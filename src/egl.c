@@ -19,7 +19,7 @@ void init_egl(ctx_t * ctx) {
     ctx->egl->window = EGL_NO_SURFACE;
 
     printf("[info] init_egl: creating EGL display\n");
-    ctx->egl->display = eglGetDisplay((EGLNativeDisplayType)ctx->egl->display);
+    ctx->egl->display = eglGetDisplay((EGLNativeDisplayType)ctx->wl->display);
     if (ctx->egl->display == EGL_NO_DISPLAY) {
         printf("[error] init_egl: failed to create EGL display\n");
         exit_fail(ctx);
@@ -57,7 +57,7 @@ void init_egl(ctx_t * ctx) {
     if (ctx->wl->width == 0) ctx->wl->width = 100;
     if (ctx->wl->height == 0) ctx->wl->height = 100;
     printf("[info] init_egl: creating EGL window\n");
-    ctx->egl->window = wl_egl_window_create(ctx->egl->surface, ctx->wl->width, ctx->wl->height);
+    ctx->egl->window = wl_egl_window_create(ctx->wl->surface, ctx->wl->width, ctx->wl->height);
     if (ctx->egl->window == EGL_NO_SURFACE) {
         printf("[error] init_egl: failed to create EGL window\n");
         exit_fail(ctx);
