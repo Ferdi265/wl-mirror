@@ -16,6 +16,7 @@ struct output_list_node {
     output_list_node_t * next;
     char * name;
     struct wl_output * output;
+    struct zxdg_output_v1 * xdg_output;
     uint32_t output_id;
 };
 

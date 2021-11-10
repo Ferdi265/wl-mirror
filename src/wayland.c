@@ -3,6 +3,68 @@
 #include <string.h>
 #include <wayland-client-protocol.h>
 #include "context.h"
+#include "xdg-output-unstable-v1.h"
+
+// --- xdg_output event handlers ---
+
+static void xdg_output_event_description(
+    void * data, struct zxdg_output_v1 * xdg_output,
+    const char * description
+) {
+    (void)data;
+    (void)xdg_output;
+    (void)description;
+}
+
+static void xdg_output_event_logical_position(
+    void * data, struct zxdg_output_v1 * xdg_output,
+    int32_t x, int32_t y
+) {
+    (void)data;
+    (void)xdg_output;
+    (void)x;
+    (void)y;
+}
+
+static void xdg_output_event_logical_size(
+    void * data, struct zxdg_output_v1 * xdg_output,
+    int32_t width, int32_t height
+) {
+    (void)data;
+    (void)xdg_output;
+    (void)width;
+    (void)height;
+}
+
+static void xdg_output_event_name(
+    void * data, struct zxdg_output_v1 * xdg_output,
+    const char * name
+) {
+    output_list_node_t * node = (output_list_node_t *)data;
+    node->name = strdup(name);
+
+    if (node->name != NULL) {
+        printf("[info] xdg_output: found output with name %s\n", node->name);
+    }
+
+    (void)xdg_output;
+}
+
+static void xdg_output_event_done(
+    void * data, struct zxdg_output_v1 * xdg_output
+) {
+    (void)data;
+    (void)xdg_output;
+}
+
+
+static const struct zxdg_output_v1_listener xdg_output_listener = {
+    .description = xdg_output_event_description,
+    .logical_position = xdg_output_event_logical_position,
+    .logical_size = xdg_output_event_logical_size,
+    .name = xdg_output_event_name,
+    .done = xdg_output_event_done
+};
 
 // --- registry event handlers ---
 
@@ -45,6 +107,24 @@ static void registry_event_add(
             registry, id, &zxdg_output_manager_v1_interface, 2
         );
         ctx->wl->output_manager_id = id;
+
+        printf("[info] registry: creating xdg_outputs for previously detected outputs\n");
+        output_list_node_t * cur = ctx->wl->outputs;
+        while (cur != NULL) {
+            printf("[info] registry: creating xdg_output\n");
+            cur->xdg_output = (struct zxdg_output_v1 *)zxdg_output_manager_v1_get_xdg_output(
+                ctx->wl->output_manager, cur->output
+            );
+            if (cur->xdg_output == NULL) {
+                printf("[error] registry: failed to create xdg_output\n");
+                exit_fail(ctx);
+            }
+
+            printf("[info] registry: adding xdg_output name event listener\n");
+            zxdg_output_v1_add_listener(cur->xdg_output, &xdg_output_listener, (void *)cur);
+
+            cur = cur->next;
+        }
     } else if (strcmp(interface, zwlr_export_dmabuf_manager_v1_interface.name) == 0) {
         if (ctx->wl->dmabuf_manager != NULL) {
             printf("[error] registry: duplicate dmabuf_manager\n");
@@ -65,6 +145,7 @@ static void registry_event_add(
         }
 
         node->name = NULL;
+        node->xdg_output = NULL;
 
         printf("[info] registry: binding output\n");
         node->output = (struct wl_output *)wl_registry_bind(
@@ -75,6 +156,22 @@ static void registry_event_add(
         printf("[info] registry: linking output node\n");
         node->next = ctx->wl->outputs;
         ctx->wl->outputs = node;
+
+        if (ctx->wl->output_manager != NULL) {
+            printf("[info] registry: creating xdg_output\n");
+            node->xdg_output = (struct zxdg_output_v1 *)zxdg_output_manager_v1_get_xdg_output(
+                ctx->wl->output_manager, node->output
+            );
+            if (node->xdg_output == NULL) {
+                printf("[error] registry: failed to create xdg_output\n");
+                exit_fail(ctx);
+            }
+
+            printf("[info] registry: adding xdg_output name event listener\n");
+            zxdg_output_v1_add_listener(node->xdg_output, &xdg_output_listener, (void *)node);
+        } else {
+            printf("[info] registry: deferring creation of xdg_output\n");
+        }
     }
 }
 
