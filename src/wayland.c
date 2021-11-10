@@ -56,6 +56,25 @@ static void registry_event_add(
             registry, id, &zwlr_export_dmabuf_manager_v1_interface, 1
         );
         ctx->wl->dmabuf_manager_id = id;
+    } else if (strcmp(interface, wl_output_interface.name) == 0) {
+        printf("[info] registry: allocating output node\n");
+        output_list_node_t * node = malloc(sizeof (output_list_node_t));
+        if (node == NULL) {
+            printf("[error] registry: failed to allocate output node\n");
+            exit_fail(ctx);
+        }
+
+        node->name = NULL;
+
+        printf("[info] registry: binding output\n");
+        node->output = (struct wl_output *)wl_registry_bind(
+            registry, id, &wl_output_interface, 3
+        );
+        node->output_id = id;
+
+        printf("[info] registry: linking output node\n");
+        node->next = ctx->wl->outputs;
+        ctx->wl->outputs = node;
     }
 }
 
@@ -77,6 +96,29 @@ static void registry_event_remove(
     } else if (id == ctx->wl->dmabuf_manager_id) {
         printf("[error] registry: dmabuf_manager disapperared\n");
         exit_fail(ctx);
+    } else {
+        output_list_node_t ** link = &ctx->wl->outputs;
+        output_list_node_t * cur = ctx->wl->outputs;
+        output_list_node_t * prev = NULL;
+        while (cur != NULL) {
+            if (id == cur->output_id) {
+                printf("[info] registry: output %s disappeared\n", cur->name);
+                output_removed_handler_mirror(ctx, cur);
+
+                printf("[info] registry: unlinking output node\n");
+                *link = cur->next;
+                prev = cur;
+                cur = cur->next;
+
+                printf("[info] registry: deallocating output node\n");
+                wl_output_destroy(prev->output);
+                free(prev->name);
+                free(prev);
+            } else {
+                link = &cur->next;
+                cur = cur->next;
+            }
+        }
     }
 
     (void)registry;
@@ -149,8 +191,8 @@ static void xdg_toplevel_event_configure(
 
     if (ctx->egl != NULL && (width != ctx->wl->width || height != ctx->wl->height)) {
         printf("[info] xdg_toplevel: resize\n");
-        configure_resize_egl(ctx, width, height);
-        configure_resize_mirror(ctx, width, height);
+        configure_resize_handler_egl(ctx, width, height);
+        configure_resize_handler_mirror(ctx, width, height);
     }
     ctx->wl->width = width;
     ctx->wl->height = height;
@@ -202,6 +244,8 @@ void init_wl(ctx_t * ctx) {
     ctx->wl->dmabuf_manager = NULL;
     ctx->wl->dmabuf_manager_id = 0;
 
+    ctx->wl->outputs = NULL;
+
     ctx->wl->surface = NULL;
     ctx->wl->xdg_surface = NULL;
     ctx->wl->xdg_toplevel = NULL;
@@ -238,12 +282,10 @@ void init_wl(ctx_t * ctx) {
     } else if (ctx->wl->wm_base == NULL) {
         printf("[error] init_wl: wm_base missing\n");
         exit_fail(ctx);
-    }
-    if (ctx->wl->output_manager == NULL) {
+    } else if (ctx->wl->output_manager == NULL) {
         printf("[error] init_wl: output_manager missing\n");
         exit_fail(ctx);
-    }
-    if (ctx->wl->dmabuf_manager == NULL) {
+    } else if (ctx->wl->dmabuf_manager == NULL) {
         printf("[error] init_wl: dmabuf_manager missing\n");
         exit_fail(ctx);
     }
@@ -301,6 +343,19 @@ void cleanup_wl(ctx_t *ctx) {
     if (ctx->wl == NULL) return;
 
     printf("[info] cleanup_wl: destroying wayland objects\n");
+
+    output_list_node_t * cur = ctx->wl->outputs;
+    output_list_node_t * prev = NULL;
+    while (cur != NULL) {
+        prev = cur;
+        cur = cur->next;
+
+        wl_output_destroy(prev->output);
+        free(prev->name);
+        free(prev);
+    }
+    ctx->wl->outputs = NULL;
+
     if (ctx->wl->xdg_toplevel != NULL) xdg_toplevel_destroy(ctx->wl->xdg_toplevel);
     if (ctx->wl->xdg_surface != NULL) xdg_surface_destroy(ctx->wl->xdg_surface);
     if (ctx->wl->surface != NULL) wl_surface_destroy(ctx->wl->surface);

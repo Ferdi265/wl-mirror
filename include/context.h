@@ -10,6 +10,15 @@
 #include "xdg-output-unstable-v1.h"
 #include "wlr-export-dmabuf-unstable-v1.h"
 
+typedef struct output_list_node output_list_node_t;
+
+struct output_list_node {
+    output_list_node_t * next;
+    char * name;
+    struct wl_output * output;
+    uint32_t output_id;
+};
+
 typedef struct {
     struct wl_display * display;
     struct wl_registry * registry;
@@ -24,6 +33,9 @@ typedef struct {
     uint32_t wm_base_id;
     uint32_t output_manager_id;
     uint32_t dmabuf_manager_id;
+
+    // output list
+    output_list_node_t * outputs;
 
     // surface objects
     struct wl_surface * surface;
@@ -64,8 +76,11 @@ void init_wl(ctx_t * ctx);
 void init_egl(ctx_t * ctx);
 void init_mirror(ctx_t * ctx, char * output);
 
-void configure_resize_egl(ctx_t * ctx, uint32_t width, uint32_t height);
-void configure_resize_mirror(ctx_t * ctx, uint32_t width, uint32_t height);
+void output_added_handler_mirror(ctx_t * ctx, output_list_node_t * node);
+void output_removed_handler_mirror(ctx_t * ctx, output_list_node_t * node);
+
+void configure_resize_handler_egl(ctx_t * ctx, uint32_t width, uint32_t height);
+void configure_resize_handler_mirror(ctx_t * ctx, uint32_t width, uint32_t height);
 
 void exit_fail(ctx_t * ctx);
 void cleanup(ctx_t * ctx);

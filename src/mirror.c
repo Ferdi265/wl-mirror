@@ -15,9 +15,21 @@ void init_mirror(ctx_t * ctx, char * output) {
     ctx->mirror->output = output;
 }
 
-// --- configure_resize_mirror
+// --- output_added_handler_mirror ---
 
-void configure_resize_mirror(ctx_t * ctx, uint32_t width, uint32_t height) {
+void output_added_handler_mirror(ctx_t * ctx, output_list_node_t * node) {
+
+}
+
+// --- output_removed_handler_mirror ---
+
+void output_removed_handler_mirror(ctx_t * ctx, output_list_node_t * node) {
+
+}
+
+// --- configure_resize_handler_mirror ---
+
+void configure_resize_handler_mirror(ctx_t * ctx, uint32_t width, uint32_t height) {
 
 }
 

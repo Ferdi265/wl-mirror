@@ -95,9 +95,9 @@ void init_egl(ctx_t * ctx) {
     }
 }
 
-// --- configure_resize_egl ---
+// --- configure_resize_handler_egl ---
 
-void configure_resize_egl(ctx_t * ctx, uint32_t width, uint32_t height) {
+void configure_resize_handler_egl(ctx_t * ctx, uint32_t width, uint32_t height) {
     printf("[info] configure_resize_egl: resizing EGL window\n");
     wl_egl_window_resize(ctx->egl->window, width, height, 0, 0);
 
