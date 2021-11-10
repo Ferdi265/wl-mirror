@@ -4,24 +4,6 @@
 #include <wayland-client-protocol.h>
 #include "context.h"
 
-void cleanup_wl(ctx_t *ctx) {
-    if (ctx->wl == NULL) return;
-
-    printf("[info] cleanup_wl: destroying wayland objects\n");
-    if (ctx->wl->xdg_toplevel != NULL) xdg_toplevel_destroy(ctx->wl->xdg_toplevel);
-    if (ctx->wl->xdg_surface != NULL) xdg_surface_destroy(ctx->wl->xdg_surface);
-    if (ctx->wl->surface != NULL) wl_surface_destroy(ctx->wl->surface);
-    if (ctx->wl->dmabuf_manager != NULL) zwlr_export_dmabuf_manager_v1_destroy(ctx->wl->dmabuf_manager);
-    if (ctx->wl->output_manager != NULL) zxdg_output_manager_v1_destroy(ctx->wl->output_manager);
-    if (ctx->wl->wm_base != NULL) xdg_wm_base_destroy(ctx->wl->wm_base);
-    if (ctx->wl->compositor != NULL) wl_compositor_destroy(ctx->wl->compositor);
-    if (ctx->wl->registry != NULL) wl_registry_destroy(ctx->wl->registry);
-    if (ctx->wl->display != NULL) wl_display_disconnect(ctx->wl->display);
-
-    free(ctx->wl);
-    ctx->wl = NULL;
-}
-
 // --- registry event handlers ---
 
 static void registry_event_add(
@@ -126,8 +108,6 @@ static void surface_configure_finished(ctx_t * ctx) {
     printf("[info] surface_configure_finished: acknowledging configure\n");
     xdg_surface_ack_configure(ctx->wl->xdg_surface, ctx->wl->last_surface_serial);
 
-    // TODO: callback?
-
     printf("[info] surface_configure_finished: committing surface\n");
     wl_surface_commit(ctx->wl->surface);
 
@@ -166,7 +146,14 @@ static void xdg_toplevel_event_configure(
     if (width == 0) width = 100;
     if (height == 0) height = 100;
 
-    // TODO: EGL callback?
+    if (ctx->egl != NULL) {
+        if (width != ctx->egl->width || height != ctx->egl->height) {
+            configure_resize_egl(ctx, width, height);
+            configure_resize_mirror(ctx, width, height);
+            ctx->egl->width = width;
+            ctx->egl->height = height;
+        }
+    }
 
     ctx->wl->xdg_toplevel_configured = true;
     if (ctx->wl->xdg_surface_configured && ctx->wl->xdg_toplevel_configured) {
@@ -304,3 +291,24 @@ void init_wl(ctx_t * ctx) {
         exit_fail(ctx);
     }
 }
+
+// --- cleanup_wl ---
+
+void cleanup_wl(ctx_t *ctx) {
+    if (ctx->wl == NULL) return;
+
+    printf("[info] cleanup_wl: destroying wayland objects\n");
+    if (ctx->wl->xdg_toplevel != NULL) xdg_toplevel_destroy(ctx->wl->xdg_toplevel);
+    if (ctx->wl->xdg_surface != NULL) xdg_surface_destroy(ctx->wl->xdg_surface);
+    if (ctx->wl->surface != NULL) wl_surface_destroy(ctx->wl->surface);
+    if (ctx->wl->dmabuf_manager != NULL) zwlr_export_dmabuf_manager_v1_destroy(ctx->wl->dmabuf_manager);
+    if (ctx->wl->output_manager != NULL) zxdg_output_manager_v1_destroy(ctx->wl->output_manager);
+    if (ctx->wl->wm_base != NULL) xdg_wm_base_destroy(ctx->wl->wm_base);
+    if (ctx->wl->compositor != NULL) wl_compositor_destroy(ctx->wl->compositor);
+    if (ctx->wl->registry != NULL) wl_registry_destroy(ctx->wl->registry);
+    if (ctx->wl->display != NULL) wl_display_disconnect(ctx->wl->display);
+
+    free(ctx->wl);
+    ctx->wl = NULL;
+}
+

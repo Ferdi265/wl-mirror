@@ -65,6 +65,9 @@ void init_wl(ctx_t * ctx);
 void init_egl(ctx_t * ctx);
 void init_mirror(ctx_t * ctx, char * output);
 
+void configure_resize_egl(ctx_t * ctx, uint32_t width, uint32_t height);
+void configure_resize_mirror(ctx_t * ctx, uint32_t width, uint32_t height);
+
 void exit_fail(ctx_t * ctx);
 void cleanup(ctx_t * ctx);
 void cleanup_wl(ctx_t * ctx);
