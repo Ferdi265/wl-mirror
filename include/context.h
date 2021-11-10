@@ -64,7 +64,8 @@ typedef struct {
 } ctx_egl_t;
 
 typedef struct {
-    char * output;
+    output_list_node_t * current;
+    struct zwlr_export_dmabuf_frame_v1 * frame;
 } ctx_mirror_t;
 
 typedef struct {
@@ -77,7 +78,6 @@ void init_wl(ctx_t * ctx);
 void init_egl(ctx_t * ctx);
 void init_mirror(ctx_t * ctx, char * output);
 
-void output_added_handler_mirror(ctx_t * ctx, output_list_node_t * node);
 void output_removed_handler_mirror(ctx_t * ctx, output_list_node_t * node);
 
 void configure_resize_handler_egl(ctx_t * ctx, uint32_t width, uint32_t height);

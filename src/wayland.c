@@ -208,6 +208,7 @@ static void registry_event_remove(
                 cur = cur->next;
 
                 printf("[info] registry: deallocating output node\n");
+                zxdg_output_v1_destroy(prev->xdg_output);
                 wl_output_destroy(prev->output);
                 free(prev->name);
                 free(prev);
@@ -447,6 +448,7 @@ void cleanup_wl(ctx_t *ctx) {
         prev = cur;
         cur = cur->next;
 
+        zxdg_output_v1_destroy(prev->xdg_output);
         wl_output_destroy(prev->output);
         free(prev->name);
         free(prev);
