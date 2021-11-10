@@ -30,6 +30,10 @@ typedef struct {
     struct xdg_surface * xdg_surface;
     struct xdg_toplevel * xdg_toplevel;
 
+    // buffer size
+    uint32_t width;
+    uint32_t height;
+
     // state flags
     uint32_t last_surface_serial;
     bool xdg_surface_configured;
@@ -44,11 +48,6 @@ typedef struct {
     EGLConfig config;
     EGLSurface surface;
     struct wl_egl_window * window;
-
-    // state flags
-    uint32_t width;
-    uint32_t height;
-    bool initialized;
 } ctx_egl_t;
 
 typedef struct {

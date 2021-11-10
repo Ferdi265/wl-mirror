@@ -146,14 +146,12 @@ static void xdg_toplevel_event_configure(
     if (width == 0) width = 100;
     if (height == 0) height = 100;
 
-    if (ctx->egl != NULL) {
-        if (width != ctx->egl->width || height != ctx->egl->height) {
-            configure_resize_egl(ctx, width, height);
-            configure_resize_mirror(ctx, width, height);
-            ctx->egl->width = width;
-            ctx->egl->height = height;
-        }
+    if (ctx->egl != NULL && (width != ctx->wl->width || height != ctx->wl->height)) {
+        configure_resize_egl(ctx, width, height);
+        configure_resize_mirror(ctx, width, height);
     }
+    ctx->wl->width = width;
+    ctx->wl->height = height;
 
     ctx->wl->xdg_toplevel_configured = true;
     if (ctx->wl->xdg_surface_configured && ctx->wl->xdg_toplevel_configured) {
@@ -205,6 +203,9 @@ void init_wl(ctx_t * ctx) {
     ctx->wl->surface = NULL;
     ctx->wl->xdg_surface = NULL;
     ctx->wl->xdg_toplevel = NULL;
+
+    ctx->wl->width = 0;
+    ctx->wl->height = 0;
 
     ctx->wl->last_surface_serial = 0;
     ctx->wl->xdg_surface_configured = false;

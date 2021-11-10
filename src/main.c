@@ -43,5 +43,9 @@ int main(int argc, char ** argv) {
     char * output = argv[1];
     init_mirror(ctx, output);
 
+    printf("[info] main: entering event loop\n");
+    while (wl_display_dispatch(ctx->wl->display) != -1 && !ctx->wl->closing) {}
+    printf("[info] main: exiting event loop\n");
+
     cleanup(ctx);
 }
