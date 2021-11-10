@@ -39,7 +39,7 @@ endif()
 # wayland protocol wrapper generation with wayland-scanner
 set(protocols-found TRUE)
 add_library(protocols STATIC)
-target_include_directories(protocols INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/proto/include/")
+target_include_directories(protocols INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include/")
 foreach(proto ${PROTOCOLS})
     cmake_path(GET proto STEM protobase)
     cmake_path(APPEND WL_PROTOCOL_DIR ${proto} OUTPUT_VARIABLE wl_protofile)
@@ -56,11 +56,11 @@ foreach(proto ${PROTOCOLS})
         set(protocols-found FALSE)
     endif()
 
-    set(protoheader "${CMAKE_CURRENT_BINARY_DIR}/proto/include/${protobase}.h")
-    set(protosource "${CMAKE_CURRENT_BINARY_DIR}/proto/src/${protobase}.c")
+    set(protoheader "${CMAKE_CURRENT_BINARY_DIR}/include/${protobase}.h")
+    set(protosource "${CMAKE_CURRENT_BINARY_DIR}/src/${protobase}.c")
 
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/proto/include/")
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/proto/src/")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/")
     add_custom_command(
         OUTPUT "${protoheader}"
         MAIN_DEPENDENCY "${protofile}"
