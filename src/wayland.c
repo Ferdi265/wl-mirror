@@ -6,6 +6,8 @@
 
 void cleanup_wl(ctx_t *ctx) {
     if (ctx->wl == NULL) return;
+
+    printf("[info] cleanup_wl: destroying wayland objects\n");
     if (ctx->wl->xdg_toplevel != NULL) xdg_toplevel_destroy(ctx->wl->xdg_toplevel);
     if (ctx->wl->xdg_surface != NULL) xdg_surface_destroy(ctx->wl->xdg_surface);
     if (ctx->wl->surface != NULL) wl_surface_destroy(ctx->wl->surface);
@@ -34,6 +36,7 @@ static void registry_event_add(
             exit_fail(ctx);
         }
 
+        printf("[info] wl_registry: binding compositor\n");
         ctx->wl->compositor = (struct wl_compositor *)wl_registry_bind(
             registry, id,
             &wl_compositor_interface, wl_compositor_interface.version
@@ -45,6 +48,7 @@ static void registry_event_add(
             exit_fail(ctx);
         }
 
+        printf("[info] wl_registry: binding wm_base\n");
         ctx->wl->wm_base = (struct xdg_wm_base *)wl_registry_bind(
             registry, id,
             &xdg_wm_base_interface, xdg_wm_base_interface.version
@@ -56,6 +60,7 @@ static void registry_event_add(
             exit_fail(ctx);
         }
 
+        printf("[info] wl_registry: binding output_manager\n");
         ctx->wl->output_manager = (struct zxdg_output_manager_v1 *)wl_registry_bind(
             registry, id,
             &zxdg_output_manager_v1_interface, zxdg_output_manager_v1_interface.version
@@ -67,6 +72,7 @@ static void registry_event_add(
             exit_fail(ctx);
         }
 
+        printf("[info] wl_registry: binding dmabuf_manager\n");
         ctx->wl->dmabuf_manager = (struct zwlr_export_dmabuf_manager_v1 *)wl_registry_bind(
             registry, id,
             &zwlr_export_dmabuf_manager_v1_interface, zwlr_export_dmabuf_manager_v1_interface.version
@@ -104,6 +110,7 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 void init_wl(ctx_t * ctx) {
+    printf("[info] init_wl: allocating context structure\n");
     ctx->wl = malloc(sizeof (ctx_wl_t));
     if (ctx->wl == NULL) {
         printf("[error] init_wl: failed to allocate context structure\n");
@@ -132,14 +139,34 @@ void init_wl(ctx_t * ctx) {
     ctx->wl->configured = false;
     ctx->wl->closing = false;
 
+    printf("[info] init_wl: connecting to wayland display\n");
     ctx->wl->display = wl_display_connect(NULL);
     if (ctx->wl->display == NULL) {
         printf("[error] init_wl: failed to connect to wayland\n");
         exit_fail(ctx);
     }
 
+    printf("[info] init_wl: getting registry\n");
     ctx->wl->registry = wl_display_get_registry(ctx->wl->display);
     wl_registry_add_listener(ctx->wl->registry, &registry_listener, (void *)ctx);
 
+    printf("[info] init_wl: waiting for events\n");
     wl_display_roundtrip(ctx->wl->display);
+
+    printf("[info] init_wl: checking for missing protocols\n");
+    if (ctx->wl->compositor == NULL) {
+        printf("[error] init_wl: compositor missing\n");
+        exit_fail(ctx);
+    } else if (ctx->wl->wm_base == NULL) {
+        printf("[error] init_wl: wm_base missing\n");
+        exit_fail(ctx);
+    }
+    if (ctx->wl->output_manager == NULL) {
+        printf("[error] init_wl: output_manager missing\n");
+        exit_fail(ctx);
+    }
+    if (ctx->wl->dmabuf_manager == NULL) {
+        printf("[error] init_wl: dmabuf_manager missing\n");
+        exit_fail(ctx);
+    }
 }
