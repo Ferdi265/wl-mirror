@@ -122,7 +122,7 @@ static void xdg_surface_event_configure(
     void * data, struct xdg_surface * xdg_surface, uint32_t serial
 ) {
     ctx_t * ctx = (ctx_t *)data;
-    printf("[xdg_surface] configure %d\n", serial);
+    printf("[info] xdg_surface: configure\n");
 
     ctx->wl->last_surface_serial = serial;
     ctx->wl->xdg_surface_configured = true;
@@ -142,11 +142,13 @@ static void xdg_toplevel_event_configure(
     int32_t width, int32_t height, struct wl_array * states
 ) {
     ctx_t * ctx = (ctx_t *)data;
+    printf("[info] xdg_toplevel: configure\n");
 
     if (width == 0) width = 100;
     if (height == 0) height = 100;
 
     if (ctx->egl != NULL && (width != ctx->wl->width || height != ctx->wl->height)) {
+        printf("[info] xdg_toplevel: resize\n");
         configure_resize_egl(ctx, width, height);
         configure_resize_mirror(ctx, width, height);
     }
