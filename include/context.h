@@ -36,7 +36,7 @@ typedef struct {
     bool xdg_toplevel_configured;
     bool configured;
     bool closing;
-} wl_ctx_t;
+} ctx_wl_t;
 
 typedef struct {
     EGLDisplay display;
@@ -49,16 +49,16 @@ typedef struct {
     uint32_t width;
     uint32_t height;
     bool initialized;
-} egl_ctx_t;
+} ctx_egl_t;
 
 typedef struct {
     char * output;
-} mirror_ctx_t;
+} ctx_mirror_t;
 
 typedef struct {
-    wl_ctx_t * wl;
-    egl_ctx_t * egl;
-    mirror_ctx_t * mirror;
+    ctx_wl_t * wl;
+    ctx_egl_t * egl;
+    ctx_mirror_t * mirror;
 } ctx_t;
 
 void init_wl(ctx_t * ctx);
