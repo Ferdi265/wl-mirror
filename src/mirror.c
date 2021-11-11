@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,6 +42,18 @@ void init_mirror(ctx_t * ctx, char * output) {
     } else {
         printf("[info] init_mirror: found output with name %s\n", output);
     }
+
+    printf("[info] init_mirror: formatting window title\n");
+    char * title = NULL;
+    asprintf(&title, "Wayland Output Mirror for %s", output);
+    if (title == NULL) {
+        printf("[error] init_mirror: failed to format window title\n");
+        exit_fail(ctx);
+    }
+
+    printf("[info] init_mirror: setting window title\n");
+    xdg_toplevel_set_title(ctx->wl->xdg_toplevel, title);
+    free(title);
 
     printf("[info] init_mirror: creating wlr_dmabuf_export_frame\n");
     ctx->mirror->frame = zwlr_export_dmabuf_manager_v1_capture_output(
