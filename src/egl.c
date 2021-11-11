@@ -162,8 +162,8 @@ void init_egl(ctx_t * ctx) {
     printf("[info] init_egl: creating texture\n");
     glGenTextures(1, &ctx->egl->texture);
     glBindTexture(GL_TEXTURE_2D, ctx->egl->texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     GLint success;
     char errorLog[1024] = { 0 };
