@@ -178,6 +178,11 @@ static void dmabuf_frame_event_ready(
     printf("[info] dmabuf_frame: setting buffer flags\n");
     ctx->egl->invert_y = ctx->mirror->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
 
+    printf("[info] dmabuf_frame: setting frame aspect ratio\n");
+    ctx->egl->width = ctx->mirror->width;
+    ctx->egl->height = ctx->mirror->height;
+    resize_viewport_egl(ctx);
+
     printf("[info] dmabuf_frame: closing dmabuf fds\n");
     for (int i = 0; i < ctx->mirror->num_objects; i++) {
         close(ctx->mirror->objects[i].fd);
@@ -263,9 +268,6 @@ static void frame_callback_event_done(
         printf("[error] frame_callback: failed to swap buffers\n");
         exit_fail(ctx);
     }
-
-    printf("[info] frame_callback: committing surface\n");
-    wl_surface_commit(ctx->wl->surface);
 
     if (ctx->mirror->state != STATE_WAIT_FRAME) {
         printf("[info] frame_callback: clearing dmabuf_frame state\n");

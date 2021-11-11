@@ -75,6 +75,9 @@ void init_egl(ctx_t * ctx) {
 
     ctx->egl->glEGLImageTargetTexture2DOES = NULL;
 
+    ctx->egl->width = 1;
+    ctx->egl->height = 1;
+
     ctx->egl->vbo = 0;
     ctx->egl->texture = 0;
     ctx->egl->shader_program = 0;
@@ -249,21 +252,43 @@ void draw_texture_egl(ctx_t *ctx) {
     glFlush();
 }
 
-// --- configure_resize_handler_egl ---
+// --- resize_viewport_egl ---
 
-void configure_resize_handler_egl(ctx_t * ctx, uint32_t width, uint32_t height) {
-    printf("[info] configure_resize_egl: resizing EGL window\n");
-    wl_egl_window_resize(ctx->egl->window, width, height, 0, 0);
-    glViewport(0, 0, width, height);
+void resize_viewport_egl(ctx_t * ctx) {
+    uint32_t win_width = ctx->wl->width;
+    uint32_t win_height = ctx->wl->height;
+    uint32_t tex_width = ctx->egl->width;
+    uint32_t tex_height = ctx->egl->height;
+    uint32_t view_width = win_width;
+    uint32_t view_height = win_height;
 
-    printf("[info] configure_resize_egl: redrawing frame\n");
+    float win_aspect = (float)win_width / win_height;
+    float tex_aspect = (float)tex_width / tex_height;
+    if (win_aspect > tex_aspect) {
+        view_width = view_height * tex_aspect;
+    } else if (win_aspect < tex_aspect) {
+        view_height = view_width / tex_aspect;
+    }
+
+    printf("[info] resize_viewport_egl: resizing viewport\n");
+    glViewport((win_width - view_width) / 2, (win_height - view_height) / 2, view_width, view_height);
+
+    printf("[info] resize_viewport_egl: redrawing frame\n");
     draw_texture_egl(ctx);
 
-    printf("[info] configure_resize_egl: swapping buffers\n");
+    printf("[info] resize_viewport_egl: swapping buffers\n");
     if (eglSwapBuffers(ctx->egl->display, ctx->egl->surface) != EGL_TRUE) {
         printf("[error] configure_resize_egl: failed to swap buffers\n");
         exit_fail(ctx);
     }
+}
+
+// --- configure_resize_handler_egl ---
+
+void resize_window_egl(ctx_t * ctx) {
+    printf("[info] resize_window_egl: resizing EGL window\n");
+    wl_egl_window_resize(ctx->egl->window, ctx->wl->width, ctx->wl->height, 0, 0);
+    resize_viewport_egl(ctx);
 }
 
 // --- cleanup_egl ---

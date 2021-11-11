@@ -69,6 +69,10 @@ typedef struct {
     // extension functions
     PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 
+    // texture size
+    uint32_t width;
+    uint32_t height;
+
     // gl objects
     GLuint vbo;
     GLuint texture;
@@ -135,7 +139,8 @@ void init_mirror(ctx_t * ctx, char * output);
 void output_removed_handler_mirror(ctx_t * ctx, output_list_node_t * node);
 
 void draw_texture_egl(ctx_t * ctx);
-void configure_resize_handler_egl(ctx_t * ctx, uint32_t width, uint32_t height);
+void resize_viewport_egl(ctx_t * ctx);
+void resize_window_egl(ctx_t * ctx);
 
 void exit_fail(ctx_t * ctx);
 void cleanup(ctx_t * ctx);

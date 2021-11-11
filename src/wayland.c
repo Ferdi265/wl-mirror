@@ -289,10 +289,10 @@ static void xdg_toplevel_event_configure(
 
     if (ctx->egl != NULL && (width != ctx->wl->width || height != ctx->wl->height)) {
         printf("[info] xdg_toplevel: resize\n");
-        configure_resize_handler_egl(ctx, width, height);
+        ctx->wl->width = width;
+        ctx->wl->height = height;
+        resize_window_egl(ctx);
     }
-    ctx->wl->width = width;
-    ctx->wl->height = height;
 
     ctx->wl->xdg_toplevel_configured = true;
     if (ctx->wl->xdg_surface_configured && ctx->wl->xdg_toplevel_configured) {
