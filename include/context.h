@@ -6,10 +6,12 @@
 #include <wayland-client.h>
 #include <wayland-egl.h>
 #include <EGL/egl.h>
+#include <EGL/eglext.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include "xdg-shell.h"
 #include "xdg-output-unstable-v1.h"
+#include "linux-dmabuf-unstable-v1.h"
 #include "wlr-export-dmabuf-unstable-v1.h"
 
 typedef struct output_list_node output_list_node_t;
@@ -95,12 +97,17 @@ typedef struct {
     uint32_t y;
     uint32_t buffer_flags;
     uint32_t frame_flags;
-    uint64_t modifier;
     uint32_t format;
+    uint32_t modifier_low;
+    uint32_t modifier_high;
     uint32_t num_objects;
 
     // object data
     ctx_mirror_object_t objects[4];
+
+    // gl data
+    EGLImage frame_image;
+    GLuint frame_texture;
 
     // state flags
     ctx_mirror_state_t state;

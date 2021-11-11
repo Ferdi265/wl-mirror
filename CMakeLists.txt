@@ -11,6 +11,7 @@ set(WLR_PROTOCOL_DIR "/usr/share/wlr-protocols/" CACHE STRING "wlr-protocols dir
 set(PROTOCOLS
     "stable/xdg-shell/xdg-shell.xml"
     "unstable/xdg-output/xdg-output-unstable-v1.xml"
+    "unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
     "unstable/wlr-export-dmabuf-unstable-v1.xml"
 )
 

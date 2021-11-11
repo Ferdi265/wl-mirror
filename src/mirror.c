@@ -23,6 +23,15 @@ static void dmabuf_frame_event_frame(
         exit_fail(ctx);
     }
 
+    if (frame_flags != 0) {
+        printf("[warn] dmabuf_frame: frame uses unhandled buffer flags {");
+        if (frame_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT) printf("Y_INVERT, ");
+        if (frame_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_INTERLACED) printf("INTERLACED, ");
+        if (frame_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_BOTTOM_FIRST) printf("BOTTOM_FIRST, ");
+        printf("}\n");
+        //exit_fail(ctx);
+    }
+
     ctx->mirror->width = width;
     ctx->mirror->height = height;
     ctx->mirror->x = x;
@@ -30,7 +39,8 @@ static void dmabuf_frame_event_frame(
     ctx->mirror->buffer_flags = buffer_flags;
     ctx->mirror->frame_flags = frame_flags;
     ctx->mirror->format = format;
-    ctx->mirror->modifier = ((uint64_t)mod_high << 32) | mod_low;
+    ctx->mirror->modifier_high = mod_high;
+    ctx->mirror->modifier_low = mod_low;
     ctx->mirror->num_objects = num_objects;
 
     ctx->mirror->state = STATE_WAIT_OBJECTS;
@@ -75,11 +85,96 @@ static void dmabuf_frame_event_ready(
         exit_fail(ctx);
     }
 
-    printf("[info] dmabuf_frame: creating texture from dmabuf\n");
-    // TODO: create texture
+    if (ctx->mirror->frame_texture != 0) {
+        printf("[info] dmabuf_frame: destroying old EGL texture\n");
+        glDeleteTextures(1, &ctx->mirror->frame_texture);
+    }
 
+    if (ctx->mirror->frame_image != EGL_NO_IMAGE) {
+        printf("[info] dmabuf_frame: destroying old EGL image\n");
+        eglDestroyImage(ctx->egl->display, ctx->mirror->frame_image);
+    }
+
+    printf("[info] dmabuf_frame: creating EGL image from dmabuf\n");
+    int i = 0;
+    EGLAttrib image_attribs[6 + 10 * 4 + 1];
+
+    image_attribs[i++] = EGL_WIDTH;
+    image_attribs[i++] = ctx->mirror->width;
+    image_attribs[i++] = EGL_HEIGHT;
+    image_attribs[i++] = ctx->mirror->height;
+    image_attribs[i++] = EGL_LINUX_DRM_FOURCC_EXT;
+    image_attribs[i++] = ctx->mirror->format;
+
+    if (ctx->mirror->num_objects >= 1) {
+        image_attribs[i++] = EGL_DMA_BUF_PLANE0_FD_EXT;
+        image_attribs[i++] = ctx->mirror->objects[0].fd;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE0_OFFSET_EXT;
+        image_attribs[i++] = ctx->mirror->objects[0].offset;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE0_PITCH_EXT;
+        image_attribs[i++] = ctx->mirror->objects[0].stride;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT;
+        image_attribs[i++] = ctx->mirror->modifier_low;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT;
+        image_attribs[i++] = ctx->mirror->modifier_high;
+    }
+
+    if (ctx->mirror->num_objects >= 2) {
+        image_attribs[i++] = EGL_DMA_BUF_PLANE1_FD_EXT;
+        image_attribs[i++] = ctx->mirror->objects[1].fd;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE1_OFFSET_EXT;
+        image_attribs[i++] = ctx->mirror->objects[1].offset;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE1_PITCH_EXT;
+        image_attribs[i++] = ctx->mirror->objects[1].stride;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT;
+        image_attribs[i++] = ctx->mirror->modifier_low;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT;
+        image_attribs[i++] = ctx->mirror->modifier_high;
+    }
+
+    if (ctx->mirror->num_objects >= 3) {
+        image_attribs[i++] = EGL_DMA_BUF_PLANE2_FD_EXT;
+        image_attribs[i++] = ctx->mirror->objects[2].fd;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE2_OFFSET_EXT;
+        image_attribs[i++] = ctx->mirror->objects[2].offset;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE2_PITCH_EXT;
+        image_attribs[i++] = ctx->mirror->objects[2].stride;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT;
+        image_attribs[i++] = ctx->mirror->modifier_low;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT;
+        image_attribs[i++] = ctx->mirror->modifier_high;
+    }
+
+    if (ctx->mirror->num_objects >= 4) {
+        image_attribs[i++] = EGL_DMA_BUF_PLANE3_FD_EXT;
+        image_attribs[i++] = ctx->mirror->objects[3].fd;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE3_OFFSET_EXT;
+        image_attribs[i++] = ctx->mirror->objects[3].offset;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE3_PITCH_EXT;
+        image_attribs[i++] = ctx->mirror->objects[3].stride;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT;
+        image_attribs[i++] = ctx->mirror->modifier_low;
+        image_attribs[i++] = EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT;
+        image_attribs[i++] = ctx->mirror->modifier_high;
+    }
+
+    image_attribs[i++] = EGL_NONE;
+
+    ctx->mirror->frame_image = eglCreateImage(ctx->egl->display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
+    if (ctx->mirror->frame_image == EGL_NO_IMAGE) {
+        printf("[error] dmabuf_frame: failed to create EGL image from dmabuf\n");
+        exit_fail(ctx);
+    }
+
+    printf("[info] dmabuf_frame: creating EGL texture from dmabuf\n");
+    glGenTextures(1, &ctx->mirror->frame_texture);
+    glBindTexture(GL_TEXTURE_2D, ctx->mirror->frame_texture);
+    ctx->egl->glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, ctx->mirror->frame_image);
+
+    printf("[info] dmabuf_frame: closing dmabuf fds\n");
     for (int i = 0; i < ctx->mirror->num_objects; i++) {
         close(ctx->mirror->objects[i].fd);
+        ctx->mirror->objects[i].fd = -1;
     }
 
     zwlr_export_dmabuf_frame_v1_destroy(ctx->mirror->frame);
@@ -178,7 +273,8 @@ static void frame_callback_event_done(
         ctx->mirror->y = 0;
         ctx->mirror->buffer_flags = 0;
         ctx->mirror->frame_flags = 0;
-        ctx->mirror->modifier = 0;
+        ctx->mirror->modifier_high = 0;
+        ctx->mirror->modifier_low = 0;
         ctx->mirror->format = 0;
         ctx->mirror->num_objects = 0;
 
@@ -235,7 +331,8 @@ void init_mirror(ctx_t * ctx, char * output) {
     ctx->mirror->y = 0;
     ctx->mirror->buffer_flags = 0;
     ctx->mirror->frame_flags = 0;
-    ctx->mirror->modifier = 0;
+    ctx->mirror->modifier_high = 0;
+    ctx->mirror->modifier_low = 0;
     ctx->mirror->format = 0;
     ctx->mirror->num_objects = 0;
 
@@ -250,6 +347,9 @@ void init_mirror(ctx_t * ctx, char * output) {
     ctx->mirror->objects[1] = empty_obj;
     ctx->mirror->objects[2] = empty_obj;
     ctx->mirror->objects[3] = empty_obj;
+
+    ctx->mirror->frame_image = EGL_NO_IMAGE;
+    ctx->mirror->frame_texture = 0;
 
     ctx->mirror->state = STATE_CANCELED;
     ctx->mirror->processed_objects = 0;
@@ -308,6 +408,8 @@ void cleanup_mirror(ctx_t *ctx) {
     printf("[info] cleanup_mirror: destroying mirror objects\n");
     if (ctx->mirror->frame_callback != NULL) wl_callback_destroy(ctx->mirror->frame_callback);
     if (ctx->mirror->frame != NULL) zwlr_export_dmabuf_frame_v1_destroy(ctx->mirror->frame);
+    if (ctx->mirror->frame_texture != 0) glDeleteTextures(1, &ctx->mirror->frame_texture);
+    if (ctx->mirror->frame_image != EGL_NO_IMAGE) eglDestroyImage(ctx->egl->display, ctx->mirror->frame_image);
 
     for (int i = 0; i < 4; i++) {
         if (ctx->mirror->objects[i].fd != -1) close(ctx->mirror->objects[i].fd);
