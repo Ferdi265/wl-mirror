@@ -12,7 +12,7 @@ const char * vertex_shader_source =
     "attribute vec2 aTexCoord;\n"
     "varying vec2 vTexCoord;\n"
     "void main() {\n"
-    "    gl_Position = vec4(aPosition.x, aPosition.y, 0.0, 1.0);\n"
+    "    gl_Position = vec4(aPosition.x, -aPosition.y, 0.0, 1.0);\n"
     "    vTexCoord = aTexCoord;\n"
     "}\n"
 ;
