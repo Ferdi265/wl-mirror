@@ -162,7 +162,7 @@ static void dmabuf_frame_event_ready(
     }
 
     printf("[info] dmabuf_frame: binding image to EGL texture\n");
-    glBindTexture(GL_TEXTURE_2D, ctx->mirror->frame_texture);
+    glBindTexture(GL_TEXTURE_2D, ctx->egl->texture);
     ctx->egl->glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, ctx->mirror->frame_image);
 
     printf("[info] dmabuf_frame: closing dmabuf fds\n");
@@ -242,12 +242,7 @@ static void frame_callback_event_done(
     wl_callback_add_listener(ctx->mirror->frame_callback, &frame_callback_listener, (void *)ctx);
 
     printf("[info] frame_callback: rendering frame\n");
-
-    glClearColor(0.0, 0.0, 0.0, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glFlush();
-
-    // TODO: render with image / texture
+    draw_texture_egl(ctx, ctx->mirror->frame_image != EGL_NO_IMAGE);
 
     printf("[info] frame_callback: swapping buffers\n");
     eglSwapInterval(ctx->egl->display, 0);
@@ -380,9 +375,6 @@ void init_mirror(ctx_t * ctx, char * output) {
     printf("[info] init_mirror: requesting render callback\n");
     ctx->mirror->frame_callback = wl_surface_frame(ctx->wl->surface);
     wl_callback_add_listener(ctx->mirror->frame_callback, &frame_callback_listener, (void *)ctx);
-
-    printf("[info] init_mirror: creating EGL texture\n");
-    glGenTextures(1, &ctx->mirror->frame_texture);
 }
 
 // --- output_removed_handler_mirror ---
@@ -405,8 +397,6 @@ void cleanup_mirror(ctx_t *ctx) {
     if (ctx->mirror->frame_callback != NULL) wl_callback_destroy(ctx->mirror->frame_callback);
     if (ctx->mirror->frame != NULL) zwlr_export_dmabuf_frame_v1_destroy(ctx->mirror->frame);
     if (ctx->mirror->frame_image != EGL_NO_IMAGE) eglDestroyImage(ctx->egl->display, ctx->mirror->frame_image);
-
-    glDeleteTextures(1, &ctx->mirror->frame_texture);
 
     for (int i = 0; i < 4; i++) {
         if (ctx->mirror->objects[i].fd != -1) close(ctx->mirror->objects[i].fd);
