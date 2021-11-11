@@ -85,11 +85,6 @@ static void dmabuf_frame_event_ready(
         exit_fail(ctx);
     }
 
-    if (ctx->mirror->frame_texture != 0) {
-        printf("[info] dmabuf_frame: destroying old EGL texture\n");
-        glDeleteTextures(1, &ctx->mirror->frame_texture);
-    }
-
     if (ctx->mirror->frame_image != EGL_NO_IMAGE) {
         printf("[info] dmabuf_frame: destroying old EGL image\n");
         eglDestroyImage(ctx->egl->display, ctx->mirror->frame_image);
@@ -166,8 +161,7 @@ static void dmabuf_frame_event_ready(
         exit_fail(ctx);
     }
 
-    printf("[info] dmabuf_frame: creating EGL texture from dmabuf\n");
-    glGenTextures(1, &ctx->mirror->frame_texture);
+    printf("[info] dmabuf_frame: binding image to EGL texture\n");
     glBindTexture(GL_TEXTURE_2D, ctx->mirror->frame_texture);
     ctx->egl->glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, ctx->mirror->frame_image);
 
@@ -349,7 +343,6 @@ void init_mirror(ctx_t * ctx, char * output) {
     ctx->mirror->objects[3] = empty_obj;
 
     ctx->mirror->frame_image = EGL_NO_IMAGE;
-    ctx->mirror->frame_texture = 0;
 
     ctx->mirror->state = STATE_CANCELED;
     ctx->mirror->processed_objects = 0;
@@ -387,6 +380,9 @@ void init_mirror(ctx_t * ctx, char * output) {
     printf("[info] init_mirror: requesting render callback\n");
     ctx->mirror->frame_callback = wl_surface_frame(ctx->wl->surface);
     wl_callback_add_listener(ctx->mirror->frame_callback, &frame_callback_listener, (void *)ctx);
+
+    printf("[info] init_mirror: creating EGL texture\n");
+    glGenTextures(1, &ctx->mirror->frame_texture);
 }
 
 // --- output_removed_handler_mirror ---
@@ -408,8 +404,9 @@ void cleanup_mirror(ctx_t *ctx) {
     printf("[info] cleanup_mirror: destroying mirror objects\n");
     if (ctx->mirror->frame_callback != NULL) wl_callback_destroy(ctx->mirror->frame_callback);
     if (ctx->mirror->frame != NULL) zwlr_export_dmabuf_frame_v1_destroy(ctx->mirror->frame);
-    if (ctx->mirror->frame_texture != 0) glDeleteTextures(1, &ctx->mirror->frame_texture);
     if (ctx->mirror->frame_image != EGL_NO_IMAGE) eglDestroyImage(ctx->egl->display, ctx->mirror->frame_image);
+
+    glDeleteTextures(1, &ctx->mirror->frame_texture);
 
     for (int i = 0; i < 4; i++) {
         if (ctx->mirror->objects[i].fd != -1) close(ctx->mirror->objects[i].fd);

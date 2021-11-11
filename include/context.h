@@ -90,6 +90,10 @@ typedef struct {
     struct wl_callback * frame_callback;
     struct zwlr_export_dmabuf_frame_v1 * frame;
 
+    // gl data
+    EGLImage frame_image;
+    GLuint frame_texture;
+
     // frame data
     uint32_t width;
     uint32_t height;
@@ -104,10 +108,6 @@ typedef struct {
 
     // object data
     ctx_mirror_object_t objects[4];
-
-    // gl data
-    EGLImage frame_image;
-    GLuint frame_texture;
 
     // state flags
     ctx_mirror_state_t state;
