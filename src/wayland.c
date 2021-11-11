@@ -290,7 +290,6 @@ static void xdg_toplevel_event_configure(
     if (ctx->egl != NULL && (width != ctx->wl->width || height != ctx->wl->height)) {
         printf("[info] xdg_toplevel: resize\n");
         configure_resize_handler_egl(ctx, width, height);
-        configure_resize_handler_mirror(ctx, width, height);
     }
     ctx->wl->width = width;
     ctx->wl->height = height;
@@ -307,9 +306,7 @@ static void xdg_toplevel_event_close(
     void * data, struct xdg_toplevel * xdg_toplevel
 ) {
     ctx_t * ctx = (ctx_t *)data;
-    printf("[xdg_surface] close\n");
-
-    printf("[info] closing\n");
+    printf("[info] xdg_surface: closing\n");
     ctx->wl->closing = true;
 
     (void)ctx;
