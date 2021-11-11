@@ -1,7 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "context.h"
-#include <GLES2/gl2.h>
+
+// --- has_extension ---
+
+static bool has_extension(const char * extension) {
+    size_t ext_len = strlen(extension);
+
+    const char * extensions = (const char *)glGetString(GL_EXTENSIONS);
+    char * match = strstr(extensions, extension);
+
+    bool found = (
+        match != NULL &&
+        (match == extensions || match[-1] == ' ') &&
+        (match[ext_len] == '\0' || match[ext_len] == ' ')
+    );
+
+    return found;
+}
 
 // --- init_egl ---
 
@@ -17,6 +34,8 @@ void init_egl(ctx_t * ctx) {
     ctx->egl->context = EGL_NO_CONTEXT;
     ctx->egl->surface = EGL_NO_SURFACE;
     ctx->egl->window = EGL_NO_SURFACE;
+
+    ctx->egl->glEGLImageTargetTexture2DOES = NULL;
 
     printf("[info] init_egl: creating EGL display\n");
     ctx->egl->display = eglGetDisplay((EGLNativeDisplayType)ctx->wl->display);
@@ -80,6 +99,19 @@ void init_egl(ctx_t * ctx) {
     printf("[info] init_egl: activating EGL context\n");
     if (eglMakeCurrent(ctx->egl->display, ctx->egl->surface, ctx->egl->surface, ctx->egl->context) != EGL_TRUE) {
         printf("[error] init_egl: failed to activate EGL context\n");
+        exit_fail(ctx);
+    }
+
+    printf("[info] init_egl: checking for needed EGL extensions\n");
+    if (!has_extension("GL_OES_EGL_image")) {
+        printf("[error] init_egl: missing EGL extension GL_OES_EGL_image\n");
+        exit_fail(ctx);
+    }
+
+    printf("[info] init_egl: getting extension function pointers\n");
+    ctx->egl->glEGLImageTargetTexture2DOES = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)eglGetProcAddress("glEGLImageTargetTexture2DOES");
+    if (ctx->egl->glEGLImageTargetTexture2DOES == NULL) {
+        printf("[error] init_egl: failed to get pointer to glEGLImageTargetTexture2DOES\n");
         exit_fail(ctx);
     }
 

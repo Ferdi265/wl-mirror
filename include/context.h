@@ -6,6 +6,8 @@
 #include <wayland-client.h>
 #include <wayland-egl.h>
 #include <EGL/egl.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 #include "xdg-shell.h"
 #include "xdg-output-unstable-v1.h"
 #include "wlr-export-dmabuf-unstable-v1.h"
@@ -61,6 +63,8 @@ typedef struct {
     EGLConfig config;
     EGLSurface surface;
     struct wl_egl_window * window;
+
+    PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 } ctx_egl_t;
 
 typedef struct {
