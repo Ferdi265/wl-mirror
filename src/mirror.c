@@ -27,12 +27,18 @@ static void dmabuf_frame_event_frame(
         ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT
     );
     if (unhandled_buffer_flags != 0) {
-        printf("[warn] dmabuf_frame: frame uses unhandled buffer flags, buffer_fla {");
+        printf("[warn] dmabuf_frame: frame uses unhandled buffer flags, buffer_flags = {");
         if (buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT) printf("Y_INVERT, ");
         if (buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_INTERLACED) printf("INTERLACED, ");
         if (buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_BOTTOM_FIRST) printf("BOTTOM_FIRST, ");
         printf("}\n");
-        //exit_fail(ctx);
+    }
+
+    uint32_t unhandled_frame_flags = frame_flags;
+    if (unhandled_frame_flags != 0) {
+        printf("[warn] dmabuf_frame: frame uses unhandled frame flags, frame_flags = {");
+        if (frame_flags & ZWLR_EXPORT_DMABUF_FRAME_V1_FLAGS_TRANSIENT) printf("TRANSIENT, ");
+        printf("}\n");
     }
 
     ctx->mirror->width = width;
