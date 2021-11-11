@@ -4,7 +4,6 @@
 #include <string.h>
 #include <unistd.h>
 #include "context.h"
-#include <GLES2/gl2.h>
 
 // --- dmabuf_frame event handlers ---
 
