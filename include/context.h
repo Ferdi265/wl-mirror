@@ -73,6 +73,9 @@ typedef struct {
     GLuint vbo;
     GLuint texture;
     GLuint shader_program;
+    GLint invert_y_uniform;
+    bool texture_initialized;
+    bool invert_y;
 } ctx_egl_t;
 
 typedef struct {
@@ -131,7 +134,7 @@ void init_mirror(ctx_t * ctx, char * output);
 
 void output_removed_handler_mirror(ctx_t * ctx, output_list_node_t * node);
 
-void draw_texture_egl(ctx_t * ctx, bool textured);
+void draw_texture_egl(ctx_t * ctx);
 void configure_resize_handler_egl(ctx_t * ctx, uint32_t width, uint32_t height);
 
 void exit_fail(ctx_t * ctx);

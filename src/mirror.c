@@ -23,11 +23,14 @@ static void dmabuf_frame_event_frame(
         exit_fail(ctx);
     }
 
-    if (frame_flags != 0) {
-        printf("[warn] dmabuf_frame: frame uses unhandled buffer flags {");
-        if (frame_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT) printf("Y_INVERT, ");
-        if (frame_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_INTERLACED) printf("INTERLACED, ");
-        if (frame_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_BOTTOM_FIRST) printf("BOTTOM_FIRST, ");
+    uint32_t unhandled_buffer_flags = buffer_flags & ~(
+        ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT
+    );
+    if (unhandled_buffer_flags != 0) {
+        printf("[warn] dmabuf_frame: frame uses unhandled buffer flags, buffer_fla {");
+        if (buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT) printf("Y_INVERT, ");
+        if (buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_INTERLACED) printf("INTERLACED, ");
+        if (buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_BOTTOM_FIRST) printf("BOTTOM_FIRST, ");
         printf("}\n");
         //exit_fail(ctx);
     }
@@ -164,6 +167,10 @@ static void dmabuf_frame_event_ready(
     printf("[info] dmabuf_frame: binding image to EGL texture\n");
     glBindTexture(GL_TEXTURE_2D, ctx->egl->texture);
     ctx->egl->glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, ctx->mirror->frame_image);
+    ctx->egl->texture_initialized = true;
+
+    printf("[info] dmabuf_frame: setting buffer flags\n");
+    ctx->egl->invert_y = ctx->mirror->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
 
     printf("[info] dmabuf_frame: closing dmabuf fds\n");
     for (int i = 0; i < ctx->mirror->num_objects; i++) {
@@ -242,7 +249,7 @@ static void frame_callback_event_done(
     wl_callback_add_listener(ctx->mirror->frame_callback, &frame_callback_listener, (void *)ctx);
 
     printf("[info] frame_callback: rendering frame\n");
-    draw_texture_egl(ctx, ctx->mirror->frame_image != EGL_NO_IMAGE);
+    draw_texture_egl(ctx);
 
     printf("[info] frame_callback: swapping buffers\n");
     eglSwapInterval(ctx->egl->display, 0);

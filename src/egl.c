@@ -8,11 +8,14 @@
 
 const char * vertex_shader_source =
     "#version 100\n"
+    "uniform bool uInvertY;\n"
     "attribute vec2 aPosition;\n"
     "attribute vec2 aTexCoord;\n"
     "varying vec2 vTexCoord;\n"
     "void main() {\n"
-    "    gl_Position = vec4(aPosition.x, -aPosition.y, 0.0, 1.0);\n"
+    "    float y = aPosition.y;\n"
+    "    if (uInvertY) y = -y;\n"
+    "    gl_Position = vec4(aPosition.x, y, 0.0, 1.0);\n"
     "    vTexCoord = aTexCoord;\n"
     "}\n"
 ;
@@ -30,12 +33,12 @@ const char * fragment_shader_source =
 // --- buffers ---
 
 const float vertex_array[] = {
-    -1.0, -1.0, 0.0, 0.0,
-     1.0, -1.0, 1.0, 0.0,
-    -1.0,  1.0, 0.0, 1.0,
-    -1.0,  1.0, 0.0, 1.0,
-     1.0, -1.0, 1.0, 0.0,
-     1.0,  1.0, 1.0, 1.0
+    -1.0, -1.0, 0.0, 1.0,
+     1.0, -1.0, 1.0, 1.0,
+    -1.0,  1.0, 0.0, 0.0,
+    -1.0,  1.0, 0.0, 0.0,
+     1.0, -1.0, 1.0, 1.0,
+     1.0,  1.0, 1.0, 0.0
 };
 
 // --- has_extension ---
@@ -75,6 +78,9 @@ void init_egl(ctx_t * ctx) {
     ctx->egl->vbo = 0;
     ctx->egl->texture = 0;
     ctx->egl->shader_program = 0;
+    ctx->egl->invert_y_uniform = 0;
+    ctx->egl->texture_initialized = false;
+    ctx->egl->invert_y = false;
 
     printf("[info] init_egl: creating EGL display\n");
     ctx->egl->display = eglGetDisplay((EGLNativeDisplayType)ctx->wl->display);
@@ -208,11 +214,12 @@ void init_egl(ctx_t * ctx) {
         glDeleteProgram(ctx->egl->shader_program);
         exit_fail(ctx);
     }
+    ctx->egl->invert_y_uniform = glGetUniformLocation(ctx->egl->shader_program, "uInvertY");
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
 
-    printf("[info] init_egl: clearing frame\n");
-    draw_texture_egl(ctx, false);
+    printf("[info] init_egl: redrawing frame\n");
+    draw_texture_egl(ctx);
 
     printf("[info] init_egl: swapping buffers\n");
     if (eglSwapBuffers(ctx->egl->display, ctx->egl->surface) != EGL_TRUE) {
@@ -223,11 +230,12 @@ void init_egl(ctx_t * ctx) {
 
 // --- draw_texture_egl ---
 
-void draw_texture_egl(ctx_t *ctx, bool textured) {
+void draw_texture_egl(ctx_t *ctx) {
     glClearColor(0.0, 0.0, 0.0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (textured) {
+    if (ctx->egl->texture_initialized) {
+        glUniform1i(ctx->egl->invert_y_uniform, ctx->egl->invert_y);
         glUseProgram(ctx->egl->shader_program);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof (float), (void *)(0 * sizeof (float)));
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof (float), (void *)(2 * sizeof (float)));
@@ -248,8 +256,8 @@ void configure_resize_handler_egl(ctx_t * ctx, uint32_t width, uint32_t height) 
     wl_egl_window_resize(ctx->egl->window, width, height, 0, 0);
     glViewport(0, 0, width, height);
 
-    printf("[info] configure_resize_egl: clearing frame\n");
-    draw_texture_egl(ctx, false);
+    printf("[info] configure_resize_egl: redrawing frame\n");
+    draw_texture_egl(ctx);
 
     printf("[info] configure_resize_egl: swapping buffers\n");
     if (eglSwapBuffers(ctx->egl->display, ctx->egl->surface) != EGL_TRUE) {
