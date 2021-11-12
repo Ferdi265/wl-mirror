@@ -3,7 +3,7 @@
 #include "context.h"
 
 void cleanup(ctx_t * ctx) {
-    printf("[info] cleanup: deallocating resources\n");
+    log_debug("[debug] cleanup: deallocating resources\n");
     if (ctx == NULL) return;
     if (ctx->mirror != NULL) cleanup_mirror(ctx);
     if (ctx->egl != NULL) cleanup_egl(ctx);
@@ -22,7 +22,7 @@ int main(int argc, char ** argv) {
         exit(1);
     }
 
-    printf("[info] main: allocating context structure\n");
+    log_debug("[debug] main: allocating context structure\n");
     ctx_t * ctx = malloc(sizeof (ctx_t));
     if (ctx == NULL) {
         printf("[error] main: failed to allocate context structure\n");
@@ -33,19 +33,19 @@ int main(int argc, char ** argv) {
     ctx->egl = NULL;
     ctx->mirror = NULL;
 
-    printf("[info] main: initializing wayland\n");
+    log_debug("[debug] main: initializing wayland\n");
     init_wl(ctx);
 
-    printf("[info] main: initializing EGL\n");
+    log_debug("[debug] main: initializing EGL\n");
     init_egl(ctx);
 
-    printf("[info] main: initializing mirror\n");
+    log_debug("[debug] main: initializing mirror\n");
     char * output = argv[1];
     init_mirror(ctx, output);
 
-    printf("[info] main: entering event loop\n");
+    log_debug("[debug] main: entering event loop\n");
     while (wl_display_dispatch(ctx->wl->display) != -1 && !ctx->wl->closing) {}
-    printf("[info] main: exiting event loop\n");
+    log_debug("[debug] main: exiting event loop\n");
 
     cleanup(ctx);
 }

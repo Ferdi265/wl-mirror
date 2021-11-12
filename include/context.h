@@ -14,6 +14,12 @@
 #include "linux-dmabuf-unstable-v1.h"
 #include "wlr-export-dmabuf-unstable-v1.h"
 
+#ifdef WL_MIRROR_LOG_DEBUG
+#define log_debug(...) printf(__VA_ARGS__)
+#else
+#define log_debug(...)
+#endif
+
 typedef struct ctx ctx_t;
 typedef struct output_list_node output_list_node_t;
 

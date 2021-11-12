@@ -14,7 +14,7 @@ static void dmabuf_frame_event_frame(
     uint32_t mod_high, uint32_t mod_low, uint32_t num_objects
 ) {
     ctx_t * ctx = (ctx_t *)data;
-    printf("[info] dmabuf_frame: received %dx%d frame with %d objects\n", width, height, num_objects);
+    log_debug("[debug] dmabuf_frame: received %dx%d frame with %d objects\n", width, height, num_objects);
     if (ctx->mirror->state != STATE_WAIT_FRAME) {
         printf("[error] dmabuf_frame: got frame while in state %d\n", ctx->mirror->state);
         exit_fail(ctx);
@@ -34,7 +34,9 @@ static void dmabuf_frame_event_frame(
         printf("}\n");
     }
 
-    uint32_t unhandled_frame_flags = frame_flags;
+    uint32_t unhandled_frame_flags = frame_flags & ~(
+        ZWLR_EXPORT_DMABUF_FRAME_V1_FLAGS_TRANSIENT
+    );
     if (unhandled_frame_flags != 0) {
         printf("[warn] dmabuf_frame: frame uses unhandled frame flags, frame_flags = {");
         if (frame_flags & ZWLR_EXPORT_DMABUF_FRAME_V1_FLAGS_TRANSIENT) printf("TRANSIENT, ");
@@ -62,7 +64,7 @@ static void dmabuf_frame_event_object(
     uint32_t offset, uint32_t stride, uint32_t plane_index
 ) {
     ctx_t * ctx = (ctx_t *)data;
-    printf("[info] dmabuf_frame: received %d byte object with plane_index %d\n", size, plane_index);
+    log_debug("[debug] dmabuf_frame: received %d byte object with plane_index %d\n", size, plane_index);
     if (ctx->mirror->state != STATE_WAIT_OBJECTS) {
         printf("[error] dmabuf_frame: got object while in state %d\n", ctx->mirror->state);
         exit_fail(ctx);
@@ -88,18 +90,18 @@ static void dmabuf_frame_event_ready(
     uint32_t sec_hi, uint32_t sec_lo, uint32_t nsec
 ) {
     ctx_t * ctx = (ctx_t *)data;
-    printf("[info] dmabuf_frame: frame is ready\n");
+    log_debug("[debug] dmabuf_frame: frame is ready\n");
     if (ctx->mirror->state != STATE_WAIT_READY) {
         printf("[error] dmabuf_frame: got ready while in state %d\n", ctx->mirror->state);
         exit_fail(ctx);
     }
 
     if (ctx->mirror->frame_image != EGL_NO_IMAGE) {
-        printf("[info] dmabuf_frame: destroying old EGL image\n");
+        log_debug("[debug] dmabuf_frame: destroying old EGL image\n");
         eglDestroyImage(ctx->egl->display, ctx->mirror->frame_image);
     }
 
-    printf("[info] dmabuf_frame: creating EGL image from dmabuf\n");
+    log_debug("[debug] dmabuf_frame: creating EGL image from dmabuf\n");
     int i = 0;
     EGLAttrib image_attribs[6 + 10 * 4 + 1];
 
@@ -170,20 +172,20 @@ static void dmabuf_frame_event_ready(
         exit_fail(ctx);
     }
 
-    printf("[info] dmabuf_frame: binding image to EGL texture\n");
+    log_debug("[debug] dmabuf_frame: binding image to EGL texture\n");
     glBindTexture(GL_TEXTURE_2D, ctx->egl->texture);
     ctx->egl->glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, ctx->mirror->frame_image);
     ctx->egl->texture_initialized = true;
 
-    printf("[info] dmabuf_frame: setting buffer flags\n");
+    log_debug("[debug] dmabuf_frame: setting buffer flags\n");
     ctx->egl->invert_y = ctx->mirror->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
 
-    printf("[info] dmabuf_frame: setting frame aspect ratio\n");
+    log_debug("[debug] dmabuf_frame: setting frame aspect ratio\n");
     ctx->egl->width = ctx->mirror->width;
     ctx->egl->height = ctx->mirror->height;
     resize_viewport_egl(ctx);
 
-    printf("[info] dmabuf_frame: closing dmabuf fds\n");
+    log_debug("[debug] dmabuf_frame: closing dmabuf fds\n");
     for (int i = 0; i < ctx->mirror->num_objects; i++) {
         close(ctx->mirror->objects[i].fd);
         ctx->mirror->objects[i].fd = -1;
@@ -203,7 +205,7 @@ static void dmabuf_frame_event_cancel(
     enum zwlr_export_dmabuf_frame_v1_cancel_reason reason
 ) {
     ctx_t * ctx = (ctx_t *)data;
-    printf("[info] dmabuf_frame: frame was canceled\n");
+    log_debug("[debug] dmabuf_frame: frame was canceled\n");
 
     zwlr_export_dmabuf_frame_v1_destroy(ctx->mirror->frame);
     ctx->mirror->frame = NULL;
@@ -216,11 +218,11 @@ static void dmabuf_frame_event_cancel(
             break;
 
         case ZWLR_EXPORT_DMABUF_FRAME_V1_CANCEL_REASON_TEMPORARY:
-            printf("[info] dmabuf_frame: temporary cancellation\n");
+            log_debug("[debug] dmabuf_frame: temporary cancellation\n");
             break;
 
         case ZWLR_EXPORT_DMABUF_FRAME_V1_CANCEL_REASON_RESIZING:
-            printf("[info] dmabuf_frame: cancellation due to output resize\n");
+            log_debug("[debug] dmabuf_frame: cancellation due to output resize\n");
             break;
 
         default:
@@ -229,7 +231,7 @@ static void dmabuf_frame_event_cancel(
             break;
     }
 
-    printf("[info] dmabuf_frame: closing files\n");
+    log_debug("[debug] dmabuf_frame: closing files\n");
     for (int i = 0; i < ctx->mirror->num_objects; i++) {
         if (ctx->mirror->objects[i].fd != -1) close(ctx->mirror->objects[i].fd);
         ctx->mirror->objects[i].fd = -1;
@@ -255,14 +257,14 @@ static void frame_callback_event_done(
     wl_callback_destroy(ctx->mirror->frame_callback);
     ctx->mirror->frame_callback = NULL;
 
-    printf("[info] frame_callback: requesting next callback\n");
+    log_debug("[debug] frame_callback: requesting next callback\n");
     ctx->mirror->frame_callback = wl_surface_frame(ctx->wl->surface);
     wl_callback_add_listener(ctx->mirror->frame_callback, &frame_callback_listener, (void *)ctx);
 
-    printf("[info] frame_callback: rendering frame\n");
+    log_debug("[debug] frame_callback: rendering frame\n");
     draw_texture_egl(ctx);
 
-    printf("[info] frame_callback: swapping buffers\n");
+    log_debug("[debug] frame_callback: swapping buffers\n");
     eglSwapInterval(ctx->egl->display, 0);
     if (eglSwapBuffers(ctx->egl->display, ctx->egl->surface) != EGL_TRUE) {
         printf("[error] frame_callback: failed to swap buffers\n");
@@ -270,7 +272,7 @@ static void frame_callback_event_done(
     }
 
     if (ctx->mirror->state != STATE_WAIT_FRAME) {
-        printf("[info] frame_callback: clearing dmabuf_frame state\n");
+        log_debug("[debug] frame_callback: clearing dmabuf_frame state\n");
         ctx->mirror->width = 0;
         ctx->mirror->height = 0;
         ctx->mirror->x = 0;
@@ -297,7 +299,7 @@ static void frame_callback_event_done(
         ctx->mirror->state = STATE_WAIT_FRAME;
         ctx->mirror->processed_objects = 0;
 
-        printf("[info] frame_callback: creating wlr_dmabuf_export_frame\n");
+        log_debug("[debug] frame_callback: creating wlr_dmabuf_export_frame\n");
         ctx->mirror->frame = zwlr_export_dmabuf_manager_v1_capture_output(
             ctx->wl->dmabuf_manager, true, ctx->mirror->current->output
         );
@@ -306,7 +308,7 @@ static void frame_callback_event_done(
             exit_fail(ctx);
         }
 
-        printf("[info] frame_callback: adding dmabuf_frame event listener\n");
+        log_debug("[debug] frame_callback: adding dmabuf_frame event listener\n");
         zwlr_export_dmabuf_frame_v1_add_listener(ctx->mirror->frame, &dmabuf_frame_listener, (void *)ctx);
     }
 }
@@ -318,7 +320,7 @@ static const struct wl_callback_listener frame_callback_listener = {
 // --- init_mirror ---
 
 void init_mirror(ctx_t * ctx, char * output) {
-    printf("[info] init_mirror: allocating context structure\n");
+    log_debug("[debug] init_mirror: allocating context structure\n");
     ctx->mirror = malloc(sizeof (ctx_mirror_t));
     if (ctx->mirror == NULL) {
         printf("[error] init_wl: failed to allocate context structure\n");
@@ -357,7 +359,7 @@ void init_mirror(ctx_t * ctx, char * output) {
     ctx->mirror->state = STATE_CANCELED;
     ctx->mirror->processed_objects = 0;
 
-    printf("[info] init_mirror: searching for output\n");
+    log_debug("[debug] init_mirror: searching for output\n");
     output_list_node_t * cur = ctx->wl->outputs;
     while (cur != NULL) {
         if (cur->name != NULL && strcmp(cur->name, output) == 0) {
@@ -372,10 +374,10 @@ void init_mirror(ctx_t * ctx, char * output) {
         printf("[error] init_mirror: output %s not found\n", output);
         exit_fail(ctx);
     } else {
-        printf("[info] init_mirror: found output with name %s\n", output);
+        log_debug("[debug] init_mirror: found output with name %s\n", output);
     }
 
-    printf("[info] init_mirror: formatting window title\n");
+    log_debug("[debug] init_mirror: formatting window title\n");
     char * title = NULL;
     asprintf(&title, "Wayland Output Mirror for %s", output);
     if (title == NULL) {
@@ -383,11 +385,11 @@ void init_mirror(ctx_t * ctx, char * output) {
         exit_fail(ctx);
     }
 
-    printf("[info] init_mirror: setting window title\n");
+    log_debug("[debug] init_mirror: setting window title\n");
     xdg_toplevel_set_title(ctx->wl->xdg_toplevel, title);
     free(title);
 
-    printf("[info] init_mirror: requesting render callback\n");
+    log_debug("[debug] init_mirror: requesting render callback\n");
     ctx->mirror->frame_callback = wl_surface_frame(ctx->wl->surface);
     wl_callback_add_listener(ctx->mirror->frame_callback, &frame_callback_listener, (void *)ctx);
 }
@@ -408,7 +410,7 @@ void output_removed_handler_mirror(ctx_t * ctx, output_list_node_t * node) {
 void cleanup_mirror(ctx_t *ctx) {
     if (ctx->mirror == NULL) return;
 
-    printf("[info] cleanup_mirror: destroying mirror objects\n");
+    log_debug("[debug] cleanup_mirror: destroying mirror objects\n");
     if (ctx->mirror->frame_callback != NULL) wl_callback_destroy(ctx->mirror->frame_callback);
     if (ctx->mirror->frame != NULL) zwlr_export_dmabuf_frame_v1_destroy(ctx->mirror->frame);
     if (ctx->mirror->frame_image != EGL_NO_IMAGE) eglDestroyImage(ctx->egl->display, ctx->mirror->frame_image);
