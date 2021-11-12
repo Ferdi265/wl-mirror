@@ -109,6 +109,7 @@ static void xdg_output_event_name(
     free(node->name);
     node->name = strdup(name);
     if (node->name == NULL) {
+        printf("[error] xdg_output: failed to allocate output name\n");
         exit_fail(ctx);
     }
     log_debug("[debug] xdg_output: found output with name %s\n", node->name);
