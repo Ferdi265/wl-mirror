@@ -255,8 +255,8 @@ void draw_texture_egl(ctx_t *ctx) {
 // --- resize_viewport_egl ---
 
 void resize_viewport_egl(ctx_t * ctx) {
-    uint32_t win_width = ctx->wl->width;
-    uint32_t win_height = ctx->wl->height;
+    uint32_t win_width = ctx->wl->scale * ctx->wl->width;
+    uint32_t win_height = ctx->wl->scale * ctx->wl->height;
     uint32_t tex_width = ctx->egl->width;
     uint32_t tex_height = ctx->egl->height;
     uint32_t view_width = win_width;
@@ -287,7 +287,7 @@ void resize_viewport_egl(ctx_t * ctx) {
 
 void resize_window_egl(ctx_t * ctx) {
     printf("[info] resize_window_egl: resizing EGL window\n");
-    wl_egl_window_resize(ctx->egl->window, ctx->wl->width, ctx->wl->height, 0, 0);
+    wl_egl_window_resize(ctx->egl->window, ctx->wl->scale * ctx->wl->width, ctx->wl->scale * ctx->wl->height, 0, 0);
     resize_viewport_egl(ctx);
 }
 

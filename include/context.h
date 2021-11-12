@@ -14,14 +14,17 @@
 #include "linux-dmabuf-unstable-v1.h"
 #include "wlr-export-dmabuf-unstable-v1.h"
 
+typedef struct ctx ctx_t;
 typedef struct output_list_node output_list_node_t;
 
 struct output_list_node {
     output_list_node_t * next;
+    ctx_t * ctx;
     char * name;
     struct wl_output * output;
     struct zxdg_output_v1 * xdg_output;
     uint32_t output_id;
+    int32_t scale;
 };
 
 typedef struct {
@@ -48,8 +51,10 @@ typedef struct {
     struct xdg_toplevel * xdg_toplevel;
 
     // buffer size
+    output_list_node_t * current_output;
     uint32_t width;
     uint32_t height;
+    int32_t scale;
 
     // state flags
     uint32_t last_surface_serial;
@@ -126,21 +131,21 @@ typedef struct {
     uint32_t processed_objects;
 } ctx_mirror_t;
 
-typedef struct {
+struct ctx {
     ctx_wl_t * wl;
     ctx_egl_t * egl;
     ctx_mirror_t * mirror;
-} ctx_t;
+};
 
 void init_wl(ctx_t * ctx);
 void init_egl(ctx_t * ctx);
 void init_mirror(ctx_t * ctx, char * output);
 
-void output_removed_handler_mirror(ctx_t * ctx, output_list_node_t * node);
-
 void draw_texture_egl(ctx_t * ctx);
 void resize_viewport_egl(ctx_t * ctx);
 void resize_window_egl(ctx_t * ctx);
+
+void output_removed_handler_mirror(ctx_t * ctx, output_list_node_t * node);
 
 void exit_fail(ctx_t * ctx);
 void cleanup(ctx_t * ctx);

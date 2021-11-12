@@ -1,9 +1,72 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wayland-client-protocol.h>
 #include "context.h"
-#include "xdg-output-unstable-v1.h"
+
+// --- output event handlers ---
+
+static void output_event_geometry(
+    void * data, struct wl_output * output,
+    int32_t x, int32_t y, int32_t physical_width, int32_t physical_height,
+    int32_t subpixel, const char * make, const char * model, int32_t transform
+) {
+    (void)data;
+    (void)output;
+    (void)x;
+    (void)y;
+    (void)physical_width;
+    (void)physical_height;
+    (void)subpixel;
+    (void)make;
+    (void)model;
+    (void)transform;
+}
+
+static void output_event_mode(
+    void * data, struct wl_output * output,
+    uint32_t flags, int32_t width, int32_t height, int32_t refresh
+) {
+    (void)data;
+    (void)output;
+    (void)flags;
+    (void)width;
+    (void)height;
+    (void)refresh;
+}
+
+static void output_event_scale(
+    void * data, struct wl_output * output,
+    int32_t scale
+) {
+    output_list_node_t * node = (output_list_node_t *)data;
+    ctx_t * ctx = node->ctx;
+
+    printf("[info] output: output %s has scale %d\n", node->name, scale);
+    int32_t old_scale = ctx->wl->scale;
+    node->scale = scale;
+    ctx->wl->scale = scale;
+    if (ctx->wl->current_output != NULL && ctx->wl->current_output->output == output) {
+        if (ctx->egl != NULL && old_scale != scale) {
+            printf("[info] output: updating window scale\n");
+            wl_surface_set_buffer_scale(ctx->wl->surface, scale);
+            resize_window_egl(ctx);
+        }
+    }
+}
+
+static void output_event_done(
+    void * data, struct wl_output * output
+) {
+    (void)data;
+    (void)output;
+}
+
+static const struct wl_output_listener output_listener = {
+    .geometry = output_event_geometry,
+    .mode = output_event_mode,
+    .scale = output_event_scale,
+    .done = output_event_done
+};
 
 // --- xdg_output event handlers ---
 
@@ -41,11 +104,14 @@ static void xdg_output_event_name(
     const char * name
 ) {
     output_list_node_t * node = (output_list_node_t *)data;
-    node->name = strdup(name);
+    ctx_t * ctx = node->ctx;
 
-    if (node->name != NULL) {
-        printf("[info] xdg_output: found output with name %s\n", node->name);
+    free(node->name);
+    node->name = strdup(name);
+    if (node->name == NULL) {
+        exit_fail(ctx);
     }
+    printf("[info] xdg_output: found output with name %s\n", node->name);
 
     (void)xdg_output;
 }
@@ -144,8 +210,13 @@ static void registry_event_add(
             exit_fail(ctx);
         }
 
+        node->ctx = ctx;
         node->name = NULL;
-        node->xdg_output = NULL;
+        node->scale = 1;
+
+        printf("[info] registry: linking output node\n");
+        node->next = ctx->wl->outputs;
+        ctx->wl->outputs = node;
 
         printf("[info] registry: binding output\n");
         node->output = (struct wl_output *)wl_registry_bind(
@@ -153,9 +224,8 @@ static void registry_event_add(
         );
         node->output_id = id;
 
-        printf("[info] registry: linking output node\n");
-        node->next = ctx->wl->outputs;
-        ctx->wl->outputs = node;
+        printf("[info] registry: adding output scale event listener\n");
+        wl_output_add_listener(node->output, &output_listener, (void *)node);
 
         if (ctx->wl->output_manager != NULL) {
             printf("[info] registry: creating xdg_output\n");
@@ -242,6 +312,53 @@ static const struct xdg_wm_base_listener wm_base_listener = {
     .ping = wm_base_event_ping
 };
 
+// --- surface event handlers ---
+
+static void surface_event_enter(
+    void * data, struct wl_surface * surface, struct wl_output * output
+) {
+    ctx_t * ctx = (ctx_t *)data;
+
+    printf("[info] surface: entering new output\n");
+    output_list_node_t * found = NULL;
+    output_list_node_t * cur = ctx->wl->outputs;
+    while (cur != NULL) {
+        if (cur->output == output) {
+            found = cur;
+            break;
+        }
+
+        cur = cur->next;
+    }
+
+    if (found == NULL) {
+        printf("[error] surface: entered nonexistant output\n");
+        exit_fail(ctx);
+    }
+
+    int32_t old_scale = ctx->wl->scale;
+    ctx->wl->current_output = found;
+    ctx->wl->scale = found->scale;
+    if (ctx->egl != NULL && old_scale != found->scale) {
+        printf("[info] surface: updating window scale\n");
+        wl_surface_set_buffer_scale(ctx->wl->surface, found->scale);
+        resize_window_egl(ctx);
+    }
+}
+
+static void surface_event_leave(
+    void * data, struct wl_surface * surface, struct wl_output * output
+) {
+    (void)data;
+    (void)surface;
+    (void)output;
+}
+
+static const struct wl_surface_listener surface_listener = {
+    .enter = surface_event_enter,
+    .leave = surface_event_leave
+};
+
 // --- configure callbacks ---
 
 static void surface_configure_finished(ctx_t * ctx) {
@@ -287,10 +404,12 @@ static void xdg_toplevel_event_configure(
     if (width == 0) width = 100;
     if (height == 0) height = 100;
 
-    if (ctx->egl != NULL && (width != ctx->wl->width || height != ctx->wl->height)) {
+    int32_t old_width = ctx->wl->width;
+    int32_t old_height = ctx->wl->height;
+    ctx->wl->width = width;
+    ctx->wl->height = height;
+    if (ctx->egl != NULL && (width != old_width || height != old_height)) {
         printf("[info] xdg_toplevel: resize\n");
-        ctx->wl->width = width;
-        ctx->wl->height = height;
         resize_window_egl(ctx);
     }
 
@@ -345,8 +464,10 @@ void init_wl(ctx_t * ctx) {
     ctx->wl->xdg_surface = NULL;
     ctx->wl->xdg_toplevel = NULL;
 
+    ctx->wl->current_output = NULL;
     ctx->wl->width = 0;
     ctx->wl->height = 0;
+    ctx->wl->scale = 1;
 
     ctx->wl->last_surface_serial = 0;
     ctx->wl->xdg_surface_configured = false;
@@ -394,6 +515,9 @@ void init_wl(ctx_t * ctx) {
         printf("[error] init_wl: failed to create surface\n");
         exit_fail(ctx);
     }
+
+    printf("[info] init_wl: adding surface enter event listener\n");
+    wl_surface_add_listener(ctx->wl->surface, &surface_listener, (void *)ctx);
 
     printf("[info] init_wl: creating xdg_surface\n");
     ctx->wl->xdg_surface = xdg_wm_base_get_xdg_surface(ctx->wl->wm_base, ctx->wl->surface);
