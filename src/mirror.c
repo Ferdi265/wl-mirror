@@ -379,8 +379,8 @@ void init_mirror(ctx_t * ctx, char * output) {
 
     log_debug("[debug] init_mirror: formatting window title\n");
     char * title = NULL;
-    asprintf(&title, "Wayland Output Mirror for %s", output);
-    if (title == NULL) {
+    int status = asprintf(&title, "Wayland Output Mirror for %s", output);
+    if (status == -1) {
         printf("[error] init_mirror: failed to format window title\n");
         exit_fail(ctx);
     }
