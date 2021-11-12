@@ -27,3 +27,6 @@ target_include_directories(wl-mirror PRIVATE include/)
 if(${WL_MIRROR_LOG_DEBUG})
     target_compile_definitions(wl-mirror PRIVATE -DWL_MIRROR_LOG_DEBUG)
 endif()
+
+# installation rule
+install(TARGETS wl-mirror DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
