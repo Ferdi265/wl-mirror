@@ -243,6 +243,8 @@ static void registry_event_add(
             log_debug("[debug] registry: deferring creation of xdg_output\n");
         }
     }
+
+    (void)version;
 }
 
 static void registry_event_remove(
@@ -344,6 +346,8 @@ static void surface_event_enter(
         wl_surface_set_buffer_scale(ctx->wl->surface, found->scale);
         resize_window_egl(ctx);
     }
+
+    (void)surface;
 }
 
 static void surface_event_leave(
@@ -386,6 +390,8 @@ static void xdg_surface_event_configure(
     if (ctx->wl->xdg_surface_configured && ctx->wl->xdg_toplevel_configured) {
         surface_configure_finished(ctx);
     }
+
+    (void)xdg_surface;
 }
 
 static const struct xdg_surface_listener xdg_surface_listener = {
@@ -418,6 +424,7 @@ static void xdg_toplevel_event_configure(
         surface_configure_finished(ctx);
     }
 
+    (void)xdg_toplevel;
     (void)states;
 }
 
@@ -428,7 +435,7 @@ static void xdg_toplevel_event_close(
     log_debug("[debug] xdg_surface: closing\n");
     ctx->wl->closing = true;
 
-    (void)ctx;
+    (void)xdg_toplevel;
 }
 
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {

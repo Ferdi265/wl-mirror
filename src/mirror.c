@@ -56,6 +56,8 @@ static void dmabuf_frame_event_frame(
 
     ctx->mirror->state = STATE_WAIT_OBJECTS;
     ctx->mirror->processed_objects = 0;
+
+    (void)frame;
 }
 
 static void dmabuf_frame_event_object(
@@ -83,6 +85,8 @@ static void dmabuf_frame_event_object(
     if (ctx->mirror->processed_objects == ctx->mirror->num_objects) {
         ctx->mirror->state = STATE_WAIT_READY;
     }
+
+    (void)frame;
 }
 
 static void dmabuf_frame_event_ready(
@@ -186,7 +190,7 @@ static void dmabuf_frame_event_ready(
     resize_viewport_egl(ctx);
 
     log_debug("[debug] dmabuf_frame: closing dmabuf fds\n");
-    for (int i = 0; i < ctx->mirror->num_objects; i++) {
+    for (unsigned int i = 0; i < ctx->mirror->num_objects; i++) {
         close(ctx->mirror->objects[i].fd);
         ctx->mirror->objects[i].fd = -1;
     }
@@ -195,6 +199,7 @@ static void dmabuf_frame_event_ready(
     ctx->mirror->frame = NULL;
     ctx->mirror->state = STATE_READY;
 
+    (void)frame;
     (void)sec_hi;
     (void)sec_lo;
     (void)nsec;
@@ -232,10 +237,12 @@ static void dmabuf_frame_event_cancel(
     }
 
     log_debug("[debug] dmabuf_frame: closing files\n");
-    for (int i = 0; i < ctx->mirror->num_objects; i++) {
+    for (unsigned int i = 0; i < ctx->mirror->num_objects; i++) {
         if (ctx->mirror->objects[i].fd != -1) close(ctx->mirror->objects[i].fd);
         ctx->mirror->objects[i].fd = -1;
     }
+
+    (void)frame;
 }
 
 static const struct zwlr_export_dmabuf_frame_v1_listener dmabuf_frame_listener = {
@@ -311,6 +318,9 @@ static void frame_callback_event_done(
         log_debug("[debug] frame_callback: adding dmabuf_frame event listener\n");
         zwlr_export_dmabuf_frame_v1_add_listener(ctx->mirror->frame, &dmabuf_frame_listener, (void *)ctx);
     }
+
+    (void)frame_callback;
+    (void)msec;
 }
 
 static const struct wl_callback_listener frame_callback_listener = {
