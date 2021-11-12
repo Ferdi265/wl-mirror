@@ -272,23 +272,23 @@ void resize_viewport_egl(ctx_t * ctx) {
 
     printf("[info] resize_viewport_egl: resizing viewport\n");
     glViewport((win_width - view_width) / 2, (win_height - view_height) / 2, view_width, view_height);
-
-    printf("[info] resize_viewport_egl: redrawing frame\n");
-    draw_texture_egl(ctx);
-
-    printf("[info] resize_viewport_egl: swapping buffers\n");
-    if (eglSwapBuffers(ctx->egl->display, ctx->egl->surface) != EGL_TRUE) {
-        printf("[error] configure_resize_egl: failed to swap buffers\n");
-        exit_fail(ctx);
-    }
 }
 
-// --- configure_resize_handler_egl ---
+// --- resize_window_egl ---
 
 void resize_window_egl(ctx_t * ctx) {
     printf("[info] resize_window_egl: resizing EGL window\n");
     wl_egl_window_resize(ctx->egl->window, ctx->wl->scale * ctx->wl->width, ctx->wl->scale * ctx->wl->height, 0, 0);
     resize_viewport_egl(ctx);
+
+    printf("[info] resize_window_egl: redrawing frame\n");
+    draw_texture_egl(ctx);
+
+    printf("[info] resize_window_egl: swapping buffers\n");
+    if (eglSwapBuffers(ctx->egl->display, ctx->egl->surface) != EGL_TRUE) {
+        printf("[error] configure_resize_egl: failed to swap buffers\n");
+        exit_fail(ctx);
+    }
 }
 
 // --- cleanup_egl ---
