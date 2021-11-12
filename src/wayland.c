@@ -44,11 +44,11 @@ static void output_event_scale(
     printf("[info] output: output %s has scale %d\n", node->name, scale);
     int32_t old_scale = ctx->wl->scale;
     node->scale = scale;
-    ctx->wl->scale = scale;
     if (ctx->wl->current_output != NULL && ctx->wl->current_output->output == output) {
+        printf("[info] output: updating window scale\n");
+        ctx->wl->scale = scale;
+        wl_surface_set_buffer_scale(ctx->wl->surface, scale);
         if (ctx->egl != NULL && old_scale != scale) {
-            printf("[info] output: updating window scale\n");
-            wl_surface_set_buffer_scale(ctx->wl->surface, scale);
             resize_window_egl(ctx);
         }
     }
