@@ -68,7 +68,7 @@ int main(int argc, char ** argv) {
             ctx->opt->show_cursor = true;
         } else if (strcmp(argv[0], "-n") == 0 || strcmp(argv[0], "--no-show-cursor") == 0) {
             ctx->opt->show_cursor = false;
-        } else if (strcmp(argv[0], "-") == 0 || strcmp(argv[0], "--scaling") == 0) {
+        } else if (strcmp(argv[0], "-s") == 0 || strcmp(argv[0], "--scaling") == 0) {
             if (argc < 2) {
                 printf("[error] main: option %s requires an argument\n", argv[0]);
                 exit_fail(ctx);
@@ -99,8 +99,7 @@ int main(int argc, char ** argv) {
     }
 
     if (argc != 1) {
-        printf("usage: wl-mirror <output>\n");
-        exit_fail(ctx);
+        usage(ctx);
     }
     char * output = argv[0];
 
