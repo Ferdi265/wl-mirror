@@ -24,9 +24,9 @@ static void usage(ctx_t * ctx) {
     printf("options:\n");
     printf("  -h,   --help             show this help\n");
     printf("  -v,   --verbose          enable debug logging\n");
-    printf("  -c,   --show-cursor      show the cursor on the mirrored screen\n");
+    printf("  -c,   --show-cursor      show the cursor on the mirrored screen (default)\n");
     printf("  -n,   --no-show-cursor   don't show the cursor on the mirrored screen\n");
-    printf("  -s l, --scaling linear   use linear scaling\n");
+    printf("  -s l, --scaling linear   use linear scaling (default)\n");
     printf("  -s n, --scaling nearest  use nearest neighbor scaling\n");
     printf("  -s e, --scaling exact    only scale to exact multiples of the \n");
     cleanup(ctx);
