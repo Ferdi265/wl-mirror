@@ -5,6 +5,13 @@ by mirroring an output onto a client surface.
 
 This project is currently a working prototype, but work is still ongoing.
 
+## Features
+
+- Mirror an output onto a resizable window
+- Mirror an output onto another output by fullscreening the window
+- Reacts to changes in output scale
+- Preserves aspect ratio
+
 ## Usage
 
 ```
