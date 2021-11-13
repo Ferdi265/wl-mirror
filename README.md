@@ -12,6 +12,8 @@ This project is currently a working prototype, but work is still ongoing.
 - Reacts to changes in output scale
 - Preserves aspect ratio
 
+![demo screenshot](https://user-images.githubusercontent.com/4077106/141605347-37ba690c-f885-422a-93a6-81d5a48bee13.png)
+
 ## Usage
 
 ```
