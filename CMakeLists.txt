@@ -6,7 +6,6 @@ project(wl-mirror C)
 # wayland protocols needed by wl-mirror
 option(FORCE_SYSTEM_WL_PROTOCOLS "force use of system wayland-protocols" OFF)
 option(FORCE_SYSTEM_WLR_PROTOCOLS "force use of system wlr-protocols" OFF)
-option(WL_MIRROR_LOG_DEBUG "enable very verbose debug logging" OFF)
 set(WL_PROTOCOL_DIR "/usr/share/wayland-protocols/" CACHE STRING "wayland-protocols directory")
 set(WLR_PROTOCOL_DIR "/usr/share/wlr-protocols/" CACHE STRING "wlr-protocols directory")
 set(PROTOCOLS
@@ -25,9 +24,6 @@ add_executable(wl-mirror ${sources})
 target_compile_options(wl-mirror PRIVATE -Wall -Wextra)
 target_link_libraries(wl-mirror PRIVATE wayland-client wayland-egl EGL GLESv2 protocols)
 target_include_directories(wl-mirror PRIVATE include/)
-if(${WL_MIRROR_LOG_DEBUG})
-    target_compile_definitions(wl-mirror PRIVATE -DWL_MIRROR_LOG_DEBUG)
-endif()
 
 # installation rule
 install(TARGETS wl-mirror DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")

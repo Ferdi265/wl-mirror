@@ -4,7 +4,7 @@
 #include "context.h"
 
 void cleanup(ctx_t * ctx) {
-    log_debug("cleanup: deallocating resources\n");
+    log_debug(ctx, "cleanup: deallocating resources\n");
     if (ctx == NULL) return;
     if (ctx->mirror != NULL) cleanup_mirror(ctx);
     if (ctx->egl != NULL) cleanup_egl(ctx);
@@ -23,6 +23,7 @@ static void usage(ctx_t * ctx) {
     printf("\n");
     printf("options:\n");
     printf("  -h,   --help             show this help\n");
+    printf("  -v,   --verbose          enable debug logging\n");
     printf("  -c,   --show-cursor      show the cursor on the mirrored screen\n");
     printf("  -n,   --no-show-cursor   don't show the cursor on the mirrored screen\n");
     printf("  -s l, --scaling linear   use linear scaling\n");
@@ -33,7 +34,6 @@ static void usage(ctx_t * ctx) {
 }
 
 int main(int argc, char ** argv) {
-    log_debug("main: allocating context structure\n");
     ctx_t * ctx = malloc(sizeof (ctx_t));
     if (ctx == NULL) {
         log_error("main: failed to allocate context structure\n");
@@ -45,13 +45,13 @@ int main(int argc, char ** argv) {
     ctx->egl = NULL;
     ctx->mirror = NULL;
 
-    log_debug("main: allocating option context structure\n");
     ctx->opt = malloc(sizeof (ctx_opt_t));
     if (ctx->opt == NULL) {
         log_error("main: failed to allocate option context structure\n");
         exit_fail(ctx);
     }
 
+    ctx->opt->verbose = false;
     ctx->opt->show_cursor = true;
     ctx->opt->scaling = SCALE_LINEAR;
 
@@ -64,6 +64,8 @@ int main(int argc, char ** argv) {
     while (argc > 0 && argv[0][0] == '-') {
         if (strcmp(argv[0], "-h") == 0 || strcmp(argv[0], "--help") == 0) {
             usage(ctx);
+        } else if (strcmp(argv[0], "-v") == 0 || strcmp(argv[0], "--verbose") == 0) {
+            ctx->opt->verbose = true;
         } else if (strcmp(argv[0], "-c") == 0 || strcmp(argv[0], "--show-cursor") == 0) {
             ctx->opt->show_cursor = true;
         } else if (strcmp(argv[0], "-n") == 0 || strcmp(argv[0], "--no-show-cursor") == 0) {
@@ -103,18 +105,18 @@ int main(int argc, char ** argv) {
     }
     char * output = argv[0];
 
-    log_debug("main: initializing wayland\n");
+    log_debug(ctx, "main: initializing wayland\n");
     init_wl(ctx);
 
-    log_debug("main: initializing EGL\n");
+    log_debug(ctx, "main: initializing EGL\n");
     init_egl(ctx);
 
-    log_debug("main: initializing mirror\n");
+    log_debug(ctx, "main: initializing mirror\n");
     init_mirror(ctx, output);
 
-    log_debug("main: entering event loop\n");
+    log_debug(ctx, "main: entering event loop\n");
     while (wl_display_dispatch(ctx->wl->display) != -1 && !ctx->wl->closing) {}
-    log_debug("main: exiting event loop\n");
+    log_debug(ctx, "main: exiting event loop\n");
 
     cleanup(ctx);
 }

@@ -14,12 +14,7 @@
 #include "linux-dmabuf-unstable-v1.h"
 #include "wlr-export-dmabuf-unstable-v1.h"
 
-#ifdef WL_MIRROR_LOG_DEBUG
-#define log_debug(fmt, ...) fprintf(stderr, "debug: " fmt, ##__VA_ARGS__)
-#else
-#define log_debug(...)
-#endif
-
+#define log_debug(ctx, fmt, ...) if (ctx->opt->verbose) fprintf(stderr, "debug: " fmt, ##__VA_ARGS__)
 #define log_error(fmt, ...) fprintf(stderr, "error: " fmt, ##__VA_ARGS__)
 
 typedef struct ctx ctx_t;
@@ -32,6 +27,7 @@ typedef enum {
 } ctx_opt_scale_t;
 
 typedef struct {
+    bool verbose;
     bool show_cursor;
     ctx_opt_scale_t scaling;
 } ctx_opt_t;
