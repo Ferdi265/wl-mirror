@@ -28,7 +28,13 @@ options:
 - `libEGL`
 - `libGLESv2`
 - `wayland-scanner`
-- `wayland-protocols`
+
+## Building
+
+- Install Dependencies
+- Clone Submodules
+- Run `cmake -B build`
+- Run `make -C build`
 
 ## Files
 
