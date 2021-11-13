@@ -171,8 +171,13 @@ void init_egl(ctx_t * ctx) {
     log_debug("[debug] init_egl: creating texture\n");
     glGenTextures(1, &ctx->egl->texture);
     glBindTexture(GL_TEXTURE_2D, ctx->egl->texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    if (ctx->opt->scaling == SCALE_LINEAR) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
 
     GLint success;
     char errorLog[1024] = { 0 };
@@ -268,6 +273,16 @@ void resize_viewport_egl(ctx_t * ctx) {
         view_width = view_height * tex_aspect;
     } else if (win_aspect < tex_aspect) {
         view_height = view_width / tex_aspect;
+    }
+
+    if (ctx->opt->scaling == SCALE_EXACT) {
+        uint32_t width_scale = win_width / tex_width;
+        uint32_t height_scale = win_height / tex_height;
+        uint32_t scale = width_scale < height_scale ? width_scale : height_scale;
+        if (scale > 0) {
+            view_width = scale * tex_width;
+            view_height = scale * tex_height;
+        }
     }
 
     log_debug("[debug] resize_viewport_egl: resizing viewport\n");

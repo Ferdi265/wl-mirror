@@ -308,7 +308,7 @@ static void frame_callback_event_done(
 
         log_debug("[debug] frame_callback: creating wlr_dmabuf_export_frame\n");
         ctx->mirror->frame = zwlr_export_dmabuf_manager_v1_capture_output(
-            ctx->wl->dmabuf_manager, true, ctx->mirror->current->output
+            ctx->wl->dmabuf_manager, ctx->opt->show_cursor, ctx->mirror->current->output
         );
         if (ctx->mirror->frame == NULL) {
             printf("[error] frame_callback: failed to create wlr_dmabuf_export_frame\n");

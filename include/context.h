@@ -23,6 +23,17 @@
 typedef struct ctx ctx_t;
 typedef struct output_list_node output_list_node_t;
 
+typedef enum {
+    SCALE_LINEAR,
+    SCALE_NEAREST,
+    SCALE_EXACT
+} ctx_opt_scale_t;
+
+typedef struct {
+    bool show_cursor;
+    ctx_opt_scale_t scaling;
+} ctx_opt_t;
+
 struct output_list_node {
     output_list_node_t * next;
     ctx_t * ctx;
@@ -138,6 +149,7 @@ typedef struct {
 } ctx_mirror_t;
 
 struct ctx {
+    ctx_opt_t * opt;
     ctx_wl_t * wl;
     ctx_egl_t * egl;
     ctx_mirror_t * mirror;
