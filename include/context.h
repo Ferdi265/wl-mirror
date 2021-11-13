@@ -15,10 +15,12 @@
 #include "wlr-export-dmabuf-unstable-v1.h"
 
 #ifdef WL_MIRROR_LOG_DEBUG
-#define log_debug(...) printf(__VA_ARGS__)
+#define log_debug(fmt, ...) fprintf(stderr, "debug: " fmt, ##__VA_ARGS__)
 #else
 #define log_debug(...)
 #endif
+
+#define log_error(fmt, ...) fprintf(stderr, "error: " fmt, ##__VA_ARGS__)
 
 typedef struct ctx ctx_t;
 typedef struct output_list_node output_list_node_t;

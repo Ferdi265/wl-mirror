@@ -4,7 +4,7 @@
 #include "context.h"
 
 void cleanup(ctx_t * ctx) {
-    log_debug("[debug] cleanup: deallocating resources\n");
+    log_debug("cleanup: deallocating resources\n");
     if (ctx == NULL) return;
     if (ctx->mirror != NULL) cleanup_mirror(ctx);
     if (ctx->egl != NULL) cleanup_egl(ctx);
@@ -33,10 +33,10 @@ static void usage(ctx_t * ctx) {
 }
 
 int main(int argc, char ** argv) {
-    log_debug("[debug] main: allocating context structure\n");
+    log_debug("main: allocating context structure\n");
     ctx_t * ctx = malloc(sizeof (ctx_t));
     if (ctx == NULL) {
-        printf("[error] main: failed to allocate context structure\n");
+        log_error("main: failed to allocate context structure\n");
         exit_fail(ctx);
     }
 
@@ -45,10 +45,10 @@ int main(int argc, char ** argv) {
     ctx->egl = NULL;
     ctx->mirror = NULL;
 
-    log_debug("[debug] main: allocating option context structure\n");
+    log_debug("main: allocating option context structure\n");
     ctx->opt = malloc(sizeof (ctx_opt_t));
     if (ctx->opt == NULL) {
-        printf("[error] main: failed to allocate option context structure\n");
+        log_error("main: failed to allocate option context structure\n");
         exit_fail(ctx);
     }
 
@@ -70,7 +70,7 @@ int main(int argc, char ** argv) {
             ctx->opt->show_cursor = false;
         } else if (strcmp(argv[0], "-s") == 0 || strcmp(argv[0], "--scaling") == 0) {
             if (argc < 2) {
-                printf("[error] main: option %s requires an argument\n", argv[0]);
+                log_error("main: option %s requires an argument\n", argv[0]);
                 exit_fail(ctx);
             } else if (strcmp(argv[1], "l") == 0 || strcmp(argv[1], "linear") == 0) {
                 ctx->opt->scaling = SCALE_LINEAR;
@@ -79,7 +79,7 @@ int main(int argc, char ** argv) {
             } else if (strcmp(argv[1], "e") == 0 || strcmp(argv[1], "exact") == 0) {
                 ctx->opt->scaling = SCALE_EXACT;
             } else {
-                printf("[error] main: invalid scaling mode %s\n", argv[1]);
+                log_error("main: invalid scaling mode %s\n", argv[1]);
                 exit_fail(ctx);
             }
 
@@ -90,7 +90,7 @@ int main(int argc, char ** argv) {
             argc--;
             break;
         } else {
-            printf("[error] main: invalid option %s\n", argv[0]);
+            log_error("main: invalid option %s\n", argv[0]);
             exit_fail(ctx);
         }
 
@@ -103,18 +103,18 @@ int main(int argc, char ** argv) {
     }
     char * output = argv[0];
 
-    log_debug("[debug] main: initializing wayland\n");
+    log_debug("main: initializing wayland\n");
     init_wl(ctx);
 
-    log_debug("[debug] main: initializing EGL\n");
+    log_debug("main: initializing EGL\n");
     init_egl(ctx);
 
-    log_debug("[debug] main: initializing mirror\n");
+    log_debug("main: initializing mirror\n");
     init_mirror(ctx, output);
 
-    log_debug("[debug] main: entering event loop\n");
+    log_debug("main: entering event loop\n");
     while (wl_display_dispatch(ctx->wl->display) != -1 && !ctx->wl->closing) {}
-    log_debug("[debug] main: exiting event loop\n");
+    log_debug("main: exiting event loop\n");
 
     cleanup(ctx);
 }

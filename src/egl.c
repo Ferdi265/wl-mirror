@@ -61,10 +61,10 @@ static bool has_extension(const char * extension) {
 // --- init_egl ---
 
 void init_egl(ctx_t * ctx) {
-    log_debug("[debug] init_egl: allocating context structure\n");
+    log_debug("init_egl: allocating context structure\n");
     ctx->egl = malloc(sizeof (ctx_egl_t));
     if (ctx->egl == NULL) {
-        printf("[error] init_egl: failed to allocate context structure\n");
+        log_error("init_egl: failed to allocate context structure\n");
         exit_fail(ctx);
     }
 
@@ -85,25 +85,25 @@ void init_egl(ctx_t * ctx) {
     ctx->egl->texture_initialized = false;
     ctx->egl->invert_y = false;
 
-    log_debug("[debug] init_egl: creating EGL display\n");
+    log_debug("init_egl: creating EGL display\n");
     ctx->egl->display = eglGetDisplay((EGLNativeDisplayType)ctx->wl->display);
     if (ctx->egl->display == EGL_NO_DISPLAY) {
-        printf("[error] init_egl: failed to create EGL display\n");
+        log_error("init_egl: failed to create EGL display\n");
         exit_fail(ctx);
     }
 
     EGLint major, minor;
-    log_debug("[debug] init_egl: initializing EGL display\n");
+    log_debug("init_egl: initializing EGL display\n");
     if (eglInitialize(ctx->egl->display, &major, &minor) != EGL_TRUE) {
-        printf("[error] init_egl: failed to initialize EGL display\n");
+        log_error("init_egl: failed to initialize EGL display\n");
         exit_fail(ctx);
     }
-    log_debug("[debug] init_egl: initialized EGL %d.%d\n", major, minor);
+    log_debug("init_egl: initialized EGL %d.%d\n", major, minor);
 
     EGLint num_configs;
-    log_debug("[debug] init_egl: getting number of EGL configs\n");
+    log_debug("init_egl: getting number of EGL configs\n");
     if (eglGetConfigs(ctx->egl->display, NULL, 0, &num_configs) != EGL_TRUE) {
-        printf("[error] init_egl: failed to get number of EGL configs\n");
+        log_error("init_egl: failed to get number of EGL configs\n");
         exit_fail(ctx);
     }
 
@@ -115,60 +115,60 @@ void init_egl(ctx_t * ctx) {
         EGL_BLUE_SIZE, 8,
         EGL_NONE
     };
-    log_debug("[debug] init_egl: getting EGL config\n");
+    log_debug("init_egl: getting EGL config\n");
     if (eglChooseConfig(ctx->egl->display, config_attribs, &ctx->egl->config, 1, &num_configs) != EGL_TRUE) {
-        printf("[error] init_egl: failed to get EGL config\n");
+        log_error("init_egl: failed to get EGL config\n");
         exit_fail(ctx);
     }
 
     if (ctx->wl->width == 0) ctx->wl->width = 100;
     if (ctx->wl->height == 0) ctx->wl->height = 100;
-    log_debug("[debug] init_egl: creating EGL window\n");
+    log_debug("init_egl: creating EGL window\n");
     ctx->egl->window = wl_egl_window_create(ctx->wl->surface, ctx->wl->width, ctx->wl->height);
     if (ctx->egl->window == EGL_NO_SURFACE) {
-        printf("[error] init_egl: failed to create EGL window\n");
+        log_error("init_egl: failed to create EGL window\n");
         exit_fail(ctx);
     }
 
-    log_debug("[debug] init_egl: creating EGL surface\n");
+    log_debug("init_egl: creating EGL surface\n");
     ctx->egl->surface = eglCreateWindowSurface(ctx->egl->display, ctx->egl->config, ctx->egl->window, NULL);
 
     EGLint context_attribs[] = {
         EGL_CONTEXT_CLIENT_VERSION, 2,
         EGL_NONE
     };
-    log_debug("[debug] init_egl: creating EGL context\n");
+    log_debug("init_egl: creating EGL context\n");
     ctx->egl->context = eglCreateContext(ctx->egl->display, ctx->egl->config, EGL_NO_CONTEXT, context_attribs);
     if (ctx->egl->context == EGL_NO_CONTEXT) {
-        printf("[error] init_egl: failed to create EGL context\n");
+        log_error("init_egl: failed to create EGL context\n");
         exit_fail(ctx);
     }
 
-    log_debug("[debug] init_egl: activating EGL context\n");
+    log_debug("init_egl: activating EGL context\n");
     if (eglMakeCurrent(ctx->egl->display, ctx->egl->surface, ctx->egl->surface, ctx->egl->context) != EGL_TRUE) {
-        printf("[error] init_egl: failed to activate EGL context\n");
+        log_error("init_egl: failed to activate EGL context\n");
         exit_fail(ctx);
     }
 
-    log_debug("[debug] init_egl: checking for needed EGL extensions\n");
+    log_debug("init_egl: checking for needed EGL extensions\n");
     if (!has_extension("GL_OES_EGL_image")) {
-        printf("[error] init_egl: missing EGL extension GL_OES_EGL_image\n");
+        log_error("init_egl: missing EGL extension GL_OES_EGL_image\n");
         exit_fail(ctx);
     }
 
-    log_debug("[debug] init_egl: getting extension function pointers\n");
+    log_debug("init_egl: getting extension function pointers\n");
     ctx->egl->glEGLImageTargetTexture2DOES = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)eglGetProcAddress("glEGLImageTargetTexture2DOES");
     if (ctx->egl->glEGLImageTargetTexture2DOES == NULL) {
-        printf("[error] init_egl: failed to get pointer to glEGLImageTargetTexture2DOES\n");
+        log_error("init_egl: failed to get pointer to glEGLImageTargetTexture2DOES\n");
         exit_fail(ctx);
     }
 
-    log_debug("[debug] init_egl: creating vertex buffer object\n");
+    log_debug("init_egl: creating vertex buffer object\n");
     glGenBuffers(1, &ctx->egl->vbo);
     glBindBuffer(GL_ARRAY_BUFFER, ctx->egl->vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof vertex_array, vertex_array, GL_STATIC_DRAW);
 
-    log_debug("[debug] init_egl: creating texture\n");
+    log_debug("init_egl: creating texture\n");
     glGenTextures(1, &ctx->egl->texture);
     glBindTexture(GL_TEXTURE_2D, ctx->egl->texture);
     if (ctx->opt->scaling == SCALE_LINEAR) {
@@ -182,7 +182,7 @@ void init_egl(ctx_t * ctx) {
     GLint success;
     char errorLog[1024] = { 0 };
 
-    log_debug("[debug] init_egl: creating vertex shader\n");
+    log_debug("init_egl: creating vertex shader\n");
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_shader_source, NULL);
     glCompileShader(vertex_shader);
@@ -190,12 +190,12 @@ void init_egl(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(vertex_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        printf("[error] init_egl: failed to compile vertex shader: %s\n", errorLog);
+        log_error("init_egl: failed to compile vertex shader: %s\n", errorLog);
         glDeleteShader(vertex_shader);
         exit_fail(ctx);
     }
 
-    log_debug("[debug] init_egl: creating fragment shader\n");
+    log_debug("init_egl: creating fragment shader\n");
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment_shader, 1, &fragment_shader_source, NULL);
     glCompileShader(fragment_shader);
@@ -203,20 +203,20 @@ void init_egl(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(fragment_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        printf("[error] init_egl: failed to compile fragment shader: %s\n", errorLog);
+        log_error("init_egl: failed to compile fragment shader: %s\n", errorLog);
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
         exit_fail(ctx);
     }
 
-    log_debug("[debug] init_egl: creating shader program\n");
+    log_debug("init_egl: creating shader program\n");
     ctx->egl->shader_program = glCreateProgram();
     glAttachShader(ctx->egl->shader_program, vertex_shader);
     glAttachShader(ctx->egl->shader_program, fragment_shader);
     glLinkProgram(ctx->egl->shader_program);
     glGetProgramiv(ctx->egl->shader_program, GL_LINK_STATUS, &success);
     if (success != GL_TRUE) {
-        printf("[error] init_egl: failed to link shader program\n");
+        log_error("init_egl: failed to link shader program\n");
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
         glDeleteProgram(ctx->egl->shader_program);
@@ -226,12 +226,12 @@ void init_egl(ctx_t * ctx) {
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
 
-    log_debug("[debug] init_egl: redrawing frame\n");
+    log_debug("init_egl: redrawing frame\n");
     draw_texture_egl(ctx);
 
-    log_debug("[debug] init_egl: swapping buffers\n");
+    log_debug("init_egl: swapping buffers\n");
     if (eglSwapBuffers(ctx->egl->display, ctx->egl->surface) != EGL_TRUE) {
-        printf("[error] init_egl: failed to swap buffers\n");
+        log_error("init_egl: failed to swap buffers\n");
         exit_fail(ctx);
     }
 }
@@ -285,23 +285,23 @@ void resize_viewport_egl(ctx_t * ctx) {
         }
     }
 
-    log_debug("[debug] resize_viewport_egl: resizing viewport\n");
+    log_debug("resize_viewport_egl: resizing viewport\n");
     glViewport((win_width - view_width) / 2, (win_height - view_height) / 2, view_width, view_height);
 }
 
 // --- resize_window_egl ---
 
 void resize_window_egl(ctx_t * ctx) {
-    log_debug("[debug] resize_window_egl: resizing EGL window\n");
+    log_debug("resize_window_egl: resizing EGL window\n");
     wl_egl_window_resize(ctx->egl->window, ctx->wl->scale * ctx->wl->width, ctx->wl->scale * ctx->wl->height, 0, 0);
     resize_viewport_egl(ctx);
 
-    log_debug("[debug] resize_window_egl: redrawing frame\n");
+    log_debug("resize_window_egl: redrawing frame\n");
     draw_texture_egl(ctx);
 
-    log_debug("[debug] resize_window_egl: swapping buffers\n");
+    log_debug("resize_window_egl: swapping buffers\n");
     if (eglSwapBuffers(ctx->egl->display, ctx->egl->surface) != EGL_TRUE) {
-        printf("[error] configure_resize_egl: failed to swap buffers\n");
+        log_error("configure_resize_egl: failed to swap buffers\n");
         exit_fail(ctx);
     }
 }
@@ -311,7 +311,7 @@ void resize_window_egl(ctx_t * ctx) {
 void cleanup_egl(ctx_t *ctx) {
     if (ctx->egl == NULL) return;
 
-    log_debug("[debug] cleanup_egl: destroying EGL objects\n");
+    log_debug("cleanup_egl: destroying EGL objects\n");
     if (ctx->egl->shader_program != 0) glDeleteProgram(ctx->egl->shader_program);
     if (ctx->egl->texture != 0) glDeleteTextures(1, &ctx->egl->texture);
     if (ctx->egl->vbo != 0) glDeleteBuffers(1, &ctx->egl->vbo);
