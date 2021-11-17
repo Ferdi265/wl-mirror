@@ -19,4 +19,7 @@ typedef struct ctx_opt {
     const char * output;
 } ctx_opt_t;
 
+bool parse_scaling_option(scale_t * scaling, const char * scaling_str);
+bool parse_transform_option(transform_t * transform, const char * transform_str);
+
 #endif
