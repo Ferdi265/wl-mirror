@@ -13,7 +13,36 @@ static void output_event_geometry(
     output_list_node_t * node = (output_list_node_t *)data;
     ctx_t * ctx = node->ctx;
 
-    log_debug(ctx, "output: output %s has transform %d\n", node->name, transform);
+    if (ctx->opt->verbose) {
+        log_debug(ctx, "output: output %s has transform ", node->name);
+        switch (transform) {
+            case WL_OUTPUT_TRANSFORM_NORMAL:
+                fprintf(stderr, "normal");
+                break;
+            case WL_OUTPUT_TRANSFORM_90:
+                fprintf(stderr, "90ccw");
+                break;
+            case WL_OUTPUT_TRANSFORM_180:
+                fprintf(stderr, "180ccw");
+                break;
+            case WL_OUTPUT_TRANSFORM_270:
+                fprintf(stderr, "270ccw");
+                break;
+            case WL_OUTPUT_TRANSFORM_FLIPPED:
+                fprintf(stderr, "flipX");
+                break;
+            case WL_OUTPUT_TRANSFORM_FLIPPED_90:
+                fprintf(stderr, "flipX-90ccw");
+                break;
+            case WL_OUTPUT_TRANSFORM_FLIPPED_180:
+                fprintf(stderr, "flipX-180ccw");
+                break;
+            case WL_OUTPUT_TRANSFORM_FLIPPED_270:
+                fprintf(stderr, "flipX-270ccw");
+                break;
+        }
+        fprintf(stderr, "\n");
+    }
 
     if (node->transform != (uint32_t)transform) {
         log_debug(ctx, "output: updating output transform\n");
