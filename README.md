@@ -11,6 +11,8 @@ This project is currently a working prototype, but work is still ongoing.
 - Mirror an output onto another output by fullscreening the window
 - Reacts to changes in output scale
 - Preserves aspect ratio
+- Corrects for flipped or rotated outputs
+- Supports custom flips or rotations
 
 ![demo screenshot](https://user-images.githubusercontent.com/4077106/141605347-37ba690c-f885-422a-93a6-81d5a48bee13.png)
 
@@ -27,6 +29,18 @@ options:
   -s l, --scaling linear   use linear scaling (default)
   -s n, --scaling nearest  use nearest neighbor scaling
   -s e, --scaling exact    only scale to exact multiples of the output size
+  -t T, --transform T      apply custom transform T
+
+transforms:
+  transforms are specified as a dash-separated list of flips followed by a rotation
+  flips are applied before rotations
+  - normal                         no transformation
+  - flipX, flipY                   flip the X or Y coordinate
+  - 0cw,  90cw,  180cw,  270cw     apply a clockwise rotation
+  - 0ccw, 90ccw, 180ccw, 270ccw    apply a counter-clockwise rotation
+  the following transformation options are provided for compatibility with sway output transforms
+  - flipped                        flip the X coordinate
+  - 0,    90,    180,    270       apply a clockwise rotation
 ```
 
 ## Dependencies
@@ -51,3 +65,4 @@ options:
 - `src/wayland.c`: Wayland and `xdg_surface` boilerplate
 - `src/egl.c`: EGL boilerplate
 - `src/mirror.c`: output mirroring code
+- `src/transform.c`: matrix transformation code
