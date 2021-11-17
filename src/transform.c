@@ -120,3 +120,35 @@ void mat3_apply_invert_y(mat3_t * mat, bool invert_y) {
         mat3_mul(&mat_flip_y, mat);
     }
 }
+
+void viewport_apply_transform(uint32_t * width, uint32_t * height, transform_t transform) {
+    uint32_t w = *width;
+    uint32_t h = *height;
+
+    switch (transform.rotation) {
+        case ROT_CCW_90:
+        case ROT_CCW_270:
+            *height = w;
+            *width = h;
+            break;
+        default:
+            break;
+    }
+}
+
+void viewport_apply_wayland_transform(uint32_t * width, uint32_t * height, enum wl_output_transform transform) {
+    uint32_t w = *width;
+    uint32_t h = *height;
+
+    switch (transform) {
+        case WL_OUTPUT_TRANSFORM_90:
+        case WL_OUTPUT_TRANSFORM_270:
+        case WL_OUTPUT_TRANSFORM_FLIPPED_90:
+        case WL_OUTPUT_TRANSFORM_FLIPPED_270:
+            *height = w;
+            *width = h;
+            break;
+        default:
+            break;
+    }
+}

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "context.h"
+#include "transform.h"
 
 // --- shaders ---
 
@@ -269,7 +270,11 @@ void resize_viewport_egl(ctx_t * ctx) {
     uint32_t view_width = win_width;
     uint32_t view_height = win_height;
 
-    // TODO: apply viewport transform
+    if (ctx->mirror != NULL) {
+        viewport_apply_wayland_transform(&tex_width, &tex_height, ctx->mirror->current->transform);
+    }
+
+    viewport_apply_transform(&tex_width, &tex_height, ctx->opt->transform);
 
     float win_aspect = (float)win_width / win_height;
     float tex_aspect = (float)tex_width / tex_height;

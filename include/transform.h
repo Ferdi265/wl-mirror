@@ -36,4 +36,7 @@ void mat3_apply_transform(mat3_t * mat, transform_t transform);
 void mat3_apply_wayland_transform(mat3_t * mat, enum wl_output_transform transform);
 void mat3_apply_invert_y(mat3_t * mat, bool invert_y);
 
+void viewport_apply_transform(uint32_t * width, uint32_t * height, transform_t transform);
+void viewport_apply_wayland_transform(uint32_t * width, uint32_t * height, enum wl_output_transform transform);
+
 #endif
