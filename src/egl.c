@@ -249,8 +249,6 @@ void draw_texture_egl(ctx_t *ctx) {
     if (ctx->egl->texture_initialized) {
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
-
-    glFlush();
 }
 
 // --- resize_viewport_egl ---
