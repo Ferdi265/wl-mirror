@@ -7,15 +7,14 @@
 
 const char * vertex_shader_source =
     "#version 100\n"
-    "uniform bool uInvertY;\n"
+    "precision mediump float;\n"
+    "uniform mat3 uTexTransform;\n"
     "attribute vec2 aPosition;\n"
     "attribute vec2 aTexCoord;\n"
     "varying vec2 vTexCoord;\n"
     "void main() {\n"
-    "    float y = aPosition.y;\n"
-    "    if (uInvertY) y = -y;\n"
-    "    gl_Position = vec4(aPosition.x, y, 0.0, 1.0);\n"
-    "    vTexCoord = aTexCoord;\n"
+    "    gl_Position = vec4(aPosition, 0.0, 1.0);\n"
+    "    vTexCoord = (uTexTransform * vec3(aTexCoord, 1.0)).xy;\n"
     "}\n"
 ;
 
@@ -80,9 +79,8 @@ void init_egl(ctx_t * ctx) {
     ctx->egl->vbo = 0;
     ctx->egl->texture = 0;
     ctx->egl->shader_program = 0;
-    ctx->egl->invert_y_uniform = 0;
+    ctx->egl->texture_transform_uniform = 0;
     ctx->egl->texture_initialized = false;
-    ctx->egl->invert_y = false;
 
     log_debug(ctx, "init_egl: creating EGL display\n");
     ctx->egl->display = eglGetDisplay((EGLNativeDisplayType)ctx->wl->display);
@@ -221,9 +219,15 @@ void init_egl(ctx_t * ctx) {
         glDeleteProgram(ctx->egl->shader_program);
         exit_fail(ctx);
     }
-    ctx->egl->invert_y_uniform = glGetUniformLocation(ctx->egl->shader_program, "uInvertY");
+    ctx->egl->texture_transform_uniform = glGetUniformLocation(ctx->egl->shader_program, "uTexTransform");
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
+
+    log_debug(ctx, "init_egl: setting initial texture transform matrix\n");
+    mat3_t texture_transform;
+    mat3_identity(&texture_transform);
+    mat3_transpose(&texture_transform);
+    glUniformMatrix3fv(ctx->egl->texture_transform_uniform, 1, false, (float *)texture_transform.data);
 
     log_debug(ctx, "init_egl: redrawing frame\n");
     draw_texture_egl(ctx);
@@ -242,7 +246,6 @@ void draw_texture_egl(ctx_t *ctx) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     if (ctx->egl->texture_initialized) {
-        glUniform1i(ctx->egl->invert_y_uniform, ctx->egl->invert_y);
         glUseProgram(ctx->egl->shader_program);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof (float), (void *)(0 * sizeof (float)));
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof (float), (void *)(2 * sizeof (float)));
@@ -266,6 +269,8 @@ void resize_viewport_egl(ctx_t * ctx) {
     uint32_t view_width = win_width;
     uint32_t view_height = win_height;
 
+    // TODO: apply viewport transform
+
     float win_aspect = (float)win_width / win_height;
     float tex_aspect = (float)tex_width / tex_height;
     if (win_aspect > tex_aspect) {
@@ -286,6 +291,20 @@ void resize_viewport_egl(ctx_t * ctx) {
 
     log_debug(ctx, "resize_viewport_egl: resizing viewport\n");
     glViewport((win_width - view_width) / 2, (win_height - view_height) / 2, view_width, view_height);
+
+    log_debug(ctx, "resize_viewport_egl: calculating texture transform matrix\n");
+    mat3_t texture_transform;
+    mat3_identity(&texture_transform);
+
+    if (ctx->mirror != NULL) {
+        mat3_apply_invert_y(&texture_transform, ctx->mirror->invert_y);
+        mat3_apply_wayland_transform(&texture_transform, ctx->mirror->current->transform);
+        mat3_apply_transform(&texture_transform, ctx->opt->transform);
+    }
+
+    log_debug(ctx, "resize_viewport_egl: setting texture transform matrix\n");
+    mat3_transpose(&texture_transform);
+    glUniformMatrix3fv(ctx->egl->texture_transform_uniform, 1, false, (float *)texture_transform.data);
 }
 
 // --- resize_window_egl ---

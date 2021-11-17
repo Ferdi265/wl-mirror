@@ -13,13 +13,16 @@ static void output_event_geometry(
     output_list_node_t * node = (output_list_node_t *)data;
     ctx_t * ctx = node->ctx;
 
-    // TODO: nicer debug print
     log_debug(ctx, "output: output %s has transform %d\n", node->name, transform);
-    node->transform = transform;
 
-    // TODO: notify egl of new transform
+    if (node->transform != (uint32_t)transform) {
+        log_debug(ctx, "output: updating output transform\n");
+        node->transform = transform;
+        if (ctx->mirror != NULL && ctx->mirror->current->output == output) {
+            resize_viewport_egl(ctx);
+        }
+    }
 
-    (void)output;
     (void)x;
     (void)y;
     (void)physical_width;

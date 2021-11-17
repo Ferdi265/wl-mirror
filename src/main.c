@@ -54,6 +54,7 @@ int main(int argc, char ** argv) {
     ctx->opt->verbose = false;
     ctx->opt->show_cursor = true;
     ctx->opt->scaling = SCALE_LINEAR;
+    ctx->opt->transform = (transform_t){ .rotation = ROT_CW_0, .flip_x = false, .flip_y = false };
 
     if (argc > 0) {
         // skip program name

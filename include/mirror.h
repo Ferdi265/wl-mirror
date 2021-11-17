@@ -31,6 +31,7 @@ typedef struct ctx_mirror {
     struct output_list_node * current;
     struct wl_callback * frame_callback;
     struct zwlr_export_dmabuf_frame_v1 * frame;
+    bool invert_y;
 
     // gl data
     EGLImage frame_image;

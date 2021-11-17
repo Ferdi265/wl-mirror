@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "transform.h"
 
 typedef enum {
     SCALE_LINEAR,
@@ -14,6 +15,7 @@ typedef struct ctx_opt {
     bool verbose;
     bool show_cursor;
     scale_t scaling;
+    transform_t transform;
     const char * output;
 } ctx_opt_t;
 

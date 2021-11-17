@@ -28,9 +28,8 @@ typedef struct ctx_egl {
     GLuint vbo;
     GLuint texture;
     GLuint shader_program;
-    GLint invert_y_uniform;
+    GLint texture_transform_uniform;
     bool texture_initialized;
-    bool invert_y;
 } ctx_egl_t;
 
 void init_egl(struct ctx * ctx);

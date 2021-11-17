@@ -184,7 +184,7 @@ static void dmabuf_frame_event_ready(
     ctx->egl->texture_initialized = true;
 
     log_debug(ctx, "dmabuf_frame: setting buffer flags\n");
-    ctx->egl->invert_y = ctx->mirror->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
+    ctx->mirror->invert_y = ctx->mirror->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
 
     log_debug(ctx, "dmabuf_frame: setting frame aspect ratio\n");
     ctx->egl->width = ctx->mirror->width;
@@ -342,6 +342,7 @@ void init_mirror(ctx_t * ctx) {
     ctx->mirror->current = NULL;
     ctx->mirror->frame_callback = NULL;
     ctx->mirror->frame = NULL;
+    ctx->mirror->invert_y = false;
 
     ctx->mirror->width = 0;
     ctx->mirror->height = 0;
