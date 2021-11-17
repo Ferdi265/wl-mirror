@@ -59,6 +59,7 @@ typedef struct ctx_wl {
     bool xdg_toplevel_configured;
     bool configured;
     bool closing;
+    bool initialized;
 } ctx_wl_t;
 
 void init_wl(struct ctx * ctx);

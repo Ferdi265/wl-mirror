@@ -54,6 +54,7 @@ typedef struct ctx_mirror {
     // state flags
     dmabuf_state_t state;
     uint32_t processed_objects;
+    bool initialized;
 } ctx_mirror_t;
 
 void init_mirror(struct ctx * ctx);

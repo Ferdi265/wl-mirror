@@ -11,10 +11,10 @@
 #include "mirror.h"
 
 typedef struct ctx {
-    ctx_opt_t * opt;
-    ctx_wl_t * wl;
-    ctx_egl_t * egl;
-    ctx_mirror_t * mirror;
+    ctx_opt_t opt;
+    ctx_wl_t wl;
+    ctx_egl_t egl;
+    ctx_mirror_t mirror;
 } ctx_t;
 
 void exit_fail(ctx_t * ctx);
