@@ -10,7 +10,15 @@ static void output_event_geometry(
     int32_t x, int32_t y, int32_t physical_width, int32_t physical_height,
     int32_t subpixel, const char * make, const char * model, int32_t transform
 ) {
-    (void)data;
+    output_list_node_t * node = (output_list_node_t *)data;
+    ctx_t * ctx = node->ctx;
+
+    // TODO: nicer debug print
+    log_debug(ctx, "output: output %s has transform %d\n", node->name, transform);
+    node->transform = transform;
+
+    // TODO: notify egl of new transform
+
     (void)output;
     (void)x;
     (void)y;

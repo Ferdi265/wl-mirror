@@ -21,6 +21,7 @@ typedef struct output_list_node {
     int32_t width;
     int32_t height;
     int32_t scale;
+    enum wl_output_transform transform;
 } output_list_node_t;
 
 typedef struct ctx_wl {
