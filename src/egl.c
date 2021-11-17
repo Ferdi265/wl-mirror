@@ -99,12 +99,6 @@ void init_egl(ctx_t * ctx) {
     log_debug(ctx, "init_egl: initialized EGL %d.%d\n", major, minor);
 
     EGLint num_configs;
-    log_debug(ctx, "init_egl: getting number of EGL configs\n");
-    if (eglGetConfigs(ctx->egl->display, NULL, 0, &num_configs) != EGL_TRUE) {
-        log_error("init_egl: failed to get number of EGL configs\n");
-        exit_fail(ctx);
-    }
-
     EGLint config_attribs[] = {
         EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
