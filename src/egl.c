@@ -32,12 +32,12 @@ const char * fragment_shader_source =
 // --- buffers ---
 
 const float vertex_array[] = {
-    -1.0, -1.0, 0.0, 1.0,
-     1.0, -1.0, 1.0, 1.0,
-    -1.0,  1.0, 0.0, 0.0,
-    -1.0,  1.0, 0.0, 0.0,
-     1.0, -1.0, 1.0, 1.0,
-     1.0,  1.0, 1.0, 0.0
+    -1.0, -1.0, 0.0, 0.0,
+     1.0, -1.0, 1.0, 0.0,
+    -1.0,  1.0, 0.0, 1.0,
+    -1.0,  1.0, 0.0, 1.0,
+     1.0, -1.0, 1.0, 0.0,
+     1.0,  1.0, 1.0, 1.0
 };
 
 // --- has_extension ---
@@ -271,7 +271,7 @@ void resize_viewport_egl(ctx_t * ctx) {
     uint32_t view_height = win_height;
 
     if (ctx->mirror != NULL) {
-        viewport_apply_wayland_transform(&tex_width, &tex_height, ctx->mirror->current->transform);
+        viewport_apply_inverse_output_transform(&tex_width, &tex_height, ctx->mirror->current->transform);
     }
 
     viewport_apply_transform(&tex_width, &tex_height, ctx->opt->transform);
@@ -303,8 +303,9 @@ void resize_viewport_egl(ctx_t * ctx) {
 
     if (ctx->mirror != NULL) {
         mat3_apply_invert_y(&texture_transform, ctx->mirror->invert_y);
-        mat3_apply_wayland_transform(&texture_transform, ctx->mirror->current->transform);
+        mat3_apply_inverse_output_transform(&texture_transform, ctx->mirror->current->transform);
         mat3_apply_transform(&texture_transform, ctx->opt->transform);
+        mat3_apply_invert_y(&texture_transform, true); // OpenGL (0,0) is bottom left, not top left
     }
 
     log_debug(ctx, "resize_viewport_egl: setting texture transform matrix\n");
