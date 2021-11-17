@@ -8,21 +8,21 @@ static const mat3_t mat_identity = { .data = {
     {  0,  0,  1 }
 }};
 
-static const mat3_t mat_rot_cw_90 = { .data = {
-    {  0, -1,  1 },
-    {  1,  0,  0 },
-    {  0,  0,  1 }
-}};
-
-static const mat3_t mat_rot_cw_180 = { .data = {
-    { -1,  0,  1 },
-    {  0, -1,  1 },
-    {  0,  0,  1 }
-}};
-
-static const mat3_t mat_rot_cw_270 = { .data = {
+static const mat3_t mat_rot_ccw_90 = { .data = {
     {  0,  1,  0 },
     { -1,  0,  1 },
+    {  0,  0,  1 }
+}};
+
+static const mat3_t mat_rot_ccw_180 = { .data = {
+    { -1,  0,  1 },
+    {  0, -1,  1 },
+    {  0,  0,  1 }
+}};
+
+static const mat3_t mat_rot_ccw_270 = { .data = {
+    {  0, -1,  1 },
+    {  1,  0,  0 },
     {  0,  0,  1 }
 }};
 
@@ -66,17 +66,20 @@ void mat3_mul(const mat3_t * mul, mat3_t * dest) {
 }
 
 void mat3_apply_transform(mat3_t * mat, transform_t transform) {
+    // apply inverse transformation matrix as we need to transform
+    // from OpenGL space to dmabuf space
+
     switch (transform.rotation) {
         case ROT_NORMAL:
             break;
         case ROT_CW_90:
-            mat3_mul(&mat_rot_cw_90, mat);
+            mat3_mul(&mat_rot_ccw_90, mat);
             break;
         case ROT_CW_180:
-            mat3_mul(&mat_rot_cw_180, mat);
+            mat3_mul(&mat_rot_ccw_180, mat);
             break;
         case ROT_CW_270:
-            mat3_mul(&mat_rot_cw_270, mat);
+            mat3_mul(&mat_rot_ccw_270, mat);
             break;
     }
 
@@ -84,33 +87,35 @@ void mat3_apply_transform(mat3_t * mat, transform_t transform) {
     if (transform.flip_y) mat3_mul(&mat_flip_y, mat);
 }
 
-void mat3_apply_inverse_output_transform(mat3_t * mat, enum wl_output_transform transform) {
+void mat3_apply_output_transform(mat3_t * mat, enum wl_output_transform transform) {
+    // wl_output transform is already inverted
+
     switch (transform) {
         case WL_OUTPUT_TRANSFORM_NORMAL:
             break;
         case WL_OUTPUT_TRANSFORM_90:
-            mat3_mul(&mat_rot_cw_90, mat);
+            mat3_mul(&mat_rot_ccw_90, mat);
             break;
         case WL_OUTPUT_TRANSFORM_180:
-            mat3_mul(&mat_rot_cw_180, mat);
+            mat3_mul(&mat_rot_ccw_180, mat);
             break;
         case WL_OUTPUT_TRANSFORM_270:
-            mat3_mul(&mat_rot_cw_270, mat);
+            mat3_mul(&mat_rot_ccw_270, mat);
             break;
         case WL_OUTPUT_TRANSFORM_FLIPPED:
             mat3_mul(&mat_flip_x, mat);
             break;
         case WL_OUTPUT_TRANSFORM_FLIPPED_90:
             mat3_mul(&mat_flip_x, mat);
-            mat3_mul(&mat_rot_cw_90, mat);
+            mat3_mul(&mat_rot_ccw_90, mat);
             break;
         case WL_OUTPUT_TRANSFORM_FLIPPED_180:
             mat3_mul(&mat_flip_x, mat);
-            mat3_mul(&mat_rot_cw_180, mat);
+            mat3_mul(&mat_rot_ccw_180, mat);
             break;
         case WL_OUTPUT_TRANSFORM_FLIPPED_270:
             mat3_mul(&mat_flip_x, mat);
-            mat3_mul(&mat_rot_cw_270, mat);
+            mat3_mul(&mat_rot_ccw_270, mat);
             break;
     }
 }
@@ -136,7 +141,7 @@ void viewport_apply_transform(uint32_t * width, uint32_t * height, transform_t t
     }
 }
 
-void viewport_apply_inverse_output_transform(uint32_t * width, uint32_t * height, enum wl_output_transform transform) {
+void viewport_apply_output_transform(uint32_t * width, uint32_t * height, enum wl_output_transform transform) {
     uint32_t w = *width;
     uint32_t h = *height;
 

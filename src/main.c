@@ -136,7 +136,7 @@ static void usage(ctx_t * ctx) {
     printf("\n");
     printf("transforms:\n");
     printf("  transforms are specified as a dash-separated list of flips followed by a rotation\n");
-    printf("  flips are applied after rotations\n");
+    printf("  flips are applied before rotations\n");
     printf("  - normal                         no transformation\n");
     printf("  - flipX, flipY                   flip the X or Y coordinate\n");
     printf("  - 0cw,  90cw,  180cw,  270cw     apply a clockwise rotation\n");

@@ -271,7 +271,7 @@ void resize_viewport_egl(ctx_t * ctx) {
     uint32_t view_height = win_height;
 
     if (ctx->mirror != NULL) {
-        viewport_apply_inverse_output_transform(&tex_width, &tex_height, ctx->mirror->current->transform);
+        viewport_apply_output_transform(&tex_width, &tex_height, ctx->mirror->current->transform);
     }
 
     viewport_apply_transform(&tex_width, &tex_height, ctx->opt->transform);
@@ -302,10 +302,13 @@ void resize_viewport_egl(ctx_t * ctx) {
     mat3_identity(&texture_transform);
 
     if (ctx->mirror != NULL) {
-        mat3_apply_invert_y(&texture_transform, ctx->mirror->invert_y);
-        mat3_apply_inverse_output_transform(&texture_transform, ctx->mirror->current->transform);
+        // apply transformations in reverse order as we need to transform
+        // from OpenGL space to dmabuf space
+
+        mat3_apply_invert_y(&texture_transform, true);
         mat3_apply_transform(&texture_transform, ctx->opt->transform);
-        mat3_apply_invert_y(&texture_transform, true); // OpenGL (0,0) is bottom left, not top left
+        mat3_apply_output_transform(&texture_transform, ctx->mirror->current->transform);
+        mat3_apply_invert_y(&texture_transform, ctx->mirror->invert_y);
     }
 
     log_debug(ctx, "resize_viewport_egl: setting texture transform matrix\n");
