@@ -273,7 +273,7 @@ static void registry_event_remove(
         while (cur != NULL) {
             if (id == cur->output_id) {
                 log_debug(ctx, "registry: output %s disappeared\n", cur->name);
-                output_removed_handler_mirror(ctx, cur);
+                output_removed_mirror(ctx, cur);
 
                 log_debug(ctx, "registry: unlinking output node\n");
                 *link = cur->next;

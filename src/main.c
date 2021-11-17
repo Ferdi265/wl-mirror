@@ -103,7 +103,8 @@ int main(int argc, char ** argv) {
     if (argc != 1) {
         usage(ctx);
     }
-    char * output = argv[0];
+
+    ctx->opt->output = argv[0];
 
     log_debug(ctx, "main: initializing wayland\n");
     init_wl(ctx);
@@ -112,7 +113,7 @@ int main(int argc, char ** argv) {
     init_egl(ctx);
 
     log_debug(ctx, "main: initializing mirror\n");
-    init_mirror(ctx, output);
+    init_mirror(ctx);
 
     log_debug(ctx, "main: entering event loop\n");
     while (wl_display_dispatch(ctx->wl->display) != -1 && !ctx->wl->closing) {}

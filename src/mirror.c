@@ -4,6 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 #include "context.h"
+#include <EGL/eglext.h>
+#include "linux-dmabuf-unstable-v1.h"
 
 // --- dmabuf_frame event handlers ---
 
@@ -291,7 +293,7 @@ static void frame_callback_event_done(
         ctx->mirror->format = 0;
         ctx->mirror->num_objects = 0;
 
-        ctx_mirror_object_t empty_obj = {
+        dmabuf_object_t empty_obj = {
             .fd = -1,
             .size = 0,
             .offset = 0,
@@ -329,7 +331,7 @@ static const struct wl_callback_listener frame_callback_listener = {
 
 // --- init_mirror ---
 
-void init_mirror(ctx_t * ctx, char * output) {
+void init_mirror(ctx_t * ctx) {
     log_debug(ctx, "init_mirror: allocating context structure\n");
     ctx->mirror = malloc(sizeof (ctx_mirror_t));
     if (ctx->mirror == NULL) {
@@ -352,7 +354,7 @@ void init_mirror(ctx_t * ctx, char * output) {
     ctx->mirror->format = 0;
     ctx->mirror->num_objects = 0;
 
-    ctx_mirror_object_t empty_obj = {
+    dmabuf_object_t empty_obj = {
         .fd = -1,
         .size = 0,
         .offset = 0,
@@ -372,7 +374,7 @@ void init_mirror(ctx_t * ctx, char * output) {
     log_debug(ctx, "init_mirror: searching for output\n");
     output_list_node_t * cur = ctx->wl->outputs;
     while (cur != NULL) {
-        if (cur->name != NULL && strcmp(cur->name, output) == 0) {
+        if (cur->name != NULL && strcmp(cur->name, ctx->opt->output) == 0) {
             ctx->mirror->current = cur;
             break;
         }
@@ -381,15 +383,15 @@ void init_mirror(ctx_t * ctx, char * output) {
     }
 
     if (ctx->mirror->current == NULL) {
-        log_error("init_mirror: output %s not found\n", output);
+        log_error("init_mirror: output %s not found\n", ctx->opt->output);
         exit_fail(ctx);
     } else {
-        log_debug(ctx, "init_mirror: found output with name %s\n", output);
+        log_debug(ctx, "init_mirror: found output with name %s\n", ctx->opt->output);
     }
 
     log_debug(ctx, "init_mirror: formatting window title\n");
     char * title = NULL;
-    int status = asprintf(&title, "Wayland Output Mirror for %s", output);
+    int status = asprintf(&title, "Wayland Output Mirror for %s", ctx->opt->output);
     if (status == -1) {
         log_error("init_mirror: failed to format window title\n");
         exit_fail(ctx);
@@ -404,14 +406,14 @@ void init_mirror(ctx_t * ctx, char * output) {
     wl_callback_add_listener(ctx->mirror->frame_callback, &frame_callback_listener, (void *)ctx);
 }
 
-// --- output_removed_handler_mirror ---
+// --- output_removed_mirror ---
 
-void output_removed_handler_mirror(ctx_t * ctx, output_list_node_t * node) {
+void output_removed_mirror(ctx_t * ctx, output_list_node_t * node) {
     if (ctx->mirror == NULL) return;
     if (ctx->mirror->current == NULL) return;
     if (ctx->mirror->current != node) return;
 
-    log_error("output_removed_handler_mirror: output disappeared, closing\n");
+    log_error("output_removed_mirror: output disappeared, closing\n");
     exit_fail(ctx);
 }
 
