@@ -172,7 +172,6 @@ static void xdg_output_event_done(
     (void)xdg_output;
 }
 
-
 static const struct zxdg_output_v1_listener xdg_output_listener = {
     .description = xdg_output_event_description,
     .logical_position = xdg_output_event_logical_position,
