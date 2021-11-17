@@ -16,6 +16,10 @@ typedef struct output_list_node {
     struct wl_output * output;
     struct zxdg_output_v1 * xdg_output;
     uint32_t output_id;
+    int32_t x;
+    int32_t y;
+    int32_t width;
+    int32_t height;
     int32_t scale;
 } output_list_node_t;
 

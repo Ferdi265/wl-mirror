@@ -83,20 +83,28 @@ static void xdg_output_event_logical_position(
     void * data, struct zxdg_output_v1 * xdg_output,
     int32_t x, int32_t y
 ) {
-    (void)data;
+    output_list_node_t * node = (output_list_node_t *)data;
+    ctx_t * ctx = node->ctx;
+
+    node->x = x;
+    node->y = y;
+    log_debug(ctx, "xdg_output: output %s has logical position %d,%d\n", node->name, x, y);
+
     (void)xdg_output;
-    (void)x;
-    (void)y;
 }
 
 static void xdg_output_event_logical_size(
     void * data, struct zxdg_output_v1 * xdg_output,
     int32_t width, int32_t height
 ) {
-    (void)data;
+    output_list_node_t * node = (output_list_node_t *)data;
+    ctx_t * ctx = node->ctx;
+
+    node->width = width;
+    node->height = height;
+    log_debug(ctx, "xdg_output: output %s has logical size %dx%d\n", node->name, width, height);
+
     (void)xdg_output;
-    (void)width;
-    (void)height;
 }
 
 static void xdg_output_event_name(
@@ -213,6 +221,10 @@ static void registry_event_add(
 
         node->ctx = ctx;
         node->name = NULL;
+        node->x = 0;
+        node->y = 0;
+        node->width = 0;
+        node->height = 0;
         node->scale = 1;
 
         log_debug(ctx, "registry: linking output node\n");
