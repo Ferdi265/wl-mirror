@@ -215,14 +215,21 @@ void init_egl(ctx_t * ctx) {
         exit_fail(ctx);
     }
     ctx->egl->texture_transform_uniform = glGetUniformLocation(ctx->egl->shader_program, "uTexTransform");
+    glUseProgram(ctx->egl->shader_program);
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
 
     log_debug(ctx, "init_egl: setting initial texture transform matrix\n");
     mat3_t texture_transform;
     mat3_identity(&texture_transform);
-    mat3_transpose(&texture_transform);
     glUniformMatrix3fv(ctx->egl->texture_transform_uniform, 1, false, (float *)texture_transform.data);
+
+    log_debug(ctx, "init_egl: setting draw state\n");
+    glClearColor(0.0, 0.0, 0.0, 1);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof (float), (void *)(0 * sizeof (float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof (float), (void *)(2 * sizeof (float)));
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
 
     log_debug(ctx, "init_egl: redrawing frame\n");
     draw_texture_egl(ctx);
@@ -237,17 +244,9 @@ void init_egl(ctx_t * ctx) {
 // --- draw_texture_egl ---
 
 void draw_texture_egl(ctx_t *ctx) {
-    glClearColor(0.0, 0.0, 0.0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
 
     if (ctx->egl->texture_initialized) {
-        glUseProgram(ctx->egl->shader_program);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof (float), (void *)(0 * sizeof (float)));
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof (float), (void *)(2 * sizeof (float)));
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ARRAY_BUFFER, ctx->egl->vbo);
-        glBindTexture(GL_TEXTURE_2D, ctx->egl->texture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
