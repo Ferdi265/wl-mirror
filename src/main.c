@@ -8,6 +8,11 @@ void cleanup(ctx_t * ctx) {
     if (ctx->mirror.initialized) cleanup_mirror(ctx);
     if (ctx->egl.initialized) cleanup_egl(ctx);
     if (ctx->wl.initialized) cleanup_wl(ctx);
+    cleanup_opt(ctx);
+}
+
+void cleanup_opt(ctx_t * ctx) {
+    if (ctx->opt.output != NULL) free(ctx->opt.output);
 }
 
 void exit_fail(ctx_t * ctx) {
@@ -118,6 +123,119 @@ bool parse_transform_option(transform_t * transform, const char * transform_arg)
     return success;
 }
 
+bool parse_region_option(region_t * region, char ** output, const char * region_arg) {
+    region_t local_region = { .x = 0, .y = 0, .width = 0, .height = 0 };
+
+    char * region_str = strdup(region_arg);
+    if (region_str == NULL) {
+        log_error("parse_region_option: failed to allocate copy of region argument\n");
+        return false;
+    }
+
+    char * position = strtok(region_str, " ");
+    char * size = strtok(NULL, " ");
+    char * output_label = strtok(NULL, " ");
+
+    if (position == NULL) {
+        log_error("parse_region_option: missing region position\n");
+        free(region_str);
+        return false;
+    }
+
+    char * x = strtok(position, ",");
+    char * y = strtok(NULL, ",");
+    char * rest = strtok(NULL, ",");
+
+    if (x == NULL) {
+        log_error("parse_region_option: missing x position\n");
+        free(region_str);
+        return false;
+    } else if (y == NULL) {
+        log_error("parse_region_option: missing y position\n");
+        free(region_str);
+        return false;
+    } else if (rest != NULL) {
+        log_error("parse_region_option: unexpected position component %s\n", rest);
+        free(region_str);
+        return false;
+    }
+
+    char * end = NULL;
+    local_region.x = strtoul(x, &end, 10);
+    if (*end != '\0') {
+        log_error("parse_region_option: invalid x position %s\n", x);
+        free(region_str);
+        return false;
+    }
+
+    end = NULL;
+    local_region.y = strtoul(y, &end, 10);
+    if (*end != '\0') {
+        log_error("parse_region_option: invalid y position %s\n", y);
+        free(region_str);
+        return false;
+    }
+
+    if (size == NULL) {
+        log_error("parse_region_option: missing size\n");
+        free(region_str);
+        return false;
+    }
+
+    char * width = strtok(size, "x");
+    char * height = strtok(NULL, "x");
+    rest = strtok(NULL, "x");
+    if (width == NULL) {
+        log_error("parse_region_option: missing width\n");
+        free(region_str);
+        return false;
+    } else if (height == NULL) {
+        log_error("parse_region_option: missing height\n");
+        free(region_str);
+        return false;
+    } else if (rest != NULL) {
+        log_error("parse_region_option: unexpected size component %s\n", rest);
+        free(region_str);
+        return false;
+    }
+
+    end = NULL;
+    local_region.width = strtoul(width, &end, 10);
+    if (*end != '\0') {
+        log_error("parse_region_option: invalid width %s\n", width);
+        free(region_str);
+        return false;
+    } else if (local_region.width == 0) {
+        log_error("parse_region_option: invalid width %d\n", local_region.width);
+        free(region_str);
+        return false;
+    }
+
+    end = NULL;
+    local_region.height = strtoul(height, &end, 10);
+    if (*end != '\0') {
+        log_error("parse_region_option: invalid height %s\n", height);
+        free(region_str);
+        return false;
+    } else if (local_region.height == 0) {
+        log_error("parse_region_option: invalid height %d\n", local_region.height);
+        free(region_str);
+        return false;
+    }
+
+    if (output_label != NULL) {
+        *output = strdup(output_label);
+        if (*output == NULL) {
+            log_error("parse_region_option: failed to allocate copy of output name\n");
+            return false;
+        }
+    }
+
+    *region = local_region;
+    free(region_str);
+    return true;
+}
+
 static void usage(ctx_t * ctx) {
     printf("usage: wl-mirror [options] <output>\n");
     printf("\n");
@@ -130,6 +248,7 @@ static void usage(ctx_t * ctx) {
     printf("  -s n, --scaling nearest  use nearest neighbor scaling\n");
     printf("  -s e, --scaling exact    only scale to exact multiples of the output size\n");
     printf("  -t T, --transform T      apply custom transform T\n");
+    printf("  -r R, --region R         capture custom region R\n");
     printf("\n");
     printf("transforms:\n");
     printf("  transforms are specified as a dash-separated list of flips followed by a rotation\n");
@@ -141,6 +260,13 @@ static void usage(ctx_t * ctx) {
     printf("  the following transformation options are provided for compatibility with sway output transforms\n");
     printf("  - flipped                        flip the X coordinate\n");
     printf("  - 0,    90,    180,    270       apply a clockwise rotation\n");
+    printf("\n");
+    printf("regions:\n");
+    printf("  regions are specified in the format used by the slurp utility\n");
+    printf("  - '<x>,<y> <width>x<height> [output]'\n");
+    printf("  on start, the region is translated into output coordinates\n");
+    printf("  when the output moves, the captured region moves with it\n");
+    printf("  when a region is specified, the <output> argument is optional\n");
     cleanup(ctx);
     exit(0);
 }
@@ -154,8 +280,10 @@ int main(int argc, char ** argv) {
 
     ctx.opt.verbose = false;
     ctx.opt.show_cursor = true;
+    ctx.opt.has_region = false;
     ctx.opt.scaling = SCALE_LINEAR;
     ctx.opt.transform = (transform_t){ .rotation = ROT_NORMAL, .flip_x = false, .flip_y = false };
+    ctx.opt.output = NULL;
 
     if (argc > 0) {
         // skip program name
@@ -188,10 +316,22 @@ int main(int argc, char ** argv) {
                 log_error("main: option %s requires an argument\n", argv[0]);
                 exit_fail(&ctx);
             } else if (!parse_transform_option(&ctx.opt.transform, argv[1])) {
+                log_error("main: invalid region %s\n", argv[1]);
+                exit_fail(&ctx);
+            }
+
+            argv++;
+            argc--;
+        } else if (strcmp(argv[0], "-r") == 0 || strcmp(argv[0], "--region") == 0) {
+            if (argc < 2) {
+                log_error("main: option %s requires an argument\n", argv[0]);
+                exit_fail(&ctx);
+            } else if (!parse_region_option(&ctx.opt.region, &ctx.opt.output, argv[1])) {
                 log_error("main: invalid transform %s\n", argv[1]);
                 exit_fail(&ctx);
             }
 
+            ctx.opt.has_region = true;
             argv++;
             argc--;
         } else if (strcmp(argv[0], "--") == 0) {
@@ -207,11 +347,27 @@ int main(int argc, char ** argv) {
         argc--;
     }
 
-    if (argc != 1) {
+    if (argc == 0 && ctx.opt.has_region && ctx.opt.output == NULL) {
+        // output implicitly defined by region
+    } else if (argc == 0 && ctx.opt.has_region && ctx.opt.output != NULL) {
+        // output explicitly defined by region
+    } else if (argc == 1 && ctx.opt.has_region && ctx.opt.output != NULL) {
+        // output defined by both region and argument
+        // must be the same
+        if (strcmp(ctx.opt.output, argv[0]) != 0) {
+            log_error("main: region and argument output differ: %s vs %s\n", ctx.opt.output, argv[0]);
+            exit_fail(&ctx);
+        }
+    } else if (argc == 1) {
+        // output defined by argument
+        ctx.opt.output = strdup(argv[0]);
+        if (ctx.opt.output == NULL) {
+            log_error("main: failed to allocate copy of output name\n");
+            exit_fail(&ctx);
+        }
+    } else {
         usage(&ctx);
     }
-
-    ctx.opt.output = argv[0];
 
     log_debug(&ctx, "main: initializing wayland\n");
     init_wl(&ctx);

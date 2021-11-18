@@ -258,8 +258,22 @@ void resize_viewport_egl(ctx_t * ctx) {
     uint32_t view_width = win_width;
     uint32_t view_height = win_height;
 
-    if (ctx->mirror.initialized) {
+    if (ctx->egl.texture_initialized) {
         viewport_apply_output_transform(&tex_width, &tex_height, ctx->mirror.current->transform);
+    }
+
+    region_t output_region;
+    region_t clamp_region = ctx->opt.region;
+    if (ctx->egl.texture_initialized && ctx->opt.has_region) {
+        output_region = (region_t){
+            .x = 0, .y = 0,
+            .width = tex_width, .height = tex_height
+        };
+
+        region_clamp(&clamp_region, &output_region);
+
+        tex_width = clamp_region.width;
+        tex_height = clamp_region.height;
     }
 
     viewport_apply_transform(&tex_width, &tex_height, ctx->opt.transform);
@@ -289,12 +303,17 @@ void resize_viewport_egl(ctx_t * ctx) {
     mat3_t texture_transform;
     mat3_identity(&texture_transform);
 
-    if (ctx->mirror.initialized) {
+    if (ctx->egl.texture_initialized) {
         // apply transformations in reverse order as we need to transform
         // from OpenGL space to dmabuf space
 
         mat3_apply_invert_y(&texture_transform, true);
         mat3_apply_transform(&texture_transform, ctx->opt.transform);
+
+        if (ctx->opt.has_region) {
+            mat3_apply_region_transform(&texture_transform, &clamp_region, &output_region);
+        }
+
         mat3_apply_output_transform(&texture_transform, ctx->mirror.current->transform);
         mat3_apply_invert_y(&texture_transform, ctx->mirror.invert_y);
     }

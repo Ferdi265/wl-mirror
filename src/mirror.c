@@ -368,27 +368,68 @@ void init_mirror(ctx_t * ctx) {
     ctx->mirror.processed_objects = 0;
     ctx->mirror.initialized = true;
 
-    log_debug(ctx, "init_mirror: searching for output\n");
-    output_list_node_t * cur = ctx->wl.outputs;
-    while (cur != NULL) {
-        if (cur->name != NULL && strcmp(cur->name, ctx->opt.output) == 0) {
-            ctx->mirror.current = cur;
-            break;
-        }
+    char * output_name = NULL;
+    if (ctx->opt.output != NULL) {
+        log_debug(ctx, "init_mirror: searching for output by name\n");
+        output_list_node_t * cur = ctx->wl.outputs;
+        while (cur != NULL) {
+            if (cur->name != NULL && strcmp(cur->name, ctx->opt.output) == 0) {
+                ctx->mirror.current = cur;
+                output_name = cur->name;
+                break;
+            }
 
-        cur = cur->next;
+            cur = cur->next;
+        }
+    } else if (ctx->opt.has_region) {
+        log_debug(ctx, "init_mirror: searching for output by region\n");
+        output_list_node_t * cur = ctx->wl.outputs;
+        while (cur != NULL) {
+            region_t output_region = {
+                .x = cur->x, .y = cur->y,
+                .width = cur->width, .height = cur->height
+            };
+            if (region_contains(&ctx->opt.region, &output_region)) {
+                ctx->mirror.current = cur;
+                output_name = cur->name;
+                break;
+            }
+
+            cur = cur->next;
+        }
     }
 
-    if (ctx->mirror.current == NULL) {
+    if (ctx->mirror.current == NULL && ctx->opt.output != NULL) {
         log_error("init_mirror: output %s not found\n", ctx->opt.output);
         exit_fail(ctx);
+    } else if (ctx->mirror.current == NULL && ctx->opt.has_region) {
+        log_error("init_mirror: output for region not found\n");
+        exit_fail(ctx);
+    } else if (ctx->mirror.current == NULL) {
+        log_error("init_mirror: no output or region specified\n");
+        exit_fail(ctx);
     } else {
-        log_debug(ctx, "init_mirror: found output with name %s\n", ctx->opt.output);
+        log_debug(ctx, "init_mirror: found output with name %s\n", output_name);
+    }
+
+    if (ctx->opt.has_region) {
+        log_debug(ctx, "init_mirror: checking if region in output\n");
+        region_t output_region = {
+            .x = ctx->mirror.current->x, .y = ctx->mirror.current->y,
+            .width = ctx->mirror.current->width, .height = ctx->mirror.current->height
+        };
+        if (!region_contains(&ctx->opt.region, &output_region)) {
+            log_error("init_mirror: output does not contain region\n");
+            exit_fail(ctx);
+        }
+
+        log_debug(ctx, "init_mirror: clamping region to output bounds\n");
+        region_clamp(&ctx->opt.region, &output_region);
     }
 
     log_debug(ctx, "init_mirror: formatting window title\n");
     char * title = NULL;
-    int status = asprintf(&title, "Wayland Output Mirror for %s", ctx->opt.output);
+    int status = asprintf(&title, "Wayland Output Mirror for %s", output_name);
     if (status == -1) {
         log_error("init_mirror: failed to format window title\n");
         exit_fail(ctx);

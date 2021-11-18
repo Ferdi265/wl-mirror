@@ -87,6 +87,18 @@ void mat3_apply_transform(mat3_t * mat, transform_t transform) {
     if (transform.flip_y) mat3_mul(&mat_flip_y, mat);
 }
 
+void mat3_apply_region_transform(mat3_t * mat, const region_t * region, const region_t * output) {
+    mat3_t region_transform;
+    mat3_identity(&region_transform);
+
+    region_transform.data[0][2] = (float)region->x / output->width;
+    region_transform.data[1][2] = (float)region->y / output->width;
+    region_transform.data[0][0] = (float)region->width / output->width;
+    region_transform.data[1][1] = (float)region->height / output->height;
+
+    mat3_mul(&region_transform, mat);
+}
+
 void mat3_apply_output_transform(mat3_t * mat, enum wl_output_transform transform) {
     // wl_output transform is already inverted
 
@@ -155,5 +167,37 @@ void viewport_apply_output_transform(uint32_t * width, uint32_t * height, enum w
             break;
         default:
             break;
+    }
+}
+
+bool region_contains(const region_t * region, const region_t * output) {
+    if (region->x + region->width <= output->x) return false;
+    if (region->x >= output->x + output->width) return false;
+    if (region->y + region->height <= output->y) return false;
+    if (region->y >= output->y + output->height) return false;
+    return true;
+}
+
+void region_clamp(region_t * region, const region_t * output) {
+    if (region->x < output->x) {
+        region->width -= output->x - region->x;
+        region->x = 0;
+    } else {
+        region->x -= output->x;
+    }
+
+    if (region->x + region->width > output->width) {
+        region->width = output->width - region->x;
+    }
+
+    if (region->y < output->y) {
+        region->height -= output->y - region->y;
+        region->y = 0;
+    } else {
+        region->y -= output->y;
+    }
+
+    if (region->y + region->height > output->height) {
+        region->height = output->height - region->y;
     }
 }
