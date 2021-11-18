@@ -13,6 +13,7 @@ This project is currently a working prototype, but work is still ongoing.
 - Preserves aspect ratio
 - Corrects for flipped or rotated outputs
 - Supports custom flips or rotations
+- Supports mirroring custom regions of outputs
 
 ![demo screenshot](https://user-images.githubusercontent.com/4077106/141605347-37ba690c-f885-422a-93a6-81d5a48bee13.png)
 
@@ -30,6 +31,7 @@ options:
   -s n, --scaling nearest  use nearest neighbor scaling
   -s e, --scaling exact    only scale to exact multiples of the output size
   -t T, --transform T      apply custom transform T
+  -r R, --region R         capture custom region R
 
 transforms:
   transforms are specified as a dash-separated list of flips followed by a rotation
@@ -41,6 +43,13 @@ transforms:
   the following transformation options are provided for compatibility with sway output transforms
   - flipped                        flip the X coordinate
   - 0,    90,    180,    270       apply a clockwise rotation
+
+regions:
+  regions are specified in the format used by the slurp utility
+  - '<x>,<y> <width>x<height> [output]'
+  on start, the region is translated into output coordinates
+  when the output moves, the captured region moves with it
+  when a region is specified, the <output> argument is optional
 ```
 
 ## Dependencies
