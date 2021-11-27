@@ -310,7 +310,7 @@ static void frame_callback_event_done(
 
         log_debug(ctx, "frame_callback: creating wlr_dmabuf_export_frame\n");
         ctx->mirror.frame = zwlr_export_dmabuf_manager_v1_capture_output(
-            ctx->wl.dmabuf_manager, ctx->opt.show_cursor, ctx->mirror.current->output
+            ctx->wl.dmabuf_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output
         );
         if (ctx->mirror.frame == NULL) {
             log_error("frame_callback: failed to create wlr_dmabuf_export_frame\n");
@@ -334,7 +334,7 @@ static const struct wl_callback_listener frame_callback_listener = {
 void init_mirror(ctx_t * ctx) {
     log_debug(ctx, "init_mirror: initializing context structure\n");
 
-    ctx->mirror.current = NULL;
+    ctx->mirror.current_target = NULL;
     ctx->mirror.frame_callback = NULL;
     ctx->mirror.frame = NULL;
     ctx->mirror.invert_y = false;
@@ -374,7 +374,7 @@ void init_mirror(ctx_t * ctx) {
         output_list_node_t * cur = ctx->wl.outputs;
         while (cur != NULL) {
             if (cur->name != NULL && strcmp(cur->name, ctx->opt.output) == 0) {
-                ctx->mirror.current = cur;
+                ctx->mirror.current_target = cur;
                 output_name = cur->name;
                 break;
             }
@@ -390,7 +390,7 @@ void init_mirror(ctx_t * ctx) {
                 .width = cur->width, .height = cur->height
             };
             if (region_contains(&ctx->opt.region, &output_region)) {
-                ctx->mirror.current = cur;
+                ctx->mirror.current_target = cur;
                 output_name = cur->name;
                 break;
             }
@@ -399,13 +399,13 @@ void init_mirror(ctx_t * ctx) {
         }
     }
 
-    if (ctx->mirror.current == NULL && ctx->opt.output != NULL) {
+    if (ctx->mirror.current_target == NULL && ctx->opt.output != NULL) {
         log_error("init_mirror: output %s not found\n", ctx->opt.output);
         exit_fail(ctx);
-    } else if (ctx->mirror.current == NULL && ctx->opt.has_region) {
+    } else if (ctx->mirror.current_target == NULL && ctx->opt.has_region) {
         log_error("init_mirror: output for region not found\n");
         exit_fail(ctx);
-    } else if (ctx->mirror.current == NULL) {
+    } else if (ctx->mirror.current_target == NULL) {
         log_error("init_mirror: no output or region specified\n");
         exit_fail(ctx);
     } else {
@@ -415,8 +415,8 @@ void init_mirror(ctx_t * ctx) {
     if (ctx->opt.has_region) {
         log_debug(ctx, "init_mirror: checking if region in output\n");
         region_t output_region = {
-            .x = ctx->mirror.current->x, .y = ctx->mirror.current->y,
-            .width = ctx->mirror.current->width, .height = ctx->mirror.current->height
+            .x = ctx->mirror.current_target->x, .y = ctx->mirror.current_target->y,
+            .width = ctx->mirror.current_target->width, .height = ctx->mirror.current_target->height
         };
         if (!region_contains(&ctx->opt.region, &output_region)) {
             log_error("init_mirror: output does not contain region\n");
@@ -448,8 +448,8 @@ void init_mirror(ctx_t * ctx) {
 
 void output_removed_mirror(ctx_t * ctx, output_list_node_t * node) {
     if (!ctx->mirror.initialized) return;
-    if (ctx->mirror.current == NULL) return;
-    if (ctx->mirror.current != node) return;
+    if (ctx->mirror.current_target == NULL) return;
+    if (ctx->mirror.current_target != node) return;
 
     log_error("output_removed_mirror: output disappeared, closing\n");
     exit_fail(ctx);

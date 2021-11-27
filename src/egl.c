@@ -259,7 +259,7 @@ void resize_viewport_egl(ctx_t * ctx) {
     uint32_t view_height = win_height;
 
     if (ctx->egl.texture_initialized) {
-        viewport_apply_output_transform(&tex_width, &tex_height, ctx->mirror.current->transform);
+        viewport_apply_output_transform(&tex_width, &tex_height, ctx->mirror.current_target->transform);
     }
 
     region_t output_region;
@@ -314,7 +314,7 @@ void resize_viewport_egl(ctx_t * ctx) {
             mat3_apply_region_transform(&texture_transform, &clamp_region, &output_region);
         }
 
-        mat3_apply_output_transform(&texture_transform, ctx->mirror.current->transform);
+        mat3_apply_output_transform(&texture_transform, ctx->mirror.current_target->transform);
         mat3_apply_invert_y(&texture_transform, ctx->mirror.invert_y);
     }
 

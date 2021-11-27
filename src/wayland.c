@@ -47,7 +47,7 @@ static void output_event_geometry(
     if (node->transform != (uint32_t)transform) {
         log_debug(ctx, "output: updating output transform\n");
         node->transform = transform;
-        if (ctx->mirror.initialized && ctx->mirror.current->output == output) {
+        if (ctx->mirror.initialized && ctx->mirror.current_target->output == output) {
             resize_viewport_egl(ctx);
         }
     }

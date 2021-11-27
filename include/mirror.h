@@ -28,7 +28,7 @@ typedef enum {
 } dmabuf_state_t;
 
 typedef struct ctx_mirror {
-    struct output_list_node * current;
+    struct output_list_node * current_target;
     struct wl_callback * frame_callback;
     struct zwlr_export_dmabuf_frame_v1 * frame;
     bool invert_y;
