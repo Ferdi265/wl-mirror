@@ -29,6 +29,7 @@ typedef struct ctx_egl {
     GLuint texture;
     GLuint shader_program;
     GLint texture_transform_uniform;
+    GLint invert_colors_uniform;
 
     // state flags
     bool texture_initialized;

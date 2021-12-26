@@ -1,3 +1,4 @@
+#include <GLES2/gl2.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,9 +24,15 @@ const char * fragment_shader_source =
     "#version 100\n"
     "precision mediump float;\n"
     "uniform sampler2D uTexture;\n"
+    "uniform bool uInvertColors;\n"
     "varying vec2 vTexCoord;\n"
     "void main() {\n"
-    "    gl_FragColor = texture2D(uTexture, vTexCoord);\n"
+    "    vec4 color = texture2D(uTexture, vTexCoord);\n"
+    "    if (uInvertColors) {\n"
+    "        gl_FragColor = vec4(1.0 - color.r, 1.0 - color.g, 1.0 - color.b, color.a);\n"
+    "    } else {\n"
+    "        gl_FragColor = color;\n"
+    "    }\n"
     "}\n"
 ;
 
@@ -76,6 +83,7 @@ void init_egl(ctx_t * ctx) {
     ctx->egl.texture = 0;
     ctx->egl.shader_program = 0;
     ctx->egl.texture_transform_uniform = 0;
+    ctx->egl.invert_colors_uniform = 0;
 
     ctx->egl.texture_initialized = false;
     ctx->egl.initialized = true;
@@ -212,6 +220,7 @@ void init_egl(ctx_t * ctx) {
         exit_fail(ctx);
     }
     ctx->egl.texture_transform_uniform = glGetUniformLocation(ctx->egl.shader_program, "uTexTransform");
+    ctx->egl.invert_colors_uniform = glGetUniformLocation(ctx->egl.shader_program, "uInvertColors");
     glUseProgram(ctx->egl.shader_program);
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
@@ -220,6 +229,10 @@ void init_egl(ctx_t * ctx) {
     mat3_t texture_transform;
     mat3_identity(&texture_transform);
     glUniformMatrix3fv(ctx->egl.texture_transform_uniform, 1, false, (float *)texture_transform.data);
+
+    log_debug(ctx, "init_egl: setting invert colors uniform\n");
+    bool invert_colors = ctx->opt.invert_colors;
+    glUniform1i(ctx->egl.invert_colors_uniform, invert_colors);
 
     log_debug(ctx, "init_egl: setting draw state\n");
     glClearColor(0.0, 0.0, 0.0, 1);

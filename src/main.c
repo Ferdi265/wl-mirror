@@ -243,6 +243,7 @@ static void usage(ctx_t * ctx) {
     printf("  -h,   --help             show this help\n");
     printf("  -v,   --verbose          enable debug logging\n");
     printf("  -c,   --show-cursor      show the cursor on the mirrored screen (default)\n");
+    printf("  -i,   --invert-colors    invert colors in the mirrored screen\n");
     printf("  -n,   --no-show-cursor   don't show the cursor on the mirrored screen\n");
     printf("  -s l, --scaling linear   use linear scaling (default)\n");
     printf("  -s n, --scaling nearest  use nearest neighbor scaling\n");
@@ -280,6 +281,7 @@ int main(int argc, char ** argv) {
 
     ctx.opt.verbose = false;
     ctx.opt.show_cursor = true;
+    ctx.opt.invert_colors = false;
     ctx.opt.has_region = false;
     ctx.opt.scaling = SCALE_LINEAR;
     ctx.opt.transform = (transform_t){ .rotation = ROT_NORMAL, .flip_x = false, .flip_y = false };
@@ -298,6 +300,8 @@ int main(int argc, char ** argv) {
             ctx.opt.verbose = true;
         } else if (strcmp(argv[0], "-c") == 0 || strcmp(argv[0], "--show-cursor") == 0) {
             ctx.opt.show_cursor = true;
+        } else if (strcmp(argv[0], "-i") == 0 || strcmp(argv[0], "--invert-colors") == 0) {
+            ctx.opt.invert_colors = true;
         } else if (strcmp(argv[0], "-n") == 0 || strcmp(argv[0], "--no-show-cursor") == 0) {
             ctx.opt.show_cursor = false;
         } else if (strcmp(argv[0], "-s") == 0 || strcmp(argv[0], "--scaling") == 0) {

@@ -26,6 +26,7 @@ options:
   -h,   --help             show this help
   -v,   --verbose          enable debug logging
   -c,   --show-cursor      show the cursor on the mirrored screen (default)
+  -i,   --invert-colors    invert colors in the mirrored screen
   -n,   --no-show-cursor   don't show the cursor on the mirrored screen
   -s l, --scaling linear   use linear scaling (default)
   -s n, --scaling nearest  use nearest neighbor scaling

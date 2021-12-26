@@ -16,6 +16,7 @@ typedef enum {
 typedef struct ctx_opt {
     bool verbose;
     bool show_cursor;
+    bool invert_colors;
     bool has_region;
     scale_t scaling;
     transform_t transform;
