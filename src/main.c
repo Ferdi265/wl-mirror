@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "context.h"
+#include "event.h"
 
 void cleanup(ctx_t * ctx) {
     log_debug(ctx, "cleanup: deallocating resources\n");
@@ -383,7 +384,7 @@ int main(int argc, char ** argv) {
     init_mirror(&ctx);
 
     log_debug(&ctx, "main: entering event loop\n");
-    while (wl_display_dispatch(ctx.wl.display) != -1 && !ctx.wl.closing) {}
+    event_loop(&ctx);
     log_debug(&ctx, "main: exiting event loop\n");
 
     cleanup(&ctx);
