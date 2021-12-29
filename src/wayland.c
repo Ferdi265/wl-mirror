@@ -260,11 +260,13 @@ static void registry_event_add(
 
         node->ctx = ctx;
         node->name = NULL;
+        node->xdg_output = NULL;
         node->x = 0;
         node->y = 0;
         node->width = 0;
         node->height = 0;
         node->scale = 1;
+        node->transform = 0;
 
         log_debug(ctx, "registry: linking output node\n");
         node->next = ctx->wl.outputs;

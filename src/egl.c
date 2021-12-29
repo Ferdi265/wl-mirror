@@ -353,6 +353,26 @@ void resize_window_egl(ctx_t * ctx) {
     }
 }
 
+// --- update_options_egl ---
+
+void update_options_egl(ctx_t * ctx) {
+    resize_viewport_egl(ctx);
+
+    log_debug(ctx, "update_options_egl: setting invert colors uniform\n");
+    bool invert_colors = ctx->opt.invert_colors;
+    glUniform1i(ctx->egl.invert_colors_uniform, invert_colors);
+
+    log_debug(ctx, "update_options_egl: setting texture scaling mode\n");
+    if (ctx->opt.scaling == SCALE_LINEAR) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+}
+
 // --- cleanup_egl ---
 
 void cleanup_egl(ctx_t *ctx) {

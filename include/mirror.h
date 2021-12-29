@@ -60,6 +60,7 @@ typedef struct ctx_mirror {
 void init_mirror(struct ctx * ctx);
 
 void output_removed_mirror(struct ctx * ctx, struct output_list_node * node);
+void update_options_mirror(struct ctx * ctx);
 
 void cleanup_mirror(struct ctx * ctx);
 
