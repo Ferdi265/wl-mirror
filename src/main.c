@@ -9,6 +9,7 @@ void cleanup(ctx_t * ctx) {
     if (ctx->mirror.initialized) cleanup_mirror(ctx);
     if (ctx->egl.initialized) cleanup_egl(ctx);
     if (ctx->wl.initialized) cleanup_wl(ctx);
+    cleanup_event(ctx);
     cleanup_opt(ctx);
 }
 
@@ -25,6 +26,7 @@ int main(int argc, char ** argv) {
     ctx.mirror.initialized = false;
 
     init_opt(&ctx);
+    init_event(&ctx);
 
     if (argc > 0) {
         // skip program name
