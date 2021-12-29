@@ -25,14 +25,18 @@ usage: wl-mirror [options] <output>
 options:
   -h,   --help             show this help
   -v,   --verbose          enable debug logging
+        --no-verbose       disable debug logging (default)
   -c,   --show-cursor      show the cursor on the mirrored screen (default)
+        --no-show-cursor   don't show the cursor on the mirrored screen
   -i,   --invert-colors    invert colors in the mirrored screen
-  -n,   --no-show-cursor   don't show the cursor on the mirrored screen
+        --no-invert-colors don't invert colors in the mirrored screen (default)
   -s l, --scaling linear   use linear scaling (default)
   -s n, --scaling nearest  use nearest neighbor scaling
   -s e, --scaling exact    only scale to exact multiples of the output size
   -t T, --transform T      apply custom transform T
   -r R, --region R         capture custom region R
+        --no-region        capture the entire output (default)
+  -S,   --stream           accept a stream of additional options on stdin
 
 transforms:
   transforms are specified as a dash-separated list of flips followed by a rotation
@@ -72,7 +76,9 @@ regions:
 ## Files
 
 - `src/main.c`: main entrypoint
+- `src/options.c`: CLI and stream option parsing
 - `src/wayland.c`: Wayland and `xdg_surface` boilerplate
 - `src/egl.c`: EGL boilerplate
 - `src/mirror.c`: output mirroring code
 - `src/transform.c`: matrix transformation code
+- `src/event.c`: event loop and asynchronous option stream input

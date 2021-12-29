@@ -15,6 +15,7 @@ typedef enum {
 
 typedef struct ctx_opt {
     bool verbose;
+    bool stream;
     bool show_cursor;
     bool invert_colors;
     bool has_region;
@@ -24,10 +25,15 @@ typedef struct ctx_opt {
     char * output;
 } ctx_opt_t;
 
-bool parse_scaling_option(scale_t * scaling, const char * scaling_str);
-bool parse_transform_option(transform_t * transform, const char * transform_str);
-bool parse_region_option(region_t * region, char ** output, const char * region_str);
-
+void init_opt(struct ctx * ctx);
 void cleanup_opt(struct ctx * ctx);
+
+bool parse_scaling_opt(scale_t * scaling, const char * scaling_arg);
+bool parse_transform_opt(transform_t * transform, const char * transform_arg);
+bool parse_region_opt(region_t * region, char ** output, const char * region_arg);
+
+void usage_opt(struct ctx * ctx);
+
+void parse_opt(struct ctx * ctx, int argc, char ** argv);
 
 #endif
