@@ -14,6 +14,8 @@ This project is currently a working prototype, but work is still ongoing.
 - Corrects for flipped or rotated outputs
 - Supports custom flips or rotations
 - Supports mirroring custom regions of outputs
+- Supports receiving additional options on stdin for changing the mirrored
+  screen or region on the fly
 
 ![demo screenshot](https://user-images.githubusercontent.com/4077106/141605347-37ba690c-f885-422a-93a6-81d5a48bee13.png)
 
