@@ -229,6 +229,7 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
         *output = strdup(output_label);
         if (*output == NULL) {
             log_error("parse_region_option: failed to allocate copy of output name\n");
+            free(region_str);
             return false;
         }
     }
