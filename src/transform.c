@@ -92,7 +92,7 @@ void mat3_apply_region_transform(mat3_t * mat, const region_t * region, const re
     mat3_identity(&region_transform);
 
     region_transform.data[0][2] = (float)region->x / output->width;
-    region_transform.data[1][2] = (float)region->y / output->width;
+    region_transform.data[1][2] = (float)region->y / output->height;
     region_transform.data[0][0] = (float)region->width / output->width;
     region_transform.data[1][1] = (float)region->height / output->height;
 
