@@ -388,7 +388,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
                 if (is_cli_args) exit_fail(ctx);
             } else {
                 if (!parse_transform_opt(&ctx->opt.transform, argv[1])) {
-                    log_error("parse_opt: invalid region %s\n", argv[1]);
+                    log_error("parse_opt: invalid transform %s\n", argv[1]);
                     if (is_cli_args) exit_fail(ctx);
                 }
 
@@ -402,7 +402,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             } else {
                 char * new_region_output = NULL;
                 if (!parse_region_opt(&ctx->opt.region, &new_region_output, argv[1])) {
-                    log_error("parse_opt: invalid transform %s\n", argv[1]);
+                    log_error("parse_opt: invalid region %s\n", argv[1]);
                     if (is_cli_args) exit_fail(ctx);
                 } else {
                     ctx->opt.has_region = true;
