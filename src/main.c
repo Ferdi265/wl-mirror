@@ -13,7 +13,7 @@ void cleanup(ctx_t * ctx) {
     cleanup_opt(ctx);
 }
 
-void exit_fail(ctx_t * ctx) {
+noreturn void exit_fail(ctx_t * ctx) {
     cleanup(ctx);
     exit(1);
 }

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdnoreturn.h>
 
 #include "log.h"
 #include "options.h"
@@ -19,7 +20,7 @@ typedef struct ctx {
     ctx_event_t event;
 } ctx_t;
 
-void exit_fail(ctx_t * ctx);
+noreturn void exit_fail(ctx_t * ctx);
 void cleanup(ctx_t * ctx);
 
 #endif
