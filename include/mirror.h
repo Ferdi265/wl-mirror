@@ -7,6 +7,7 @@
 #include <wayland-egl.h>
 #include <EGL/egl.h>
 #include "wlr-export-dmabuf-unstable-v1.h"
+#include "transform.h"
 
 struct ctx;
 struct output_list_node;
@@ -31,6 +32,7 @@ typedef struct ctx_mirror {
     struct output_list_node * current_target;
     struct wl_callback * frame_callback;
     struct zwlr_export_dmabuf_frame_v1 * frame;
+    region_t current_region;
     bool invert_y;
 
     // gl data

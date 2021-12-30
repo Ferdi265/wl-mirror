@@ -337,6 +337,7 @@ void init_mirror(ctx_t * ctx) {
     ctx->mirror.current_target = NULL;
     ctx->mirror.frame_callback = NULL;
     ctx->mirror.frame = NULL;
+    ctx->mirror.current_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
     ctx->mirror.invert_y = false;
 
     ctx->mirror.width = 0;
@@ -368,7 +369,7 @@ void init_mirror(ctx_t * ctx) {
     ctx->mirror.processed_objects = 0;
     ctx->mirror.initialized = true;
 
-    if (!find_output_opt(ctx, &ctx->mirror.current_target)) {
+    if (!find_output_opt(ctx, &ctx->mirror.current_target, &ctx->mirror.current_region)) {
         log_error("init_mirror: failed to find output\n");
         exit_fail(ctx);
     }

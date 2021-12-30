@@ -32,7 +32,7 @@ void cleanup_opt(struct ctx * ctx);
 bool parse_scaling_opt(scale_t * scaling, const char * scaling_arg);
 bool parse_transform_opt(transform_t * transform, const char * transform_arg);
 bool parse_region_opt(region_t * region, char ** output, const char * region_arg);
-bool find_output_opt(struct ctx * ctx, struct output_list_node ** output_handle);
+bool find_output_opt(struct ctx * ctx, struct output_list_node ** output_handle, region_t * region_handle);
 
 void usage_opt(struct ctx * ctx);
 

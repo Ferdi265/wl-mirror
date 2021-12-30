@@ -238,9 +238,10 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
     return true;
 }
 
-bool find_output_opt(ctx_t * ctx, output_list_node_t ** output_handle) {
+bool find_output_opt(ctx_t * ctx, output_list_node_t ** output_handle, region_t * region_handle) {
     char * output_name = ctx->opt.output;
     output_list_node_t * local_output_handle = NULL;
+    region_t local_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
 
     if (ctx->opt.output != NULL) {
         log_debug(ctx, "find_output_opt: searching for output by name\n");
@@ -297,10 +298,12 @@ bool find_output_opt(ctx_t * ctx, output_list_node_t ** output_handle) {
         }
 
         log_debug(ctx, "find_output_opt: clamping region to output bounds\n");
-        region_clamp(&ctx->opt.region, &output_region);
+        local_region = ctx->opt.region;
+        region_clamp(&local_region, &output_region);
     }
 
     *output_handle = local_output_handle;
+    *region_handle = local_region;
     return true;
 }
 
@@ -485,8 +488,10 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     }
 
     output_list_node_t * target_output = NULL;
-    if (!is_cli_args && find_output_opt(ctx, &target_output)) {
+    region_t target_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
+    if (!is_cli_args && find_output_opt(ctx, &target_output, &target_region)) {
         ctx->mirror.current_target = target_output;
+        ctx->mirror.current_region = target_region;
 
         update_options_egl(ctx);
         update_options_mirror(ctx);

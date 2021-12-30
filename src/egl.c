@@ -276,12 +276,13 @@ void resize_viewport_egl(ctx_t * ctx) {
     }
 
     region_t output_region;
-    region_t clamp_region = ctx->opt.region;
+    region_t clamp_region;
     if (ctx->egl.texture_initialized && ctx->opt.has_region) {
         output_region = (region_t){
             .x = 0, .y = 0,
             .width = tex_width, .height = tex_height
         };
+        clamp_region = ctx->mirror.current_region;
 
         region_clamp(&clamp_region, &output_region);
 
