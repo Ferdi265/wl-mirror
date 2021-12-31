@@ -14,12 +14,19 @@ usage() {
     echo "  custom [options]    send custom options to wl-mirror (default asks via rofi)"
     echo
     echo "dependencies:"
-    echo "  wl-mirror, pipectl, slurp, and rofi"
+    echo "  wl-mirror, pipectl, slurp, and rofi or dmenu"
     exit 0
 }
 
+type -p rofi >/dev/null
+if [[ $? -ne 0 ]]; then
+    DMENU=dmenu-rofi
+else
+    DMENU=dmenu
+fi
+
 dmenu-rofi() {
-    rofi -dmenu -p "wl-present $1" -width 30 -columns 1
+    rofi -dmenu -width 30 -columns 1 "$@"
 }
 
 slurp-output() {
@@ -61,12 +68,12 @@ ask-region() {
 }
 
 ask-scaling() {
-    (echo linear; echo nearest; echo exact) | dmenu-rofi "scaling"
+    (echo linear; echo nearest; echo exact) | "$DMENU" -p "wl-present scaling"
     [[ $? -ne 0 ]] && exit 1
 }
 
 ask-custom() {
-    cat <<EOF | dmenu-rofi "custom"
+    cat <<EOF | "$DMENU" -p "wl-present custom"
 --verbose
 --no-verbose
 --show-cursor
