@@ -82,6 +82,13 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 - Run `cmake -B build`
 - Run `make -C build`
 
+## CMake Options
+
+- `FORCE_SYSTEM_WL_PROTOCOLS`: always use system-installed wayland-protocols, do not use submodules (default `OFF`)
+- `FORCE_SYSTEM_WLR_PROTOCOLS`: always use system-installed wlr-protocols, do not use submodules (default `OFF`)
+- `WL_PROTOCOL_DIR`: directory where system-installed wayland-protocols are located (default `/usr/share/wayland-protocols`)
+- `WLR_PROTOCOL_DIR`: directory where system-installed wlr-protocols are located (default `/usr/share/wlr-protocols`)
+
 ## Files
 
 - `src/main.c`: main entrypoint
