@@ -19,7 +19,7 @@ usage() {
 }
 
 type -p rofi >/dev/null
-if [[ $? -ne 0 ]]; then
+if [[ $? -eq 0 ]]; then
     DMENU=dmenu-rofi
 else
     DMENU=dmenu
