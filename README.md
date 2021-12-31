@@ -3,8 +3,6 @@
 `wl-mirror` attempts to provide a solution to sway's lack of output mirroring
 by mirroring an output onto a client surface.
 
-This project is currently a working prototype, but work is still ongoing.
-
 ## Features
 
 - Mirror an output onto a resizable window
