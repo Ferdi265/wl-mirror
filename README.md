@@ -75,6 +75,12 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 - `libGLESv2`
 - `wayland-scanner`
 
+## Script Dependencies
+
+- `pipectl` (`scripts/wl-present`)
+- `slurp` (`scripts/wl-present`)
+- `rofi` or `dmenu` (`scripts/wl-present`)
+
 ## Building
 
 - Install Dependencies
