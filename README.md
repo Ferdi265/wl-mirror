@@ -59,6 +59,13 @@ regions:
   when a region is specified, the <output> argument is optional
 ```
 
+The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be used.
+
+- [`wl-present`](scripts/wl-present) is a small script to demonstrate the use
+  of the `-S` option to interactively present on a Sway desktop.  
+  This script is especially useful when binding the `wl-present` subcommands to
+  keyboard shortcuts.
+
 ## Dependencies
 
 - `CMake`
