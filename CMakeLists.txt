@@ -4,7 +4,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(wl-mirror C)
 
 # options
-option(INSTALL_EXAMPLE_SCRIPTS "install wl-mirror example scripts" ON)
+option(INSTALL_EXAMPLE_SCRIPTS "install wl-mirror example scripts" OFF)
 
 # wayland protocols needed by wl-mirror
 option(FORCE_SYSTEM_WL_PROTOCOLS "force use of system wayland-protocols" OFF)
