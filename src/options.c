@@ -493,7 +493,9 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     if (!is_cli_args && find_output_opt(ctx, &target_output, &target_region)) {
         ctx->mirror.current_target = target_output;
         ctx->mirror.current_region = target_region;
+    }
 
+    if (!is_cli_args) {
         update_options_egl(ctx);
         update_options_mirror(ctx);
     }
