@@ -16,6 +16,7 @@ set(PROTOCOLS
     "unstable/xdg-output/xdg-output-unstable-v1.xml"
     "unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
     "unstable/wlr-export-dmabuf-unstable-v1.xml"
+    "unstable/wlr-screencopy-unstable-v1.xml"
 )
 
 # wayland protocol wrapper generation with wayland-scanner

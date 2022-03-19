@@ -250,6 +250,28 @@ static void registry_event_add(
             registry, id, &zwlr_export_dmabuf_manager_v1_interface, 1
         );
         ctx->wl.dmabuf_manager_id = id;
+    } else if (strcmp(interface, zwlr_screencopy_manager_v1_interface.name) == 0) {
+        if (ctx->wl.screencopy_manager != NULL) {
+            log_error("registry: duplicate screencopy_manager\n");
+            exit_fail(ctx);
+        }
+
+        log_debug(ctx, "registry: binding screencopy_manager\n");
+        ctx->wl.screencopy_manager = (struct zwlr_screencopy_manager_v1 *)wl_registry_bind(
+            registry, id, &zwlr_screencopy_manager_v1_interface, 3
+        );
+        ctx->wl.screencopy_manager_id = id;
+    } else if (strcmp(interface, wl_shm_interface.name) == 0) {
+        if (ctx->wl.shm != NULL) {
+            log_error("registry: duplicate shm\n");
+            exit_fail(ctx);
+        }
+
+        log_debug(ctx, "registry: binding shm\n");
+        ctx->wl.shm = (struct wl_shm *)wl_registry_bind(
+            registry, id, &wl_shm_interface, 1
+        );
+        ctx->wl.shm_id = id;
     } else if (strcmp(interface, wl_output_interface.name) == 0) {
         log_debug(ctx, "registry: allocating output node\n");
         output_list_node_t * node = malloc(sizeof (output_list_node_t));
@@ -511,8 +533,13 @@ void init_wl(ctx_t * ctx) {
     ctx->wl.wm_base_id = 0;
     ctx->wl.output_manager = NULL;
     ctx->wl.output_manager_id = 0;
+
     ctx->wl.dmabuf_manager = NULL;
     ctx->wl.dmabuf_manager_id = 0;
+    ctx->wl.shm = NULL;
+    ctx->wl.shm_id = 0;
+    ctx->wl.screencopy_manager = NULL;
+    ctx->wl.screencopy_manager_id = 0;
 
     ctx->wl.outputs = NULL;
 
@@ -557,9 +584,6 @@ void init_wl(ctx_t * ctx) {
         exit_fail(ctx);
     } else if (ctx->wl.output_manager == NULL) {
         log_error("init_wl: output_manager missing\n");
-        exit_fail(ctx);
-    } else if (ctx->wl.dmabuf_manager == NULL) {
-        log_error("init_wl: dmabuf_manager missing\n");
         exit_fail(ctx);
     }
 
@@ -633,10 +657,12 @@ void cleanup_wl(ctx_t *ctx) {
     }
     ctx->wl.outputs = NULL;
 
+    if (ctx->wl.dmabuf_manager != NULL) zwlr_export_dmabuf_manager_v1_destroy(ctx->wl.dmabuf_manager);
+    if (ctx->wl.screencopy_manager != NULL) zwlr_screencopy_manager_v1_destroy(ctx->wl.screencopy_manager);
+    if (ctx->wl.shm != NULL) wl_shm_destroy(ctx->wl.shm);
     if (ctx->wl.xdg_toplevel != NULL) xdg_toplevel_destroy(ctx->wl.xdg_toplevel);
     if (ctx->wl.xdg_surface != NULL) xdg_surface_destroy(ctx->wl.xdg_surface);
     if (ctx->wl.surface != NULL) wl_surface_destroy(ctx->wl.surface);
-    if (ctx->wl.dmabuf_manager != NULL) zwlr_export_dmabuf_manager_v1_destroy(ctx->wl.dmabuf_manager);
     if (ctx->wl.output_manager != NULL) zxdg_output_manager_v1_destroy(ctx->wl.output_manager);
     if (ctx->wl.wm_base != NULL) xdg_wm_base_destroy(ctx->wl.wm_base);
     if (ctx->wl.compositor != NULL) wl_compositor_destroy(ctx->wl.compositor);

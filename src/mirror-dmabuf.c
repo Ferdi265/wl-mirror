@@ -274,8 +274,8 @@ static const struct zwlr_export_dmabuf_frame_v1_listener dmabuf_frame_listener =
 static void mirror_dmabuf_on_frame(ctx_t * ctx) {
     dmabuf_mirror_backend_t * backend = (dmabuf_mirror_backend_t *)ctx->mirror.backend;
 
-    if (backend->state != STATE_WAIT_FRAME) {
-        log_debug(ctx, "frame_callback: clearing dmabuf_frame state\n");
+    if (backend->state == STATE_READY || backend->state == STATE_CANCELED) {
+        log_debug(ctx, "mirror_dmabuf_on_frame: clearing dmabuf_frame state\n");
         backend->width = 0;
         backend->height = 0;
         backend->x = 0;
@@ -302,17 +302,17 @@ static void mirror_dmabuf_on_frame(ctx_t * ctx) {
         backend->state = STATE_WAIT_FRAME;
         backend->processed_objects = 0;
 
-        log_debug(ctx, "frame_callback: creating wlr_dmabuf_export_frame\n");
+        log_debug(ctx, "mirror_dmabuf_on_frame: creating wlr_dmabuf_export_frame\n");
         backend->dmabuf_frame = zwlr_export_dmabuf_manager_v1_capture_output(
             ctx->wl.dmabuf_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output
         );
         if (backend->dmabuf_frame == NULL) {
-            log_error("frame_callback: failed to create wlr_dmabuf_export_frame\n");
+            log_error("mirror_dmabuf_on_frame: failed to create wlr_dmabuf_export_frame\n");
             backend_fail(ctx);
             return;
         }
 
-        log_debug(ctx, "frame_callback: adding dmabuf_frame event listener\n");
+        log_debug(ctx, "mirror_dmabuf_on_frame: adding dmabuf_frame event listener\n");
         zwlr_export_dmabuf_frame_v1_add_listener(backend->dmabuf_frame, &dmabuf_frame_listener, (void *)ctx);
     }
 
@@ -337,6 +337,11 @@ static void mirror_dmabuf_on_cleanup(ctx_t * ctx) {
 // --- init_mirror_dmabuf ---
 
 void init_mirror_dmabuf(ctx_t * ctx) {
+    if (ctx->wl.dmabuf_manager == NULL) {
+        log_error("init_mirror_dmabuf: missing wlr_export_dmabuf_manager protocol\n");
+        return;
+    }
+
     dmabuf_mirror_backend_t * backend = malloc(sizeof (dmabuf_mirror_backend_t));
     if (backend == NULL) {
         log_error("init_mirror_dmabuf: failed to allocate backend state\n");
@@ -372,7 +377,7 @@ void init_mirror_dmabuf(ctx_t * ctx) {
     backend->objects[2] = empty_obj;
     backend->objects[3] = empty_obj;
 
-    backend->state = STATE_CANCELED;
+    backend->state = STATE_READY;
     backend->processed_objects = 0;
 
     ctx->mirror.backend = (mirror_backend_t *)backend;

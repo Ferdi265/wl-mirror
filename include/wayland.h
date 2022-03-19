@@ -6,6 +6,7 @@
 #include "xdg-shell.h"
 #include "xdg-output-unstable-v1.h"
 #include "wlr-export-dmabuf-unstable-v1.h"
+#include "wlr-screencopy-unstable-v1.h"
 
 struct ctx;
 
@@ -32,12 +33,20 @@ typedef struct ctx_wl {
     struct wl_compositor * compositor;
     struct xdg_wm_base * wm_base;
     struct zxdg_output_manager_v1 * output_manager;
-    struct zwlr_export_dmabuf_manager_v1 * dmabuf_manager;
     // registry ids
     uint32_t compositor_id;
     uint32_t wm_base_id;
     uint32_t output_manager_id;
+
+    // dmabuf backend objects
+    struct zwlr_export_dmabuf_manager_v1 * dmabuf_manager;
     uint32_t dmabuf_manager_id;
+
+    // screencopy backend objects
+    struct wl_shm * shm;
+    struct zwlr_screencopy_manager_v1 * screencopy_manager;
+    uint32_t shm_id;
+    uint32_t screencopy_manager_id;
 
     // output list
     output_list_node_t * outputs;
