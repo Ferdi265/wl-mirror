@@ -11,7 +11,7 @@
 struct ctx;
 struct output_list_node;
 
-#define MIRROR_AUTO_FALLBACK_FAILCOUNT 10
+#define MIRROR_BACKEND_FATAL_FAILCOUNT 10
 
 typedef struct mirror_backend {
     void (*on_frame)(struct ctx * ctx);
@@ -42,6 +42,7 @@ void init_mirror_backend(struct ctx * ctx);
 void output_removed_mirror(struct ctx * ctx, struct output_list_node * node);
 void update_options_mirror(struct ctx * ctx);
 
+void backend_fail(struct ctx * ctx);
 void cleanup_mirror(struct ctx * ctx);
 
 #endif

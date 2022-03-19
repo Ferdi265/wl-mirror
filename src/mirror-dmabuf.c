@@ -20,10 +20,12 @@ static void dmabuf_frame_event_frame(
     log_debug(ctx, "dmabuf_frame: received %dx%d frame with %d objects\n", width, height, num_objects);
     if (backend->state != STATE_WAIT_FRAME) {
         log_error("dmabuf_frame: got frame while in state %d\n", backend->state);
-        exit_fail(ctx);
+        backend_fail(ctx);
+        return;
     } else if (num_objects > 4) {
         log_error("dmabuf_frame: got frame with more than 4 objects\n");
-        exit_fail(ctx);
+        backend_fail(ctx);
+        return;
     }
 
     uint32_t unhandled_buffer_flags = buffer_flags & ~(
@@ -74,10 +76,12 @@ static void dmabuf_frame_event_object(
     log_debug(ctx, "dmabuf_frame: received %d byte object with plane_index %d\n", size, plane_index);
     if (backend->state != STATE_WAIT_OBJECTS) {
         log_error("dmabuf_frame: got object while in state %d\n", backend->state);
-        exit_fail(ctx);
+        backend_fail(ctx);
+        return;
     } else if (index >= backend->num_objects) {
         log_error("dmabuf_frame: got object with out-of-bounds index %d\n", index);
-        exit_fail(ctx);
+        backend_fail(ctx);
+        return;
     }
 
     backend->objects[index].fd = fd;
@@ -104,7 +108,8 @@ static void dmabuf_frame_event_ready(
     log_debug(ctx, "dmabuf_frame: frame is ready\n");
     if (backend->state != STATE_WAIT_READY) {
         log_error("dmabuf_frame: got ready while in state %d\n", backend->state);
-        exit_fail(ctx);
+        backend_fail(ctx);
+        return;
     }
 
     if (ctx->mirror.frame_image != EGL_NO_IMAGE) {
@@ -180,7 +185,8 @@ static void dmabuf_frame_event_ready(
     ctx->mirror.frame_image = eglCreateImage(ctx->egl.display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
     if (ctx->mirror.frame_image == EGL_NO_IMAGE) {
         log_error("dmabuf_frame: failed to create EGL image from dmabuf\n");
-        exit_fail(ctx);
+        backend_fail(ctx);
+        return;
     }
 
     log_debug(ctx, "dmabuf_frame: binding image to EGL texture\n");
@@ -302,7 +308,8 @@ static void mirror_dmabuf_on_frame(ctx_t * ctx) {
         );
         if (backend->dmabuf_frame == NULL) {
             log_error("frame_callback: failed to create wlr_dmabuf_export_frame\n");
-            exit_fail(ctx);
+            backend_fail(ctx);
+            return;
         }
 
         log_debug(ctx, "frame_callback: adding dmabuf_frame event listener\n");

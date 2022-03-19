@@ -8,43 +8,6 @@
 #include "linux-dmabuf-unstable-v1.h"
 #include "mirror-backends.h"
 
-// --- auto backend handler
-
-typedef struct {
-    char * name;
-    void (*init)(ctx_t * ctx);
-} fallback_backend_t;
-
-static fallback_backend_t auto_fallback_backends[] = {
-    { "dmabuf", init_mirror_dmabuf },
-    { "screencopy", init_mirror_screencopy },
-    { NULL, NULL }
-};
-
-static void auto_backend_fallback(ctx_t * ctx) {
-    while (true) {
-        size_t index = ctx->mirror.auto_backend_index;
-        fallback_backend_t * next_backend = &auto_fallback_backends[index];
-
-        if (next_backend->name == NULL) {
-            log_error("auto_backend_fallback: no working backend found, exiting\n");
-            exit_fail(ctx);
-        }
-
-        if (index > 0) {
-            log_warn("auto_backend_fallback: falling back to backend %s\n", next_backend->name);
-        } else {
-            log_debug(ctx, "auto_backend_fallback: selecting backend %s\n", next_backend->name);
-        }
-
-        if (ctx->mirror.backend != NULL) ctx->mirror.backend->on_cleanup(ctx);
-        next_backend->init(ctx);
-        if (ctx->mirror.backend != NULL) break;
-
-        ctx->mirror.auto_backend_index++;
-    }
-}
-
 // --- frame_callback event handlers ---
 
 static const struct wl_callback_listener frame_callback_listener;
@@ -72,8 +35,8 @@ static void frame_callback_event_done(
     }
 
     if (ctx->mirror.backend != NULL) {
-        if (ctx->opt.backend == BACKEND_AUTO && ctx->mirror.backend->fail_count > MIRROR_AUTO_FALLBACK_FAILCOUNT) {
-            auto_backend_fallback(ctx);
+        if (ctx->mirror.backend->fail_count >= MIRROR_BACKEND_FATAL_FAILCOUNT) {
+            backend_fail(ctx);
         }
 
         ctx->mirror.backend->on_frame(ctx);
@@ -115,6 +78,44 @@ void init_mirror(ctx_t * ctx) {
     ctx->mirror.frame_callback = wl_surface_frame(ctx->wl.surface);
     wl_callback_add_listener(ctx->mirror.frame_callback, &frame_callback_listener, (void *)ctx);
 }
+
+// --- auto backend handler
+
+typedef struct {
+    char * name;
+    void (*init)(ctx_t * ctx);
+} fallback_backend_t;
+
+static fallback_backend_t auto_fallback_backends[] = {
+    { "dmabuf", init_mirror_dmabuf },
+    { "screencopy", init_mirror_screencopy },
+    { NULL, NULL }
+};
+
+static void auto_backend_fallback(ctx_t * ctx) {
+    while (true) {
+        size_t index = ctx->mirror.auto_backend_index;
+        fallback_backend_t * next_backend = &auto_fallback_backends[index];
+
+        if (next_backend->name == NULL) {
+            log_error("auto_backend_fallback: no working backend found, exiting\n");
+            exit_fail(ctx);
+        }
+
+        if (index > 0) {
+            log_warn("auto_backend_fallback: falling back to backend %s\n", next_backend->name);
+        } else {
+            log_debug(ctx, "auto_backend_fallback: selecting backend %s\n", next_backend->name);
+        }
+
+        if (ctx->mirror.backend != NULL) ctx->mirror.backend->on_cleanup(ctx);
+        next_backend->init(ctx);
+        if (ctx->mirror.backend != NULL) break;
+
+        ctx->mirror.auto_backend_index++;
+    }
+}
+
 
 // --- init_mirror_backend ---
 
@@ -165,9 +166,19 @@ void update_options_mirror(ctx_t * ctx) {
     free(title);
 }
 
+// --- backend_fail ---
+
+void backend_fail(ctx_t * ctx) {
+    if (ctx->opt.backend == BACKEND_AUTO) {
+        auto_backend_fallback(ctx);
+    } else {
+        exit_fail(ctx);
+    }
+}
+
 // --- cleanup_mirror ---
 
-void cleanup_mirror(ctx_t *ctx) {
+void cleanup_mirror(ctx_t * ctx) {
     if (!ctx->mirror.initialized) return;
 
     log_debug(ctx, "cleanup_mirror: destroying mirror objects\n");
