@@ -33,10 +33,15 @@ options:
   -s l, --scaling linear   use linear scaling (default)
   -s n, --scaling nearest  use nearest neighbor scaling
   -s e, --scaling exact    only scale to exact multiples of the output size
+  -b B  --backend B        use a specific backend for capturing the screen
   -t T, --transform T      apply custom transform T
   -r R, --region R         capture custom region R
         --no-region        capture the entire output (default)
   -S,   --stream           accept a stream of additional options on stdin
+
+backends:
+  - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs
+  - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs
 
 transforms:
   transforms are specified as a dash-separated list of flips followed by a rotation
@@ -101,5 +106,7 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 - `src/wayland.c`: Wayland and `xdg_surface` boilerplate
 - `src/egl.c`: EGL boilerplate
 - `src/mirror.c`: output mirroring code
+- `src/mirror-dmabuf.c`: wlr-export-dmabuf-unstable-v1 backend code
+- `src/mirror-screencopy.c`: wlr-screencopy-unstable-v1 backend code
 - `src/transform.c`: matrix transformation code
 - `src/event.c`: event loop and asynchronous option stream input

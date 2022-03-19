@@ -14,6 +14,12 @@ typedef enum {
     SCALE_EXACT
 } scale_t;
 
+typedef enum {
+    BACKEND_AUTO,
+    BACKEND_DMABUF,
+    BACKEND_SCREENCOPY
+} backend_t;
+
 typedef struct ctx_opt {
     bool verbose;
     bool stream;
@@ -21,6 +27,7 @@ typedef struct ctx_opt {
     bool invert_colors;
     bool has_region;
     scale_t scaling;
+    backend_t backend;
     transform_t transform;
     region_t region;
     char * output;

@@ -45,6 +45,9 @@ int main(int argc, char ** argv) {
     log_debug(&ctx, "main: initializing mirror\n");
     init_mirror(&ctx);
 
+    log_debug(&ctx, "main: initializing mirror backend\n");
+    init_mirror_backend(&ctx);
+
     log_debug(&ctx, "main: entering event loop\n");
     event_loop(&ctx);
     log_debug(&ctx, "main: exiting event loop\n");

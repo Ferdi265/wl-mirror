@@ -10,6 +10,7 @@ void init_opt(ctx_t * ctx) {
     ctx->opt.invert_colors = false;
     ctx->opt.has_region = false;
     ctx->opt.scaling = SCALE_LINEAR;
+    ctx->opt.backend = BACKEND_AUTO;
     ctx->opt.transform = (transform_t){ .rotation = ROT_NORMAL, .flip_x = false, .flip_y = false };
     ctx->opt.region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
     ctx->opt.output = NULL;
@@ -28,6 +29,21 @@ bool parse_scaling_opt(scale_t * scaling, const char * scaling_arg) {
         return true;
     } else if (strcmp(scaling_arg, "e") == 0 || strcmp(scaling_arg, "exact") == 0) {
         *scaling = SCALE_EXACT;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool parse_backend_opt(backend_t * backend, const char * backend_arg) {
+    if (strcmp(backend_arg, "auto") == 0) {
+        *backend = BACKEND_AUTO;
+        return true;
+    } else if (strcmp(backend_arg, "dmabuf") == 0) {
+        *backend = BACKEND_DMABUF;
+        return true;
+    } else if (strcmp(backend_arg, "screencopy") == 0) {
+        *backend = BACKEND_SCREENCOPY;
         return true;
     } else {
         return false;
@@ -322,10 +338,15 @@ void usage_opt(ctx_t * ctx) {
     printf("  -s l, --scaling linear   use linear scaling (default)\n");
     printf("  -s n, --scaling nearest  use nearest neighbor scaling\n");
     printf("  -s e, --scaling exact    only scale to exact multiples of the output size\n");
+    printf("  -b B  --backend B        use a specific backend for capturing the screen\n");
     printf("  -t T, --transform T      apply custom transform T\n");
     printf("  -r R, --region R         capture custom region R\n");
     printf("        --no-region        capture the entire output (default)\n");
     printf("  -S,   --stream           accept a stream of additional options on stdin\n");
+    printf("\n");
+    printf("backends:\n");
+    printf("  - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs\n");
+    printf("  - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs\n");
     printf("\n");
     printf("transforms:\n");
     printf("  transforms are specified as a dash-separated list of flips followed by a rotation\n");
@@ -350,6 +371,7 @@ void usage_opt(ctx_t * ctx) {
 
 void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     bool is_cli_args = !ctx->opt.stream;
+    bool new_backend = false;
     bool new_region = false;
     bool new_output = false;
     char * region_output = NULL;
@@ -383,6 +405,20 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
                     if (is_cli_args) exit_fail(ctx);
                 }
 
+                argv++;
+                argc--;
+            }
+        } else if (strcmp(argv[0], "-b") == 0 || strcmp(argv[0], "--backend") == 0) {
+            if (argc < 2) {
+                log_error("parse_opt: option %s requires an argument\n", argv[0]);
+                if (is_cli_args) exit_fail(ctx);
+            } else {
+                if (!parse_backend_opt(&ctx->opt.backend, argv[1])) {
+                    log_error("parse_opt: invalid backend %s\n", argv[1]);
+                    if (is_cli_args) exit_fail(ctx);
+                }
+
+                new_backend = true;
                 argv++;
                 argc--;
             }
@@ -493,6 +529,10 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     if (!is_cli_args && find_output_opt(ctx, &target_output, &target_region)) {
         ctx->mirror.current_target = target_output;
         ctx->mirror.current_region = target_region;
+    }
+
+    if (!is_cli_args && new_backend) {
+        init_mirror_backend(ctx);
     }
 
     if (!is_cli_args) {
