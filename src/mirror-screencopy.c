@@ -5,6 +5,133 @@
 #include "context.h"
 #include "mirror-screencopy.h"
 #include <sys/mman.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+
+typedef struct {
+    uint32_t shm_format;
+    uint32_t bpp;
+    GLint gl_format;
+    GLint gl_type;
+} shm_gl_format_t;
+
+static const shm_gl_format_t shm_gl_formats[] = {
+    {
+        .shm_format = WL_SHM_FORMAT_ARGB8888,
+        .bpp = 32,
+        .gl_format = GL_BGRA_EXT,
+        .gl_type = GL_UNSIGNED_BYTE,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_XRGB8888,
+        .bpp = 32,
+        .gl_format = GL_BGRA_EXT,
+        .gl_type = GL_UNSIGNED_BYTE,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_XBGR8888,
+        .bpp = 32,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_UNSIGNED_BYTE,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_ABGR8888,
+        .bpp = 32,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_UNSIGNED_BYTE,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_BGR888,
+        .bpp = 24,
+        .gl_format = GL_RGB,
+        .gl_type = GL_UNSIGNED_BYTE,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_RGBX4444,
+        .bpp = 16,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_UNSIGNED_SHORT_4_4_4_4,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_RGBA4444,
+        .bpp = 16,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_UNSIGNED_SHORT_4_4_4_4,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_RGBX5551,
+        .bpp = 16,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_UNSIGNED_SHORT_5_5_5_1,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_RGBA5551,
+        .bpp = 16,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_UNSIGNED_SHORT_5_5_5_1,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_RGB565,
+        .bpp = 16,
+        .gl_format = GL_RGB,
+        .gl_type = GL_UNSIGNED_SHORT_5_6_5,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_XBGR2101010,
+        .bpp = 32,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_UNSIGNED_INT_2_10_10_10_REV_EXT,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_ABGR2101010,
+        .bpp = 32,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_UNSIGNED_INT_2_10_10_10_REV_EXT,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_XBGR16161616F,
+        .bpp = 64,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_HALF_FLOAT_OES,
+    },
+    {
+        .shm_format = WL_SHM_FORMAT_ABGR16161616F,
+        .bpp = 64,
+        .gl_format = GL_RGBA,
+        .gl_type = GL_HALF_FLOAT_OES,
+    },
+    {
+        .shm_format = -1U,
+        .bpp = -1U,
+        .gl_format = -1,
+        .gl_type = -1
+    }
+};
+
+static const shm_gl_format_t * shm_gl_format_from_shm(uint32_t shm_format) {
+    const shm_gl_format_t * format = shm_gl_formats;
+    while (format->shm_format != -1U) {
+        printf("comparing needle=%c%c%c%c vs haystack=%c%c%c%c\n",
+            (shm_format >> 24) & 0xff,
+            (shm_format >> 16) & 0xff,
+            (shm_format >> 8) & 0xff,
+            (shm_format >> 0) & 0xff,
+            (format->shm_format >> 24) & 0xff,
+            (format->shm_format >> 16) & 0xff,
+            (format->shm_format >> 8) & 0xff,
+            (format->shm_format >> 0) & 0xff
+        );
+        if (format->shm_format == shm_format) {
+            return format;
+        }
+
+        format++;
+    }
+
+    return NULL;
+}
 
 // --- screencopy_frame event handlers ---
 
@@ -22,45 +149,7 @@ static void screencopy_frame_event_buffer(
         return;
     }
 
-    backend->frame_info.width = width;
-    backend->frame_info.height = height;
-    backend->frame_info.stride = stride;
-    backend->frame_info.format = format;
-
-    backend->state = STATE_WAIT_BUFFER_DONE;
-
-    (void)frame;
-}
-
-static void screencopy_frame_event_linux_dmabuf(
-    void * data, struct zwlr_screencopy_frame_v1 * frame,
-    uint32_t format, uint32_t width, uint32_t height
-) {
-    ctx_t * ctx = (ctx_t *)data;
-    screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
-
-    log_debug(ctx, "screencopy_frame: received dmabuf offer for %dx%d frame\n", width, height);
-    log_debug(ctx, "screencopy_frame: dmabuf buffers are not yet supported\n");
-
-    (void)backend;
-    (void)frame;
-    (void)format;
-}
-
-static void screencopy_frame_event_buffer_done(
-    void * data, struct zwlr_screencopy_frame_v1 * frame
-) {
-    ctx_t * ctx = (ctx_t *)data;
-    screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
-
-    log_debug(ctx, "screencopy_frame: received buffer done event\n");
-    if (backend->state != STATE_WAIT_BUFFER_DONE) {
-        log_error("screencopy_frame: received buffer_done without supported buffer offer\n");
-        backend_fail(ctx);
-        return;
-    }
-
-    size_t new_size = backend->frame_info.stride * backend->frame_info.height;
+    size_t new_size = stride * height;
     if (new_size > backend->shm_size) {
         if (backend->shm_buffer != NULL) {
             wl_buffer_destroy(backend->shm_buffer);
@@ -87,10 +176,10 @@ static void screencopy_frame_event_buffer_done(
     }
 
     bool new_buffer_needed =
-        backend->buffer_info.width != backend->frame_info.width ||
-        backend->buffer_info.height != backend->frame_info.height ||
-        backend->buffer_info.stride != backend->frame_info.stride ||
-        backend->buffer_info.format != backend->frame_info.format;
+        backend->frame_width != width ||
+        backend->frame_height != height ||
+        backend->frame_stride != stride ||
+        backend->frame_format != format;
 
     if (backend->shm_buffer != NULL && new_buffer_needed) {
         wl_buffer_destroy(backend->shm_buffer);
@@ -100,14 +189,47 @@ static void screencopy_frame_event_buffer_done(
     if (backend->shm_buffer == NULL) {
         backend->shm_buffer = wl_shm_pool_create_buffer(
             backend->shm_pool, 0,
-            backend->frame_info.width, backend->frame_info.height,
-            backend->frame_info.stride, backend->frame_info.format
+            width, height,
+            stride, format
         );
         if (backend->shm_buffer == NULL) {
             log_error("screencopy_frame: failed to create wl_buffer\n");
             backend_fail(ctx);
             return;
         }
+    }
+
+    backend->frame_width = width;
+    backend->frame_height = height;
+    backend->frame_stride = stride;
+    backend->frame_format = format;
+    backend->state = STATE_WAIT_BUFFER_DONE;
+
+    (void)frame;
+}
+
+static void screencopy_frame_event_linux_dmabuf(
+    void * data, struct zwlr_screencopy_frame_v1 * frame,
+    uint32_t format, uint32_t width, uint32_t height
+) {
+    (void)data;
+    (void)frame;
+    (void)format;
+    (void)width;
+    (void)height;
+}
+
+static void screencopy_frame_event_buffer_done(
+    void * data, struct zwlr_screencopy_frame_v1 * frame
+) {
+    ctx_t * ctx = (ctx_t *)data;
+    screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
+
+    log_debug(ctx, "screencopy_frame: received buffer done event\n");
+    if (backend->state != STATE_WAIT_BUFFER_DONE) {
+        log_error("screencopy_frame: received buffer_done without supported buffer offer\n");
+        backend_fail(ctx);
+        return;
     }
 
     backend->state = STATE_WAIT_FLAGS;
@@ -156,16 +278,43 @@ static void screencopy_frame_event_ready(
     screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
 
     log_debug(ctx, "screencopy_frame: received ready event\n");
-    log_debug(ctx, "width: %d, height: %d, stride: %d, format: %x\n",
-        backend->frame_info.width, backend->frame_info.height,
-        backend->frame_info.stride, backend->frame_info.format
+    log_debug(ctx, "width: %d, height: %d, stride: %d, format: %c%c%c%c\n",
+        backend->frame_width, backend->frame_height,
+        backend->frame_stride,
+        (backend->frame_format >> 24) & 0xff,
+        (backend->frame_format >> 16) & 0xff,
+        (backend->frame_format >> 8) & 0xff,
+        (backend->frame_format >> 0) & 0xff
     );
 
-    backend_fail(ctx);
+    if (ctx->mirror.frame_image != EGL_NO_IMAGE) {
+        log_debug(ctx, "screencopy_frame: destroying old EGL image\n");
+        eglDestroyImage(ctx->egl.display, ctx->mirror.frame_image);
+    }
 
-    // TODO: somehow create OpenGL texture
-    // (lots of cleanup needed elsewhere too)
-    // (EGLImage might be able to be removed from common mirror and moved into dmabuf)
+    const shm_gl_format_t * format = shm_gl_format_from_shm(backend->frame_format);
+    if (format == NULL) {
+        log_error("screencopy_frame: failed to find GL format for shm format\n");
+        backend_fail(ctx);
+        return;
+    }
+
+    log_debug(ctx, "screencopy_frame: loading texture data\n");
+    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, backend->frame_stride / (format->bpp / 8));
+    glTexImage2D(GL_TEXTURE_2D,
+        0, format->gl_format, backend->frame_width, backend->frame_height,
+        0, format->gl_format, format->gl_type, backend->shm_addr
+    );
+    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
+    ctx->egl.texture_initialized = true;
+
+    log_debug(ctx, "screencopy_frame: setting buffer flags\n");
+    ctx->mirror.invert_y = backend->frame_flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT;
+
+    log_debug(ctx, "screencopy_frame: setting frame aspect ratio\n");
+    ctx->egl.width = backend->frame_width;
+    ctx->egl.height = backend->frame_height;
+    resize_viewport_egl(ctx);
 
     zwlr_screencopy_frame_v1_destroy(backend->screencopy_frame);
     backend->screencopy_frame = NULL;
@@ -173,6 +322,9 @@ static void screencopy_frame_event_ready(
     backend->header.fail_count = 0;
 
     (void)frame;
+    (void)sec_hi;
+    (void)sec_lo;
+    (void)nsec;
 }
 
 static void screencopy_frame_event_failed(
@@ -207,13 +359,6 @@ static void mirror_screencopy_on_frame(ctx_t * ctx) {
     if (backend->state == STATE_READY || backend->state == STATE_CANCELED) {
         log_debug(ctx, "mirror_screencopy_on_frame: clearing screencopy_frame state\n");
 
-        buffer_info_t zero_buffer = {
-            .width = 0,
-            .height = 0,
-            .stride = 0,
-            .format = 0
-        };
-        backend->frame_info = zero_buffer;
         backend->frame_flags = 0;
         backend->state = STATE_WAIT_BUFFER;
 
@@ -274,14 +419,10 @@ void init_mirror_screencopy(ctx_t * ctx) {
 
     backend->screencopy_frame = NULL;
 
-    buffer_info_t zero_buffer = {
-        .width = 0,
-        .height = 0,
-        .stride = 0,
-        .format = 0
-    };
-    backend->buffer_info = zero_buffer;
-    backend->frame_info = zero_buffer;
+    backend->frame_width = 0;
+    backend->frame_height = 0;
+    backend->frame_stride = 0;
+    backend->frame_format = 0;
     backend->frame_flags = 0;
 
     backend->state = STATE_READY;

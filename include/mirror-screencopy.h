@@ -16,13 +16,6 @@ typedef enum {
 } screencopy_state_t;
 
 typedef struct {
-    uint32_t width;
-    uint32_t height;
-    uint32_t stride;
-    uint32_t format;
-} buffer_info_t;
-
-typedef struct {
     mirror_backend_t header;
 
     // shm state
@@ -38,8 +31,10 @@ typedef struct {
     struct zwlr_screencopy_frame_v1 * screencopy_frame;
 
     // frame data
-    buffer_info_t buffer_info;
-    buffer_info_t frame_info;
+    uint32_t frame_width;
+    uint32_t frame_height;
+    uint32_t frame_stride;
+    uint32_t frame_format;
     uint32_t frame_flags;
 
     // screencopy state flags
