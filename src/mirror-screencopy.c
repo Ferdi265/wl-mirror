@@ -113,16 +113,6 @@ static const shm_gl_format_t shm_gl_formats[] = {
 static const shm_gl_format_t * shm_gl_format_from_shm(uint32_t shm_format) {
     const shm_gl_format_t * format = shm_gl_formats;
     while (format->shm_format != -1U) {
-        printf("comparing needle=%c%c%c%c vs haystack=%c%c%c%c\n",
-            (shm_format >> 24) & 0xff,
-            (shm_format >> 16) & 0xff,
-            (shm_format >> 8) & 0xff,
-            (shm_format >> 0) & 0xff,
-            (format->shm_format >> 24) & 0xff,
-            (format->shm_format >> 16) & 0xff,
-            (format->shm_format >> 8) & 0xff,
-            (format->shm_format >> 0) & 0xff
-        );
         if (format->shm_format == shm_format) {
             return format;
         }
