@@ -40,7 +40,7 @@ void init_mirror(struct ctx * ctx);
 void init_mirror_backend(struct ctx * ctx);
 
 void output_removed_mirror(struct ctx * ctx, struct output_list_node * node);
-void update_options_mirror(struct ctx * ctx);
+void update_title_mirror(struct ctx * ctx);
 
 void backend_fail(struct ctx * ctx);
 void cleanup_mirror(struct ctx * ctx);

@@ -17,28 +17,30 @@ static void frame_callback_event_done(
 ) {
     ctx_t * ctx = (ctx_t *)data;
 
+    // destroy frame callback
     wl_callback_destroy(ctx->mirror.frame_callback);
     ctx->mirror.frame_callback = NULL;
 
-    log_debug(ctx, "frame_callback: requesting next callback\n");
+    // add new frame callback listener
+    // the wayland spec says you cannot reuse the old frame callback
     ctx->mirror.frame_callback = wl_surface_frame(ctx->wl.surface);
     wl_callback_add_listener(ctx->mirror.frame_callback, &frame_callback_listener, (void *)ctx);
 
-    log_debug(ctx, "frame_callback: rendering frame\n");
+    // render frame, set swap interval to 0 to ensure nonblocking buffer swap
     draw_texture_egl(ctx);
-
-    log_debug(ctx, "frame_callback: swapping buffers\n");
     eglSwapInterval(ctx->egl.display, 0);
     if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        log_error("frame_callback: failed to swap buffers\n");
+        log_error("mirror::frame_callback_event_done(): failed to swap buffers\n");
         exit_fail(ctx);
     }
 
     if (ctx->mirror.backend != NULL) {
+        // check if backend failure count exceeded
         if (ctx->mirror.backend->fail_count >= MIRROR_BACKEND_FATAL_FAILCOUNT) {
             backend_fail(ctx);
         }
 
+        // request new screen capture from backend
         ctx->mirror.backend->on_frame(ctx);
     }
 
@@ -53,8 +55,7 @@ static const struct wl_callback_listener frame_callback_listener = {
 // --- init_mirror ---
 
 void init_mirror(ctx_t * ctx) {
-    log_debug(ctx, "init_mirror: initializing context structure\n");
-
+    // initialize context structure
     ctx->mirror.current_target = NULL;
     ctx->mirror.frame_callback = NULL;
     ctx->mirror.current_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
@@ -67,14 +68,16 @@ void init_mirror(ctx_t * ctx) {
 
     ctx->mirror.initialized = true;
 
+    // finding target output
     if (!find_output_opt(ctx, &ctx->mirror.current_target, &ctx->mirror.current_region)) {
-        log_error("init_mirror: failed to find output\n");
+        log_error("mirror::init_mirror(): failed to find output\n");
         exit_fail(ctx);
     }
 
-    update_options_mirror(ctx);
+    // update window title
+    update_title_mirror(ctx);
 
-    log_debug(ctx, "init_mirror: requesting render callback\n");
+    // add frame callback listener
     ctx->mirror.frame_callback = wl_surface_frame(ctx->wl.surface);
     wl_callback_add_listener(ctx->mirror.frame_callback, &frame_callback_listener, (void *)ctx);
 }
@@ -94,24 +97,30 @@ static fallback_backend_t auto_fallback_backends[] = {
 
 static void auto_backend_fallback(ctx_t * ctx) {
     while (true) {
+        // get next backend
         size_t index = ctx->mirror.auto_backend_index;
         fallback_backend_t * next_backend = &auto_fallback_backends[index];
-
         if (next_backend->name == NULL) {
-            log_error("auto_backend_fallback: no working backend found, exiting\n");
+            log_error("mirror::auto_backend_fallback(): no working backend found, exiting\n");
             exit_fail(ctx);
         }
 
         if (index > 0) {
-            log_warn("auto_backend_fallback: falling back to backend %s\n", next_backend->name);
+            log_warn("mirror::auto_backend_fallback(): falling back to backend %s\n", next_backend->name);
         } else {
-            log_debug(ctx, "auto_backend_fallback: selecting backend %s\n", next_backend->name);
+            log_debug(ctx, "mirror::auto_backend_fallback(): selecting backend %s\n", next_backend->name);
         }
 
+        // uninitialize previous backend
         if (ctx->mirror.backend != NULL) ctx->mirror.backend->on_cleanup(ctx);
+
+        // initialize next backend
         next_backend->init(ctx);
+
+        // break if backend loading succeeded
         if (ctx->mirror.backend != NULL) break;
 
+        // try next backend
         ctx->mirror.auto_backend_index++;
     }
 }
@@ -146,22 +155,20 @@ void output_removed_mirror(ctx_t * ctx, output_list_node_t * node) {
     if (ctx->mirror.current_target == NULL) return;
     if (ctx->mirror.current_target != node) return;
 
-    log_error("output_removed_mirror: output disappeared, closing\n");
+    log_error("mirror::output_removed_mirror(): output disappeared, closing\n");
     exit_fail(ctx);
 }
 
 // --- update_options_mirror ---
 
-void update_options_mirror(ctx_t * ctx) {
-    log_debug(ctx, "init_mirror: formatting window title\n");
+void update_title_mirror(ctx_t * ctx) {
     char * title = NULL;
     int status = asprintf(&title, "Wayland Output Mirror for %s", ctx->mirror.current_target->name);
     if (status == -1) {
-        log_error("init_mirror: failed to format window title\n");
+        log_error("mirror::update_title_mirror(): failed to format window title\n");
         exit_fail(ctx);
     }
 
-    log_debug(ctx, "init_mirror: setting window title\n");
     xdg_toplevel_set_title(ctx->wl.xdg_toplevel, title);
     free(title);
 }
@@ -181,7 +188,7 @@ void backend_fail(ctx_t * ctx) {
 void cleanup_mirror(ctx_t * ctx) {
     if (!ctx->mirror.initialized) return;
 
-    log_debug(ctx, "cleanup_mirror: destroying mirror objects\n");
+    log_debug(ctx, "mirror::cleanup_mirror(): destroying mirror objects\n");
 
     if (ctx->mirror.backend != NULL) ctx->mirror.backend->on_cleanup(ctx);
     if (ctx->mirror.frame_callback != NULL) wl_callback_destroy(ctx->mirror.frame_callback);

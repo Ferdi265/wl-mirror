@@ -537,7 +537,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
 
     if (!is_cli_args) {
         update_options_egl(ctx);
-        update_options_mirror(ctx);
+        update_title_mirror(ctx);
     }
 }
 
