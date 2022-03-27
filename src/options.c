@@ -345,6 +345,7 @@ void usage_opt(ctx_t * ctx) {
     printf("  -S,   --stream           accept a stream of additional options on stdin\n");
     printf("\n");
     printf("backends:\n");
+    printf("  - auto        automatically try the backends in order and use the first that works (default)\n");
     printf("  - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs\n");
     printf("  - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs\n");
     printf("\n");
