@@ -51,7 +51,7 @@ static void output_event_geometry(
 
         // update egl viewport only if this is the target output
         if (ctx->mirror.initialized && ctx->mirror.current_target->output == output) {
-            resize_viewport_egl(ctx);
+            resize_viewport(ctx);
         }
     }
 
@@ -99,7 +99,7 @@ static void output_event_scale(
 
             // resize egl window to reflect new scale
             if (ctx->egl.initialized) {
-                resize_window_egl(ctx);
+                resize_window(ctx);
             }
         }
     }
@@ -442,7 +442,7 @@ static void surface_event_enter(
 
         // resize egl window to reflect new scale
         if (ctx->egl.initialized) {
-            resize_window_egl(ctx);
+            resize_window(ctx);
         }
     }
 
@@ -519,7 +519,7 @@ static void xdg_toplevel_event_configure(
 
         // resize window to reflect new surface size
         if (ctx->egl.initialized) {
-            resize_window_egl(ctx);
+            resize_window(ctx);
         }
     }
 

@@ -251,16 +251,16 @@ void init_egl(ctx_t * ctx) {
     glEnableVertexAttribArray(1);
 
     // draw initial frame
-    draw_texture_egl(ctx);
+    draw_texture(ctx);
     if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
         log_error("egl::init(): failed to swap buffers\n");
         exit_fail(ctx);
     }
 }
 
-// --- draw_texture_egl ---
+// --- draw_texture ---
 
-void draw_texture_egl(ctx_t *ctx) {
+void draw_texture(ctx_t *ctx) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     if (ctx->egl.texture_initialized) {
@@ -268,9 +268,9 @@ void draw_texture_egl(ctx_t *ctx) {
     }
 }
 
-// --- resize_viewport_egl ---
+// --- resize_viewport
 
-void resize_viewport_egl(ctx_t * ctx) {
+void resize_viewport(ctx_t * ctx) {
     log_debug(ctx, "egl::resize_viewport(): resizing viewport\n");
 
     uint32_t win_width = ctx->wl.scale * ctx->wl.width;
@@ -351,28 +351,28 @@ void resize_viewport_egl(ctx_t * ctx) {
     glUniformMatrix3fv(ctx->egl.texture_transform_uniform, 1, false, (float *)texture_transform.data);
 }
 
-// --- resize_window_egl ---
+// --- resize_window ---
 
-void resize_window_egl(ctx_t * ctx) {
+void resize_window(ctx_t * ctx) {
     log_debug(ctx, "egl::resize_window(): resizing EGL window\n");
 
     // resize window, then trigger viewport recalculation
     wl_egl_window_resize(ctx->egl.window, ctx->wl.scale * ctx->wl.width, ctx->wl.scale * ctx->wl.height, 0, 0);
-    resize_viewport_egl(ctx);
+    resize_viewport(ctx);
 
     // redraw frame
-    draw_texture_egl(ctx);
+    draw_texture(ctx);
     if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
         log_error("egl::resize_window(): failed to swap buffers\n");
         exit_fail(ctx);
     }
 }
 
-// --- update_options_egl ---
+// --- update_uniforms ---
 
-void update_options_egl(ctx_t * ctx) {
+void update_uniforms(ctx_t * ctx) {
     // trigger viewport recalculation
-    resize_viewport_egl(ctx);
+    resize_viewport(ctx);
 
     // set invert colors uniform
     bool invert_colors = ctx->opt.invert_colors;

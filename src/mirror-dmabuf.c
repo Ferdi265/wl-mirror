@@ -223,14 +223,14 @@ static void on_ready(
     bool invert_y = backend->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
     if (ctx->mirror.invert_y != invert_y) {
         ctx->mirror.invert_y = invert_y;
-        update_options_egl(ctx);
+        update_uniforms(ctx);
     }
 
     // set texture size and aspect ratio only if changed
     if (backend->width != ctx->egl.width || backend->height != ctx->egl.height) {
         ctx->egl.width = backend->width;
         ctx->egl.height = backend->height;
-        resize_viewport_egl(ctx);
+        resize_viewport(ctx);
     }
 
     dmabuf_frame_cleanup(backend);

@@ -27,7 +27,7 @@ static void on_frame(
     wl_callback_add_listener(ctx->mirror.frame_callback, &frame_callback_listener, (void *)ctx);
 
     // render frame, set swap interval to 0 to ensure nonblocking buffer swap
-    draw_texture_egl(ctx);
+    draw_texture(ctx);
     eglSwapInterval(ctx->egl.display, 0);
     if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
         log_error("mirror::on_frame(): failed to swap buffers\n");

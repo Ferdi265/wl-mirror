@@ -38,10 +38,10 @@ typedef struct ctx_egl {
 
 void init_egl(struct ctx * ctx);
 
-void draw_texture_egl(struct ctx * ctx);
-void resize_viewport_egl(struct ctx * ctx);
-void resize_window_egl(struct ctx * ctx);
-void update_options_egl(struct ctx * ctx);
+void draw_texture(struct ctx * ctx);
+void resize_viewport(struct ctx * ctx);
+void resize_window(struct ctx * ctx);
+void update_uniforms(struct ctx * ctx);
 
 void cleanup_egl(struct ctx * ctx);
 
