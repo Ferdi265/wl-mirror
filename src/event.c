@@ -30,7 +30,7 @@ void event_args_push(ctx_t * ctx, char * arg) {
 
         char ** new_args = realloc(ctx->event.args, sizeof (char *) * new_cap);
         if (new_args == NULL) {
-            log_error("event_args_push: failed to grow args array for option stream line\n");
+            log_error("event::event_args_push(): failed to grow args array for option stream line\n");
             exit_fail(ctx);
         }
 
@@ -49,7 +49,7 @@ void event_line_reserve(ctx_t * ctx) {
 
         char * new_line = realloc(ctx->event.line, sizeof (char) * new_cap);
         if (new_line == NULL) {
-            log_error("event_line_reserve: failed to grow line buffer for option stream line\n");
+            log_error("event::event_line_reserve(): failed to grow line buffer for option stream line\n");
             exit_fail(ctx);
         }
 
@@ -68,7 +68,7 @@ void event_stdin_line(ctx_t * ctx, char * line) {
     char * arg_start = NULL;
     char quote_char = '\0';
 
-    log_debug(ctx, "event_stdin_line: got line '%s'\n", line);
+    log_debug(ctx, "event::event_stdin_line(): got line '%s'\n", line);
 
     ctx->event.args_len = 0;
 
@@ -121,14 +121,14 @@ void event_stdin_line(ctx_t * ctx, char * line) {
     }
 
     if (state == QUOTED_ARG) {
-        log_error("event_stdin_line: unmatched quote in argument\n");
+        log_error("event::event_stdin_line(): unmatched quote in argument\n");
     }
 
     if (state == QUOTED_ARG || state == UNQUOTED_ARG) {
         event_args_push(ctx, arg_start);
     }
 
-    log_debug(ctx, "event_stdin_line: parsed %zd arguments\n", ctx->event.args_len);
+    log_debug(ctx, "event::event_stdin_line(): parsed %zd arguments\n", ctx->event.args_len);
 
     parse_opt(ctx, ctx->event.args_len, ctx->event.args);
 }
@@ -143,7 +143,7 @@ void event_stdin_data(ctx_t * ctx) {
         if (num == -1 && errno == EWOULDBLOCK) {
             break;
         } else if (num == -1) {
-            log_error("event_stdin_data: failed to read data from stdin\n");
+            log_error("event::event_stdin_data(): failed to read data from stdin\n");
             exit_fail(ctx);
         } else {
             ctx->event.line_len += num;
