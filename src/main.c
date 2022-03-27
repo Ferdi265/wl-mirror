@@ -5,10 +5,12 @@
 #include "event.h"
 
 void cleanup(ctx_t * ctx) {
-    log_debug(ctx, "cleanup: deallocating resources\n");
+    log_debug(ctx, "main::cleanup(): deallocating resources\n");
+
     if (ctx->mirror.initialized) cleanup_mirror(ctx);
     if (ctx->egl.initialized) cleanup_egl(ctx);
     if (ctx->wl.initialized) cleanup_wl(ctx);
+
     cleanup_event(ctx);
     cleanup_opt(ctx);
 }
@@ -36,21 +38,21 @@ int main(int argc, char ** argv) {
 
     parse_opt(&ctx, argc, argv);
 
-    log_debug(&ctx, "main: initializing wayland\n");
+    log_debug(&ctx, "main::main(): initializing wayland\n");
     init_wl(&ctx);
 
-    log_debug(&ctx, "main: initializing EGL\n");
+    log_debug(&ctx, "main::main(): initializing EGL\n");
     init_egl(&ctx);
 
-    log_debug(&ctx, "main: initializing mirror\n");
+    log_debug(&ctx, "main::main(): initializing mirror\n");
     init_mirror(&ctx);
 
-    log_debug(&ctx, "main: initializing mirror backend\n");
+    log_debug(&ctx, "main::main(): initializing mirror backend\n");
     init_mirror_backend(&ctx);
 
-    log_debug(&ctx, "main: entering event loop\n");
+    log_debug(&ctx, "main::main(): entering event loop\n");
     event_loop(&ctx);
-    log_debug(&ctx, "main: exiting event loop\n");
+    log_debug(&ctx, "main::main(): exiting event loop\n");
 
     cleanup(&ctx);
 }
