@@ -309,10 +309,12 @@ static void on_ready(
     // set buffer flags
     ctx->mirror.invert_y = backend->frame_flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT;
 
-    // set frame size and aspect ratio
-    ctx->egl.width = backend->frame_width;
-    ctx->egl.height = backend->frame_height;
-    resize_viewport_egl(ctx);
+    // set texture size and aspect ratio only if changed
+    if (backend->frame_width != ctx->egl.width || backend->frame_height != ctx->egl.height) {
+        ctx->egl.width = backend->frame_width;
+        ctx->egl.height = backend->frame_height;
+        resize_viewport_egl(ctx);
+    }
 
     zwlr_screencopy_frame_v1_destroy(backend->screencopy_frame);
     backend->screencopy_frame = NULL;

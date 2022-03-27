@@ -222,10 +222,12 @@ static void on_ready(
     // set buffer flags
     ctx->mirror.invert_y = backend->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
 
-    // set texture size and aspect ratio
-    ctx->egl.width = backend->width;
-    ctx->egl.height = backend->height;
-    resize_viewport_egl(ctx);
+    // set texture size and aspect ratio only if changed
+    if (backend->width != ctx->egl.width || backend->height != ctx->egl.height) {
+        ctx->egl.width = backend->width;
+        ctx->egl.height = backend->height;
+        resize_viewport_egl(ctx);
+    }
 
     dmabuf_frame_cleanup(backend);
     backend->state = STATE_READY;
