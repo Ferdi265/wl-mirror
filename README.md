@@ -40,6 +40,7 @@ options:
   -S,   --stream           accept a stream of additional options on stdin
 
 backends:
+  - auto        automatically try the backends in order and use the first that works (default)
   - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs
   - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs
 
