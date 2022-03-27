@@ -8,6 +8,7 @@
 #include "context.h"
 
 void init_event(ctx_t * ctx) {
+    // initialize context structure
     ctx->event.line = NULL;
     ctx->event.line_len = 0;
     ctx->event.line_cap = 0;
@@ -23,14 +24,14 @@ void cleanup_event(ctx_t * ctx) {
 }
 
 #define ARGS_MIN_CAP 8
-void event_args_push(ctx_t * ctx, char * arg) {
+static void args_push(ctx_t * ctx, char * arg) {
     if (ctx->event.args_len == ctx->event.args_cap) {
         size_t new_cap = ctx->event.args_cap * 2;
         if (new_cap == 0) new_cap = ARGS_MIN_CAP;
 
         char ** new_args = realloc(ctx->event.args, sizeof (char *) * new_cap);
         if (new_args == NULL) {
-            log_error("event::event_args_push(): failed to grow args array for option stream line\n");
+            log_error("event::args_push(): failed to grow args array for option stream line\n");
             exit_fail(ctx);
         }
 
@@ -42,14 +43,14 @@ void event_args_push(ctx_t * ctx, char * arg) {
 }
 
 #define LINE_MIN_RESERVE 1024
-void event_line_reserve(ctx_t * ctx) {
+static void line_reserve(ctx_t * ctx) {
     if (ctx->event.line_cap - ctx->event.line_len < LINE_MIN_RESERVE) {
         size_t new_cap = ctx->event.line_cap * 2;
         if (new_cap == 0) new_cap = LINE_MIN_RESERVE;
 
         char * new_line = realloc(ctx->event.line, sizeof (char) * new_cap);
         if (new_line == NULL) {
-            log_error("event::event_line_reserve(): failed to grow line buffer for option stream line\n");
+            log_error("event::line_reserve(): failed to grow line buffer for option stream line\n");
             exit_fail(ctx);
         }
 
@@ -64,11 +65,11 @@ enum parse_state {
     QUOTED_ARG,
     UNQUOTED_ARG
 };
-void event_stdin_line(ctx_t * ctx, char * line) {
+static void on_line(ctx_t * ctx, char * line) {
     char * arg_start = NULL;
     char quote_char = '\0';
 
-    log_debug(ctx, "event::event_stdin_line(): got line '%s'\n", line);
+    log_debug(ctx, "event::on_line(): got line '%s'\n", line);
 
     ctx->event.args_len = 0;
 
@@ -101,7 +102,7 @@ void event_stdin_line(ctx_t * ctx, char * line) {
                     line++;
                 } else {
                     *line = '\0';
-                    event_args_push(ctx, arg_start);
+                    args_push(ctx, arg_start);
                     line++;
                     state = BEFORE_ARG;
                 }
@@ -112,7 +113,7 @@ void event_stdin_line(ctx_t * ctx, char * line) {
                     line++;
                 } else {
                     *line = '\0';
-                    event_args_push(ctx, arg_start);
+                    args_push(ctx, arg_start);
                     line++;
                     state = BEFORE_ARG;
                 }
@@ -121,21 +122,21 @@ void event_stdin_line(ctx_t * ctx, char * line) {
     }
 
     if (state == QUOTED_ARG) {
-        log_error("event::event_stdin_line(): unmatched quote in argument\n");
+        log_error("event::on_line(): unmatched quote in argument\n");
     }
 
     if (state == QUOTED_ARG || state == UNQUOTED_ARG) {
-        event_args_push(ctx, arg_start);
+        args_push(ctx, arg_start);
     }
 
-    log_debug(ctx, "event::event_stdin_line(): parsed %zd arguments\n", ctx->event.args_len);
+    log_debug(ctx, "event::on_line(): parsed %zd arguments\n", ctx->event.args_len);
 
     parse_opt(ctx, ctx->event.args_len, ctx->event.args);
 }
 
-void event_stdin_data(ctx_t * ctx) {
+static void on_data(ctx_t * ctx) {
     while (true) {
-        event_line_reserve(ctx);
+        line_reserve(ctx);
 
         size_t cap = ctx->event.line_cap;
         size_t len = ctx->event.line_len;
@@ -143,7 +144,7 @@ void event_stdin_data(ctx_t * ctx) {
         if (num == -1 && errno == EWOULDBLOCK) {
             break;
         } else if (num == -1) {
-            log_error("event::event_stdin_data(): failed to read data from stdin\n");
+            log_error("event::on_data(): failed to read data from stdin\n");
             exit_fail(ctx);
         } else {
             ctx->event.line_len += num;
@@ -157,7 +158,7 @@ void event_stdin_data(ctx_t * ctx) {
             line[i] = ' ';
         } else if (line[i] == '\n') {
             line[i] = '\0';
-            event_stdin_line(ctx, line);
+            on_line(ctx, line);
             memmove(line, line + (i + 1), len - (i + 1));
             ctx->event.line_len -= i + 1;
             break;
@@ -191,7 +192,7 @@ void event_loop(ctx_t * ctx) {
         }
 
         if (fds[1].revents & POLLIN) {
-            event_stdin_data(ctx);
+            on_data(ctx);
         }
 
         fds[0].revents = 0;

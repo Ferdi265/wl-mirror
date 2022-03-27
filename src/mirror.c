@@ -12,7 +12,7 @@
 
 static const struct wl_callback_listener frame_callback_listener;
 
-static void frame_callback_event_done(
+static void on_frame(
     void * data, struct wl_callback * frame_callback, uint32_t msec
 ) {
     ctx_t * ctx = (ctx_t *)data;
@@ -30,7 +30,7 @@ static void frame_callback_event_done(
     draw_texture_egl(ctx);
     eglSwapInterval(ctx->egl.display, 0);
     if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        log_error("mirror::frame_callback_event_done(): failed to swap buffers\n");
+        log_error("mirror::on_frame(): failed to swap buffers\n");
         exit_fail(ctx);
     }
 
@@ -41,7 +41,7 @@ static void frame_callback_event_done(
         }
 
         // request new screen capture from backend
-        ctx->mirror.backend->on_frame(ctx);
+        ctx->mirror.backend->do_capture(ctx);
     }
 
     (void)frame_callback;
@@ -49,7 +49,7 @@ static void frame_callback_event_done(
 }
 
 static const struct wl_callback_listener frame_callback_listener = {
-    .done = frame_callback_event_done
+    .done = on_frame
 };
 
 // --- init_mirror ---
@@ -70,12 +70,12 @@ void init_mirror(ctx_t * ctx) {
 
     // finding target output
     if (!find_output_opt(ctx, &ctx->mirror.current_target, &ctx->mirror.current_region)) {
-        log_error("mirror::init_mirror(): failed to find output\n");
+        log_error("mirror::init(): failed to find output\n");
         exit_fail(ctx);
     }
 
     // update window title
-    update_title_mirror(ctx);
+    update_title(ctx);
 
     // add frame callback listener
     ctx->mirror.frame_callback = wl_surface_frame(ctx->wl.surface);
@@ -112,7 +112,7 @@ static void auto_backend_fallback(ctx_t * ctx) {
         }
 
         // uninitialize previous backend
-        if (ctx->mirror.backend != NULL) ctx->mirror.backend->on_cleanup(ctx);
+        if (ctx->mirror.backend != NULL) ctx->mirror.backend->do_cleanup(ctx);
 
         // initialize next backend
         next_backend->init(ctx);
@@ -129,7 +129,7 @@ static void auto_backend_fallback(ctx_t * ctx) {
 // --- init_mirror_backend ---
 
 void init_mirror_backend(ctx_t * ctx) {
-    if (ctx->mirror.backend != NULL) ctx->mirror.backend->on_cleanup(ctx);
+    if (ctx->mirror.backend != NULL) ctx->mirror.backend->do_cleanup(ctx);
 
     switch (ctx->opt.backend) {
         case BACKEND_AUTO:
@@ -148,24 +148,24 @@ void init_mirror_backend(ctx_t * ctx) {
     if (ctx->mirror.backend == NULL) exit_fail(ctx);
 }
 
-// --- output_removed_mirror ---
+// --- output_removed ---
 
-void output_removed_mirror(ctx_t * ctx, output_list_node_t * node) {
+void output_removed(ctx_t * ctx, output_list_node_t * node) {
     if (!ctx->mirror.initialized) return;
     if (ctx->mirror.current_target == NULL) return;
     if (ctx->mirror.current_target != node) return;
 
-    log_error("mirror::output_removed_mirror(): output disappeared, closing\n");
+    log_error("mirror::output_removed(): output disappeared, closing\n");
     exit_fail(ctx);
 }
 
 // --- update_options_mirror ---
 
-void update_title_mirror(ctx_t * ctx) {
+void update_title(ctx_t * ctx) {
     char * title = NULL;
     int status = asprintf(&title, "Wayland Output Mirror for %s", ctx->mirror.current_target->name);
     if (status == -1) {
-        log_error("mirror::update_title_mirror(): failed to format window title\n");
+        log_error("mirror::update_title(): failed to format window title\n");
         exit_fail(ctx);
     }
 
@@ -188,9 +188,9 @@ void backend_fail(ctx_t * ctx) {
 void cleanup_mirror(ctx_t * ctx) {
     if (!ctx->mirror.initialized) return;
 
-    log_debug(ctx, "mirror::cleanup_mirror(): destroying mirror objects\n");
+    log_debug(ctx, "mirror::cleanup(): destroying mirror objects\n");
 
-    if (ctx->mirror.backend != NULL) ctx->mirror.backend->on_cleanup(ctx);
+    if (ctx->mirror.backend != NULL) ctx->mirror.backend->do_cleanup(ctx);
     if (ctx->mirror.frame_callback != NULL) wl_callback_destroy(ctx->mirror.frame_callback);
     if (ctx->mirror.frame_image != EGL_NO_IMAGE) eglDestroyImage(ctx->egl.display, ctx->mirror.frame_image);
 

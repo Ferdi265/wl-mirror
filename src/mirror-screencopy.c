@@ -11,7 +11,7 @@
 #include <EGL/eglext.h>
 
 static void backend_cancel(screencopy_mirror_backend_t * backend) {
-    log_error("mirror-screencopy:backend_cancel(): cancelling capture due to error\n");
+    log_error("mirror-screencopy::backend_cancel(): cancelling capture due to error\n");
 
     // destroy screencopy frame object
     zwlr_screencopy_frame_v1_destroy(backend->screencopy_frame);
@@ -135,16 +135,16 @@ static const shm_gl_format_t * shm_gl_format_from_shm(uint32_t shm_format) {
 
 // --- screencopy_frame event handlers ---
 
-static void screencopy_frame_event_buffer(
+static void on_buffer(
     void * data, struct zwlr_screencopy_frame_v1 * frame,
     uint32_t format, uint32_t width, uint32_t height, uint32_t stride
 ) {
     ctx_t * ctx = (ctx_t *)data;
     screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-screencopy::screencopy_frame_event_buffer(): received buffer offer for %dx%d+%d frame\n", width, height, stride);
+    log_debug(ctx, "mirror-screencopy::on_buffer(): received buffer offer for %dx%d+%d frame\n", width, height, stride);
     if (backend->state != STATE_WAIT_BUFFER) {
-        log_error("mirror-screencopy::screencopy_frame_event_buffer(): got buffer event while in state %d\n", backend->state);
+        log_error("mirror-screencopy::on_buffer(): got buffer event while in state %d\n", backend->state);
         backend_cancel(backend);
         return;
     }
@@ -157,14 +157,14 @@ static void screencopy_frame_event_buffer(
         }
 
         if (ftruncate(backend->shm_fd, new_size) == -1) {
-            log_error("mirror-screencopy::screencopy_frame_event_buffer(): failed to grow shm buffer\n");
+            log_error("mirror-screencopy::on_buffer(): failed to grow shm buffer\n");
             backend_cancel(backend);
             return;
         }
 
         void * new_addr = mremap(backend->shm_addr, backend->shm_size, new_size, MREMAP_MAYMOVE);
         if (new_addr == MAP_FAILED) {
-            log_error("mirror-screencopy::screencopy_frame_event_buffer(): failed to remap shm buffer\n");
+            log_error("mirror-screencopy::on_buffer(): failed to remap shm buffer\n");
             backend_cancel(backend);
             return;
         }
@@ -193,7 +193,7 @@ static void screencopy_frame_event_buffer(
             stride, format
         );
         if (backend->shm_buffer == NULL) {
-            log_error("mirror-screencopy::screencopy_frame_event_buffer(): failed to create wl_buffer\n");
+            log_error("mirror-screencopy::on_buffer(): failed to create wl_buffer\n");
             backend_cancel(backend);
             return;
         }
@@ -208,7 +208,7 @@ static void screencopy_frame_event_buffer(
     (void)frame;
 }
 
-static void screencopy_frame_event_linux_dmabuf(
+static void on_linux_dmabuf(
     void * data, struct zwlr_screencopy_frame_v1 * frame,
     uint32_t format, uint32_t width, uint32_t height
 ) {
@@ -219,15 +219,15 @@ static void screencopy_frame_event_linux_dmabuf(
     (void)height;
 }
 
-static void screencopy_frame_event_buffer_done(
+static void on_buffer_done(
     void * data, struct zwlr_screencopy_frame_v1 * frame
 ) {
     ctx_t * ctx = (ctx_t *)data;
     screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-screencopy::screencopy_frame_event_buffer_done(): received buffer done event\n");
+    log_debug(ctx, "mirror-screencopy::on_buffer_done(): received buffer done event\n");
     if (backend->state != STATE_WAIT_BUFFER_DONE) {
-        log_error("mirror-screencopy::screencopy_frame_event_buffer_done(): received buffer_done without supported buffer offer\n");
+        log_error("mirror-screencopy::on_buffer_done(): received buffer_done without supported buffer offer\n");
         backend_cancel(backend);
         return;
     }
@@ -238,7 +238,7 @@ static void screencopy_frame_event_buffer_done(
     (void)frame;
 }
 
-static void screencopy_frame_event_damage(
+static void on_damage(
     void * data, struct zwlr_screencopy_frame_v1 * frame,
     uint32_t x, uint32_t y, uint32_t width, uint32_t height
 ) {
@@ -250,16 +250,16 @@ static void screencopy_frame_event_damage(
     (void)height;
 }
 
-static void screencopy_frame_event_flags(
+static void on_flags(
     void * data, struct zwlr_screencopy_frame_v1 * frame,
     uint32_t flags
 ) {
     ctx_t * ctx = (ctx_t *)data;
     screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-screencopy::screencopy_frame_event_flags(): received flags event\n");
+    log_debug(ctx, "mirror-screencopy::on_flags(): received flags event\n");
     if (backend->state != STATE_WAIT_FLAGS) {
-        log_error("mirror-screencopy::screencopy_frame_event_flags(): received unexpected flags event\n");
+        log_error("mirror-screencopy::on_flags(): received unexpected flags event\n");
         backend_cancel(backend);
         return;
     }
@@ -270,7 +270,7 @@ static void screencopy_frame_event_flags(
     (void)frame;
 }
 
-static void screencopy_frame_event_ready(
+static void on_ready(
     void * data, struct zwlr_screencopy_frame_v1 * frame,
     uint32_t sec_hi, uint32_t sec_lo, uint32_t nsec
 ) {
@@ -278,7 +278,7 @@ static void screencopy_frame_event_ready(
     screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
 
     if (ctx->opt.verbose) {
-        log_debug(ctx, "mirror-screencopy::screencopy_frame_event_ready(): received ready event with");
+        log_debug(ctx, "mirror-screencopy::on_ready(): received ready event with");
         fprintf(stderr, "width: %d, height: %d, stride: %d, format: %c%c%c%c\n",
             backend->frame_width, backend->frame_height,
             backend->frame_stride,
@@ -292,7 +292,7 @@ static void screencopy_frame_event_ready(
     // find correct texture format
     const shm_gl_format_t * format = shm_gl_format_from_shm(backend->frame_format);
     if (format == NULL) {
-        log_error("mirror-screencopy::screencopy_frame_event_ready(): failed to find GL format for shm format\n");
+        log_error("mirror-screencopy::on_ready(): failed to find GL format for shm format\n");
         backend_fail(ctx);
         return;
     }
@@ -325,13 +325,13 @@ static void screencopy_frame_event_ready(
     (void)nsec;
 }
 
-static void screencopy_frame_event_failed(
+static void on_failed(
     void * data, struct zwlr_screencopy_frame_v1 * frame
 ) {
     ctx_t * ctx = (ctx_t *)data;
     screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-screencopy::screencopy_frame_event_cancel(): received cancel event\n");
+    log_debug(ctx, "mirror-screencopy::on_failed(): received cancel event\n");
 
     backend_cancel(backend);
 
@@ -339,18 +339,18 @@ static void screencopy_frame_event_failed(
 }
 
 static const struct zwlr_screencopy_frame_v1_listener screencopy_frame_listener = {
-    .buffer = screencopy_frame_event_buffer,
-    .linux_dmabuf = screencopy_frame_event_linux_dmabuf,
-    .buffer_done = screencopy_frame_event_buffer_done,
-    .damage = screencopy_frame_event_damage,
-    .flags = screencopy_frame_event_flags,
-    .ready = screencopy_frame_event_ready,
-    .failed = screencopy_frame_event_failed
+    .buffer = on_buffer,
+    .linux_dmabuf = on_linux_dmabuf,
+    .buffer_done = on_buffer_done,
+    .damage = on_damage,
+    .flags = on_flags,
+    .ready = on_ready,
+    .failed = on_failed
 };
 
 // --- backend event handlers ---
 
-static void mirror_screencopy_on_frame(ctx_t * ctx) {
+static void do_capture(ctx_t * ctx) {
     screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
 
     if (backend->state == STATE_READY || backend->state == STATE_CANCELED) {
@@ -363,7 +363,7 @@ static void mirror_screencopy_on_frame(ctx_t * ctx) {
             ctx->wl.screencopy_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output
         );
         if (backend->screencopy_frame == NULL) {
-            log_error("mirror_screencopy_on_frame: failed to create wlr_screencopy_frame\n");
+            log_error("do_capture: failed to create wlr_screencopy_frame\n");
             backend_fail(ctx);
         }
 
@@ -377,10 +377,10 @@ static void mirror_screencopy_on_frame(ctx_t * ctx) {
     }
 }
 
-static void mirror_screencopy_on_cleanup(ctx_t * ctx) {
+static void do_cleanup(ctx_t * ctx) {
     screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-screencopy::mirror_screencopy_on_cleanup(): destroying mirror-screencopy objects\n");
+    log_debug(ctx, "mirror-screencopy::do_cleanup(): destroying mirror-screencopy objects\n");
 
     if (backend->screencopy_frame != NULL) zwlr_screencopy_frame_v1_destroy(backend->screencopy_frame);
     if (backend->shm_buffer != NULL) wl_buffer_destroy(backend->shm_buffer);
@@ -397,23 +397,23 @@ static void mirror_screencopy_on_cleanup(ctx_t * ctx) {
 void init_mirror_screencopy(ctx_t * ctx) {
     // check for required protocols
     if (ctx->wl.shm == NULL) {
-        log_error("mirror-screencopy::init_mirror_screencopy(): missing wl_shm protocol\n");
+        log_error("mirror-screencopy::init(): missing wl_shm protocol\n");
         return;
     } else if (ctx->wl.screencopy_manager == NULL) {
-        log_error("mirror-screencopy::init_mirror_screencopy(): missing wlr_screencopy_manager protocol\n");
+        log_error("mirror-screencopy::init(): missing wlr_screencopy_manager protocol\n");
         return;
     }
 
     // allocate backend context structure
     screencopy_mirror_backend_t * backend = malloc(sizeof (screencopy_mirror_backend_t));
     if (backend == NULL) {
-        log_error("mirror-screencopy::init_mirror_screencopy(): failed to allocate backend state\n");
+        log_error("mirror-screencopy::init(): failed to allocate backend state\n");
         return;
     }
 
     // initialize context structure
-    backend->header.on_frame = mirror_screencopy_on_frame;
-    backend->header.on_cleanup = mirror_screencopy_on_cleanup;
+    backend->header.do_capture = do_capture;
+    backend->header.do_cleanup = do_cleanup;
     backend->header.fail_count = 0;
 
     backend->shm_fd = -1;
@@ -444,14 +444,14 @@ void init_mirror_screencopy(ctx_t * ctx) {
     // create shm fd
     backend->shm_fd = memfd_create("wl_shm_buffer", 0);
     if (backend->shm_fd == -1) {
-        log_error("mirror-screencopy::init_mirror_screencopy(): failed to create shm buffer\n");
+        log_error("mirror-screencopy::init(): failed to create shm buffer\n");
         backend_fail(ctx);
     }
 
     // resize shm fd to nonempty size
     backend->shm_size = 1;
     if (ftruncate(backend->shm_fd, backend->shm_size) == -1) {
-        log_error("mirror-screencopy::init_mirror_screencopy(): failed to resize shm buffer\n");
+        log_error("mirror-screencopy::init(): failed to resize shm buffer\n");
         backend_fail(ctx);
     }
 
@@ -459,14 +459,14 @@ void init_mirror_screencopy(ctx_t * ctx) {
     backend->shm_addr = mmap(NULL, backend->shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, backend->shm_fd, 0);
     if (backend->shm_addr == MAP_FAILED) {
         backend->shm_addr = NULL;
-        log_error("mirror-screencopy::init_mirror_screencopy(): failed to map shm buffer\n");
+        log_error("mirror-screencopy::init(): failed to map shm buffer\n");
         backend_fail(ctx);
     }
 
     // create shm pool from shm fd
     backend->shm_pool = wl_shm_create_pool(ctx->wl.shm, backend->shm_fd, backend->shm_size);
     if (backend->shm_pool == NULL) {
-        log_error("mirror-screencopy::init_mirror_screencopy(): failed to create shm pool\n");
+        log_error("mirror-screencopy::init(): failed to create shm pool\n");
         backend_fail(ctx);
     }
 }

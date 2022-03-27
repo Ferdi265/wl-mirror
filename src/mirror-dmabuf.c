@@ -28,7 +28,7 @@ static void backend_cancel(dmabuf_mirror_backend_t * backend) {
 
 // --- dmabuf_frame event handlers ---
 
-static void dmabuf_frame_event_frame(
+static void on_frame(
     void * data, struct zwlr_export_dmabuf_frame_v1 * frame,
     uint32_t width, uint32_t height, uint32_t x, uint32_t y,
     uint32_t buffer_flags, uint32_t frame_flags, uint32_t format,
@@ -37,13 +37,13 @@ static void dmabuf_frame_event_frame(
     ctx_t * ctx = (ctx_t *)data;
     dmabuf_mirror_backend_t * backend = (dmabuf_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-dmabuf::dmabuf_frame_event_frame(): received %dx%d frame with %d objects\n", width, height, num_objects);
+    log_debug(ctx, "mirror-dmabuf::on_frame(): received %dx%d frame with %d objects\n", width, height, num_objects);
     if (backend->state != STATE_WAIT_FRAME) {
-        log_error("mirror-dmabuf::dmabuf_frame_event_frame(): got frame while in state %d\n", backend->state);
+        log_error("mirror-dmabuf::on_frame(): got frame while in state %d\n", backend->state);
         backend_cancel(backend);
         return;
     } else if (num_objects > 4) {
-        log_error("mirror-dmabuf::dmabuf_frame_event_frame(): got frame with more than 4 objects\n");
+        log_error("mirror-dmabuf::on_frame(): got frame with more than 4 objects\n");
         backend_cancel(backend);
         return;
     }
@@ -52,7 +52,7 @@ static void dmabuf_frame_event_frame(
         ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT
     );
     if (unhandled_buffer_flags != 0) {
-        log_warn("mirror-dmabuf::dmabuf_frame_event_frame(): frame uses unhandled buffer flags, buffer_flags = {");
+        log_warn("mirror-dmabuf::on_frame(): frame uses unhandled buffer flags, buffer_flags = {");
         if (buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT) fprintf(stderr, "Y_INVERT, ");
         if (buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_INTERLACED) fprintf(stderr, "INTERLACED, ");
         if (buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_BOTTOM_FIRST) fprintf(stderr, "BOTTOM_FIRST, ");
@@ -63,7 +63,7 @@ static void dmabuf_frame_event_frame(
         ZWLR_EXPORT_DMABUF_FRAME_V1_FLAGS_TRANSIENT
     );
     if (unhandled_frame_flags != 0) {
-        log_warn("mirror-dmabuf::dmabuf_frame_event_frame(): frame uses unhandled frame flags, frame_flags = {");
+        log_warn("mirror-dmabuf::on_frame(): frame uses unhandled frame flags, frame_flags = {");
         if (frame_flags & ZWLR_EXPORT_DMABUF_FRAME_V1_FLAGS_TRANSIENT) fprintf(stderr, "TRANSIENT, ");
         fprintf(stderr, "}\n");
     }
@@ -87,7 +87,7 @@ static void dmabuf_frame_event_frame(
     (void)frame;
 }
 
-static void dmabuf_frame_event_object(
+static void on_object(
     void * data, struct zwlr_export_dmabuf_frame_v1 * frame,
     uint32_t index, int32_t fd, uint32_t size,
     uint32_t offset, uint32_t stride, uint32_t plane_index
@@ -95,14 +95,14 @@ static void dmabuf_frame_event_object(
     ctx_t * ctx = (ctx_t *)data;
     dmabuf_mirror_backend_t * backend = (dmabuf_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-dmabuf::dmabuf_frame_event_object(): received %d byte object with plane_index %d\n", size, plane_index);
+    log_debug(ctx, "mirror-dmabuf::on_object(): received %d byte object with plane_index %d\n", size, plane_index);
     if (backend->state != STATE_WAIT_OBJECTS) {
-        log_error("mirror-dmabuf::dmabuf_frame_event_object(): got object while in state %d\n", backend->state);
+        log_error("mirror-dmabuf::on_object(): got object while in state %d\n", backend->state);
         close(fd);
         backend_cancel(backend);
         return;
     } else if (index >= backend->num_objects) {
-        log_error("mirror-dmabuf::dmabuf_frame_event_object(): got object with out-of-bounds index %d\n", index);
+        log_error("mirror-dmabuf::on_object(): got object with out-of-bounds index %d\n", index);
         close(fd);
         backend_cancel(backend);
         return;
@@ -122,14 +122,14 @@ static void dmabuf_frame_event_object(
     (void)frame;
 }
 
-static void dmabuf_frame_event_ready(
+static void on_ready(
     void * data, struct zwlr_export_dmabuf_frame_v1 * frame,
     uint32_t sec_hi, uint32_t sec_lo, uint32_t nsec
 ) {
     ctx_t * ctx = (ctx_t *)data;
     dmabuf_mirror_backend_t * backend = (dmabuf_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-dmabuf::dmabuf_frame_event_ready(): frame is ready\n");
+    log_debug(ctx, "mirror-dmabuf::on_ready(): frame is ready\n");
     if (backend->state != STATE_WAIT_READY) {
         log_error("dmabuf_frame: got ready while in state %d\n", backend->state);
         backend_cancel(backend);
@@ -137,7 +137,7 @@ static void dmabuf_frame_event_ready(
     }
 
     if (ctx->mirror.frame_image != EGL_NO_IMAGE) {
-        log_debug(ctx, "mirror-dmabuf::dmabuf_frame_event_ready(): destroying old EGL image\n");
+        log_debug(ctx, "mirror-dmabuf::on_ready(): destroying old EGL image\n");
         eglDestroyImage(ctx->egl.display, ctx->mirror.frame_image);
     }
 
@@ -209,7 +209,7 @@ static void dmabuf_frame_event_ready(
     // create EGLimage from dmabuf with attribute array
     ctx->mirror.frame_image = eglCreateImage(ctx->egl.display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
     if (ctx->mirror.frame_image == EGL_NO_IMAGE) {
-        log_error("mirror-dmabuf::dmabuf_frame_event_ready(): failed to create EGL image from dmabuf\n");
+        log_error("mirror-dmabuf::on_ready(): failed to create EGL image from dmabuf\n");
         backend_fail(ctx);
         return;
     }
@@ -237,35 +237,35 @@ static void dmabuf_frame_event_ready(
     (void)nsec;
 }
 
-static void dmabuf_frame_event_cancel(
+static void on_cancel(
     void * data, struct zwlr_export_dmabuf_frame_v1 * frame,
     enum zwlr_export_dmabuf_frame_v1_cancel_reason reason
 ) {
     ctx_t * ctx = (ctx_t *)data;
     dmabuf_mirror_backend_t * backend = (dmabuf_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-dmabuf::dmabuf_frame_event_cancel(): frame was canceled\n");
+    log_debug(ctx, "mirror-dmabuf::on_cancel(): frame was canceled\n");
 
     dmabuf_frame_cleanup(backend);
     backend->state = STATE_CANCELED;
 
     switch (reason) {
         case ZWLR_EXPORT_DMABUF_FRAME_V1_CANCEL_REASON_PERMANENT:
-            log_error("mirror-dmabuf::dmabuf_frame_event_cancel(): permanent cancellation\n");
+            log_error("mirror-dmabuf::on_cancel(): permanent cancellation\n");
             backend->header.fail_count++;
             break;
 
         case ZWLR_EXPORT_DMABUF_FRAME_V1_CANCEL_REASON_TEMPORARY:
-            log_error("mirror-dmabuf::dmabuf_frame_event_cancel(): temporary cancellation\n");
+            log_error("mirror-dmabuf::on_cancel(): temporary cancellation\n");
             backend->header.fail_count++;
             break;
 
         case ZWLR_EXPORT_DMABUF_FRAME_V1_CANCEL_REASON_RESIZING:
-            log_debug(ctx, "mirror-dmabuf::dmabuf_frame_event_cancel(): cancellation due to output resize\n");
+            log_debug(ctx, "mirror-dmabuf::on_cancel(): cancellation due to output resize\n");
             break;
 
         default:
-            log_error("mirror-dmabuf::dmabuf_frame_event_cancel(): unknown cancellation reason %d\n", reason);
+            log_error("mirror-dmabuf::on_cancel(): unknown cancellation reason %d\n", reason);
             backend->header.fail_count++;
             break;
     }
@@ -274,15 +274,15 @@ static void dmabuf_frame_event_cancel(
 }
 
 static const struct zwlr_export_dmabuf_frame_v1_listener dmabuf_frame_listener = {
-    .frame = dmabuf_frame_event_frame,
-    .object = dmabuf_frame_event_object,
-    .ready = dmabuf_frame_event_ready,
-    .cancel = dmabuf_frame_event_cancel
+    .frame = on_frame,
+    .object = on_object,
+    .ready = on_ready,
+    .cancel = on_cancel
 };
 
 // --- backend event handlers ---
 
-static void mirror_dmabuf_on_frame(ctx_t * ctx) {
+static void do_capture(ctx_t * ctx) {
     dmabuf_mirror_backend_t * backend = (dmabuf_mirror_backend_t *)ctx->mirror.backend;
 
     if (backend->state == STATE_READY || backend->state == STATE_CANCELED) {
@@ -318,7 +318,7 @@ static void mirror_dmabuf_on_frame(ctx_t * ctx) {
             ctx->wl.dmabuf_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output
         );
         if (backend->dmabuf_frame == NULL) {
-            log_error("mirror_dmabuf_on_frame: failed to create wlr_dmabuf_export_frame\n");
+            log_error("mirror-dmabuf::do_capture(): failed to create wlr_dmabuf_export_frame\n");
             backend_fail(ctx);
             return;
         }
@@ -333,10 +333,10 @@ static void mirror_dmabuf_on_frame(ctx_t * ctx) {
 
 }
 
-static void mirror_dmabuf_on_cleanup(ctx_t * ctx) {
+static void do_cleanup(ctx_t * ctx) {
     dmabuf_mirror_backend_t * backend = (dmabuf_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-dmabuf::mirror_dmabuf_on_cleanup(): destroying mirror-dmabuf objects\n");
+    log_debug(ctx, "mirror-dmabuf::do_cleanup(): destroying mirror-dmabuf objects\n");
 
     if (backend->dmabuf_frame != NULL) zwlr_export_dmabuf_frame_v1_destroy(backend->dmabuf_frame);
 
@@ -354,20 +354,20 @@ static void mirror_dmabuf_on_cleanup(ctx_t * ctx) {
 void init_mirror_dmabuf(ctx_t * ctx) {
     // check for required protocols
     if (ctx->wl.dmabuf_manager == NULL) {
-        log_error("mirror-dmabuf::init_mirror_dmabuf(): missing wlr_export_dmabuf_manager protocol\n");
+        log_error("mirror-dmabuf::init(): missing wlr_export_dmabuf_manager protocol\n");
         return;
     }
 
     // allocate backend context structure
     dmabuf_mirror_backend_t * backend = malloc(sizeof (dmabuf_mirror_backend_t));
     if (backend == NULL) {
-        log_error("mirror-dmabuf::init_mirror_dmabuf(): failed to allocate backend state\n");
+        log_error("mirror-dmabuf::init(): failed to allocate backend state\n");
         return;
     }
 
     // initialize context structure
-    backend->header.on_frame = mirror_dmabuf_on_frame;
-    backend->header.on_cleanup = mirror_dmabuf_on_cleanup;
+    backend->header.do_capture = do_capture;
+    backend->header.do_cleanup = do_cleanup;
     backend->header.fail_count = 0;
 
     backend->dmabuf_frame = NULL;

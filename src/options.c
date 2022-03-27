@@ -60,7 +60,7 @@ bool parse_transform_opt(transform_t * transform, const char * transform_arg) {
 
     char * transform_str = strdup(transform_arg);
     if (transform_str == NULL) {
-        log_error("parse_transform_option: failed to allocate copy of transform argument\n");
+        log_error("options::parse_transform_option(): failed to allocate copy of transform argument\n");
         return false;
     }
 
@@ -69,12 +69,12 @@ bool parse_transform_opt(transform_t * transform, const char * transform_arg) {
     char * transform_spec = strtok(transform_str, "-");
     while (transform_spec != NULL) {
         if (strcmp(transform_spec, "normal") == 0) {
-            log_error("parse_transform_option: %s must be the only transform specifier\n", transform_spec);
+            log_error("options::parse_transform_option(): %s must be the only transform specifier\n", transform_spec);
             success = false;
             break;
         } else if (strcmp(transform_spec, "flipX") == 0 || strcmp(transform_spec, "flipped") == 0) {
             if (local_transform.flip_x) {
-                log_error("parse_transform_option: duplicate flip specifier %s\n", transform_spec);
+                log_error("options::parse_transform_option(): duplicate flip specifier %s\n", transform_spec);
                 success = false;
                 break;
             }
@@ -82,7 +82,7 @@ bool parse_transform_opt(transform_t * transform, const char * transform_arg) {
             local_transform.flip_x = true;
         } else if (strcmp(transform_spec, "flipY") == 0) {
             if (local_transform.flip_y) {
-                log_error("parse_transform_option: duplicate flip specifier %s\n", transform_spec);
+                log_error("options::parse_transform_option(): duplicate flip specifier %s\n", transform_spec);
                 success = false;
                 break;
             }
@@ -90,7 +90,7 @@ bool parse_transform_opt(transform_t * transform, const char * transform_arg) {
             local_transform.flip_y = true;
         } else if (strcmp(transform_spec, "0") == 0 || strcmp(transform_spec, "0cw") == 0 || strcmp(transform_spec, "0ccw") == 0) {
             if (has_rotation) {
-                log_error("parse_transform_option: duplicate rotation specifier %s\n", transform_spec);
+                log_error("options::parse_transform_option(): duplicate rotation specifier %s\n", transform_spec);
                 success = false;
                 break;
             }
@@ -99,7 +99,7 @@ bool parse_transform_opt(transform_t * transform, const char * transform_arg) {
             local_transform.rotation = ROT_NORMAL;
         } else if (strcmp(transform_spec, "90") == 0 || strcmp(transform_spec, "90cw") == 0 || strcmp(transform_spec, "270ccw") == 0) {
             if (has_rotation) {
-                log_error("parse_transform_option: duplicate rotation specifier %s\n", transform_spec);
+                log_error("options::parse_transform_option(): duplicate rotation specifier %s\n", transform_spec);
                 success = false;
                 break;
             }
@@ -108,7 +108,7 @@ bool parse_transform_opt(transform_t * transform, const char * transform_arg) {
             local_transform.rotation = ROT_CW_90;
         } else if (strcmp(transform_spec, "180") == 0 || strcmp(transform_spec, "180cw") == 0 || strcmp(transform_spec, "180ccw") == 0) {
             if (has_rotation) {
-                log_error("parse_transform_option: duplicate rotation specifier %s\n", transform_spec);
+                log_error("options::parse_transform_option(): duplicate rotation specifier %s\n", transform_spec);
                 success = false;
                 break;
             }
@@ -117,7 +117,7 @@ bool parse_transform_opt(transform_t * transform, const char * transform_arg) {
             local_transform.rotation = ROT_CW_180;
         } else if (strcmp(transform_spec, "270") == 0 || strcmp(transform_spec, "270cw") == 0 || strcmp(transform_spec, "90ccw") == 0) {
             if (has_rotation) {
-                log_error("parse_transform_option: duplicate rotation specifier %s\n", transform_spec);
+                log_error("options::parse_transform_option(): duplicate rotation specifier %s\n", transform_spec);
                 success = false;
                 break;
             }
@@ -125,7 +125,7 @@ bool parse_transform_opt(transform_t * transform, const char * transform_arg) {
             has_rotation = true;
             local_transform.rotation = ROT_CW_270;
         } else {
-            log_error("parse_transform_option: invalid transform specifier %s\n", transform_spec);
+            log_error("options::parse_transform_option(): invalid transform specifier %s\n", transform_spec);
             success = false;
             break;
         }
@@ -146,7 +146,7 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
 
     char * region_str = strdup(region_arg);
     if (region_str == NULL) {
-        log_error("parse_region_option: failed to allocate copy of region argument\n");
+        log_error("options::parse_region_option(): failed to allocate copy of region argument\n");
         return false;
     }
 
@@ -155,7 +155,7 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
     char * output_label = strtok(NULL, " ");
 
     if (position == NULL) {
-        log_error("parse_region_option: missing region position\n");
+        log_error("options::parse_region_option(): missing region position\n");
         free(region_str);
         return false;
     }
@@ -165,15 +165,15 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
     char * rest = strtok(NULL, ",");
 
     if (x == NULL) {
-        log_error("parse_region_option: missing x position\n");
+        log_error("options::parse_region_option(): missing x position\n");
         free(region_str);
         return false;
     } else if (y == NULL) {
-        log_error("parse_region_option: missing y position\n");
+        log_error("options::parse_region_option(): missing y position\n");
         free(region_str);
         return false;
     } else if (rest != NULL) {
-        log_error("parse_region_option: unexpected position component %s\n", rest);
+        log_error("options::parse_region_option(): unexpected position component %s\n", rest);
         free(region_str);
         return false;
     }
@@ -181,7 +181,7 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
     char * end = NULL;
     local_region.x = strtoul(x, &end, 10);
     if (*end != '\0') {
-        log_error("parse_region_option: invalid x position %s\n", x);
+        log_error("options::parse_region_option(): invalid x position %s\n", x);
         free(region_str);
         return false;
     }
@@ -189,13 +189,13 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
     end = NULL;
     local_region.y = strtoul(y, &end, 10);
     if (*end != '\0') {
-        log_error("parse_region_option: invalid y position %s\n", y);
+        log_error("options::parse_region_option(): invalid y position %s\n", y);
         free(region_str);
         return false;
     }
 
     if (size == NULL) {
-        log_error("parse_region_option: missing size\n");
+        log_error("options::parse_region_option(): missing size\n");
         free(region_str);
         return false;
     }
@@ -204,15 +204,15 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
     char * height = strtok(NULL, "x");
     rest = strtok(NULL, "x");
     if (width == NULL) {
-        log_error("parse_region_option: missing width\n");
+        log_error("options::parse_region_option(): missing width\n");
         free(region_str);
         return false;
     } else if (height == NULL) {
-        log_error("parse_region_option: missing height\n");
+        log_error("options::parse_region_option(): missing height\n");
         free(region_str);
         return false;
     } else if (rest != NULL) {
-        log_error("parse_region_option: unexpected size component %s\n", rest);
+        log_error("options::parse_region_option(): unexpected size component %s\n", rest);
         free(region_str);
         return false;
     }
@@ -220,11 +220,11 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
     end = NULL;
     local_region.width = strtoul(width, &end, 10);
     if (*end != '\0') {
-        log_error("parse_region_option: invalid width %s\n", width);
+        log_error("options::parse_region_option(): invalid width %s\n", width);
         free(region_str);
         return false;
     } else if (local_region.width == 0) {
-        log_error("parse_region_option: invalid width %d\n", local_region.width);
+        log_error("options::parse_region_option(): invalid width %d\n", local_region.width);
         free(region_str);
         return false;
     }
@@ -232,11 +232,11 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
     end = NULL;
     local_region.height = strtoul(height, &end, 10);
     if (*end != '\0') {
-        log_error("parse_region_option: invalid height %s\n", height);
+        log_error("options::parse_region_option(): invalid height %s\n", height);
         free(region_str);
         return false;
     } else if (local_region.height == 0) {
-        log_error("parse_region_option: invalid height %d\n", local_region.height);
+        log_error("options::parse_region_option(): invalid height %d\n", local_region.height);
         free(region_str);
         return false;
     }
@@ -244,7 +244,7 @@ bool parse_region_opt(region_t * region, char ** output, const char * region_arg
     if (output_label != NULL) {
         *output = strdup(output_label);
         if (*output == NULL) {
-            log_error("parse_region_option: failed to allocate copy of output name\n");
+            log_error("options::parse_region_option(): failed to allocate copy of output name\n");
             free(region_str);
             return false;
         }
@@ -261,7 +261,7 @@ bool find_output_opt(ctx_t * ctx, output_list_node_t ** output_handle, region_t 
     region_t local_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
 
     if (ctx->opt.output != NULL) {
-        log_debug(ctx, "find_output_opt: searching for output by name\n");
+        log_debug(ctx, "options::find_output(): searching for output by name\n");
         output_list_node_t * cur = ctx->wl.outputs;
         while (cur != NULL) {
             if (cur->name != NULL && strcmp(cur->name, ctx->opt.output) == 0) {
@@ -273,7 +273,7 @@ bool find_output_opt(ctx_t * ctx, output_list_node_t ** output_handle, region_t 
             cur = cur->next;
         }
     } else if (ctx->opt.has_region) {
-        log_debug(ctx, "find_output_opt: searching for output by region\n");
+        log_debug(ctx, "options::find_output(): searching for output by region\n");
         output_list_node_t * cur = ctx->wl.outputs;
         while (cur != NULL) {
             region_t output_region = {
@@ -291,30 +291,30 @@ bool find_output_opt(ctx_t * ctx, output_list_node_t ** output_handle, region_t 
     }
 
     if (local_output_handle == NULL && ctx->opt.output != NULL) {
-        log_error("find_output_opt: output %s not found\n", ctx->opt.output);
+        log_error("options::find_output(): output %s not found\n", ctx->opt.output);
         return false;
     } else if (local_output_handle == NULL && ctx->opt.has_region) {
-        log_error("find_output_opt: output for region not found\n");
+        log_error("options::find_output(): output for region not found\n");
         return false;
     } else if (local_output_handle == NULL) {
-        log_error("find_output_opt: no output or region specified\n");
+        log_error("options::find_output(): no output or region specified\n");
         return false;
     } else {
-        log_debug(ctx, "find_output_opt: found output with name %s\n", output_name);
+        log_debug(ctx, "options::find_output(): found output with name %s\n", output_name);
     }
 
     if (ctx->opt.has_region) {
-        log_debug(ctx, "find_output_opt: checking if region in output\n");
+        log_debug(ctx, "options::find_output(): checking if region in output\n");
         region_t output_region = {
             .x = local_output_handle->x, .y = local_output_handle->y,
             .width = local_output_handle->width, .height = local_output_handle->height
         };
         if (!region_contains(&ctx->opt.region, &output_region)) {
-            log_error("find_output_opt: output does not contain region\n");
+            log_error("options::find_output(): output does not contain region\n");
             return false;
         }
 
-        log_debug(ctx, "find_output_opt: clamping region to output bounds\n");
+        log_debug(ctx, "options::find_output(): clamping region to output bounds\n");
         local_region = ctx->opt.region;
         region_clamp(&local_region, &output_region);
     }
@@ -389,7 +389,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
         } else if (strcmp(argv[0], "--no-show-cursor") == 0) {
             ctx->opt.show_cursor = false;
         } else if (strcmp(argv[0], "-n") == 0) {
-            log_warn("parse_opt: -n is deprecated, use --no-show-cursor\n");
+            log_warn("options::parse(): -n is deprecated, use --no-show-cursor\n");
             ctx->opt.show_cursor = false;
         } else if (strcmp(argv[0], "-i") == 0 || strcmp(argv[0], "--invert-colors") == 0) {
             ctx->opt.invert_colors = true;
@@ -397,11 +397,11 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             ctx->opt.invert_colors = false;
         } else if (strcmp(argv[0], "-s") == 0 || strcmp(argv[0], "--scaling") == 0) {
             if (argc < 2) {
-                log_error("parse_opt: option %s requires an argument\n", argv[0]);
+                log_error("options::parse(): option %s requires an argument\n", argv[0]);
                 if (is_cli_args) exit_fail(ctx);
             } else {
                 if (!parse_scaling_opt(&ctx->opt.scaling, argv[1])) {
-                    log_error("parse_opt: invalid scaling mode %s\n", argv[1]);
+                    log_error("options::parse(): invalid scaling mode %s\n", argv[1]);
                     if (is_cli_args) exit_fail(ctx);
                 }
 
@@ -410,11 +410,11 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             }
         } else if (strcmp(argv[0], "-b") == 0 || strcmp(argv[0], "--backend") == 0) {
             if (argc < 2) {
-                log_error("parse_opt: option %s requires an argument\n", argv[0]);
+                log_error("options::parse(): option %s requires an argument\n", argv[0]);
                 if (is_cli_args) exit_fail(ctx);
             } else {
                 if (!parse_backend_opt(&ctx->opt.backend, argv[1])) {
-                    log_error("parse_opt: invalid backend %s\n", argv[1]);
+                    log_error("options::parse(): invalid backend %s\n", argv[1]);
                     if (is_cli_args) exit_fail(ctx);
                 }
 
@@ -424,11 +424,11 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             }
         } else if (strcmp(argv[0], "-t") == 0 || strcmp(argv[0], "--transform") == 0) {
             if (argc < 2) {
-                log_error("parse_opt: option %s requires an argument\n", argv[0]);
+                log_error("options::parse(): option %s requires an argument\n", argv[0]);
                 if (is_cli_args) exit_fail(ctx);
             } else {
                 if (!parse_transform_opt(&ctx->opt.transform, argv[1])) {
-                    log_error("parse_opt: invalid transform %s\n", argv[1]);
+                    log_error("options::parse(): invalid transform %s\n", argv[1]);
                     if (is_cli_args) exit_fail(ctx);
                 }
 
@@ -437,12 +437,12 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             }
         } else if (strcmp(argv[0], "-r") == 0 || strcmp(argv[0], "--region") == 0) {
             if (argc < 2) {
-                log_error("parse_opt: option %s requires an argument\n", argv[0]);
+                log_error("options::parse(): option %s requires an argument\n", argv[0]);
                 if (is_cli_args) exit_fail(ctx);
             } else {
                 char * new_region_output = NULL;
                 if (!parse_region_opt(&ctx->opt.region, &new_region_output, argv[1])) {
-                    log_error("parse_opt: invalid region %s\n", argv[1]);
+                    log_error("options::parse(): invalid region %s\n", argv[1]);
                     if (is_cli_args) exit_fail(ctx);
                 } else {
                     ctx->opt.has_region = true;
@@ -464,7 +464,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             argc--;
             break;
         } else {
-            log_error("parse_opt: invalid option %s\n", argv[0]);
+            log_error("options::parse(): invalid option %s\n", argv[0]);
             if (is_cli_args) exit_fail(ctx);
         }
 
@@ -475,7 +475,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     if (argc > 0) {
         arg_output = strdup(argv[0]);
         if (arg_output == NULL) {
-            log_error("parse_opt: failed to allocate copy of output name\n");
+            log_error("options::parse(): failed to allocate copy of output name\n");
             if (is_cli_args) exit_fail(ctx);
         } else {
             new_output = true;
@@ -507,7 +507,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
         // must be the same
         // region must be in this output
         if (strcmp(region_output, arg_output) != 0) {
-            log_error("parse_opt: region and argument output differ: %s vs %s\n", region_output, arg_output);
+            log_error("options::parse(): region and argument output differ: %s vs %s\n", region_output, arg_output);
             if (is_cli_args) exit_fail(ctx);
         }
         ctx->opt.output = region_output;
@@ -520,7 +520,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     }
 
     if (argc > 1) {
-        log_error("parse_opt: unexpected trailing arguments after output name\n");
+        log_error("options::parse(): unexpected trailing arguments after output name\n");
         if (is_cli_args) exit_fail(ctx);
     }
 
@@ -537,7 +537,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
 
     if (!is_cli_args) {
         update_options_egl(ctx);
-        update_title_mirror(ctx);
+        update_title(ctx);
     }
 }
 

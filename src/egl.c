@@ -92,17 +92,17 @@ void init_egl(ctx_t * ctx) {
     // create egl display
     ctx->egl.display = eglGetDisplay((EGLNativeDisplayType)ctx->wl.display);
     if (ctx->egl.display == EGL_NO_DISPLAY) {
-        log_error("egl::init_egl(): failed to create EGL display\n");
+        log_error("egl::init(): failed to create EGL display\n");
         exit_fail(ctx);
     }
 
     // initialize egl display and check egl version
     EGLint major, minor;
     if (eglInitialize(ctx->egl.display, &major, &minor) != EGL_TRUE) {
-        log_error("egl::init_egl(): failed to initialize EGL display\n");
+        log_error("egl::init(): failed to initialize EGL display\n");
         exit_fail(ctx);
     }
-    log_debug(ctx, "egl::init_egl(): initialized EGL %d.%d\n", major, minor);
+    log_debug(ctx, "egl::init(): initialized EGL %d.%d\n", major, minor);
 
     // find an egl config with
     // - window support
@@ -118,7 +118,7 @@ void init_egl(ctx_t * ctx) {
         EGL_NONE
     };
     if (eglChooseConfig(ctx->egl.display, config_attribs, &ctx->egl.config, 1, &num_configs) != EGL_TRUE) {
-        log_error("egl::init_egl(): failed to get EGL config\n");
+        log_error("egl::init(): failed to get EGL config\n");
         exit_fail(ctx);
     }
 
@@ -129,7 +129,7 @@ void init_egl(ctx_t * ctx) {
     // create egl window
     ctx->egl.window = wl_egl_window_create(ctx->wl.surface, ctx->wl.width, ctx->wl.height);
     if (ctx->egl.window == EGL_NO_SURFACE) {
-        log_error("egl::init_egl(): failed to create EGL window\n");
+        log_error("egl::init(): failed to create EGL window\n");
         exit_fail(ctx);
     }
 
@@ -143,20 +143,20 @@ void init_egl(ctx_t * ctx) {
     };
     ctx->egl.context = eglCreateContext(ctx->egl.display, ctx->egl.config, EGL_NO_CONTEXT, context_attribs);
     if (ctx->egl.context == EGL_NO_CONTEXT) {
-        log_error("egl::init_egl(): failed to create EGL context\n");
+        log_error("egl::init(): failed to create EGL context\n");
         exit_fail(ctx);
     }
 
     // activate egl context
     if (eglMakeCurrent(ctx->egl.display, ctx->egl.surface, ctx->egl.surface, ctx->egl.context) != EGL_TRUE) {
-        log_error("egl::init_egl(): failed to activate EGL context\n");
+        log_error("egl::init(): failed to activate EGL context\n");
         exit_fail(ctx);
     }
 
     // check for needed extensions
     // - GL_OES_EGL_image: for converting EGLImages to GL textures
     if (!has_extension("GL_OES_EGL_image")) {
-        log_error("egl::init_egl(): missing EGL extension GL_OES_EGL_image\n");
+        log_error("egl::init(): missing EGL extension GL_OES_EGL_image\n");
         exit_fail(ctx);
     }
 
@@ -164,7 +164,7 @@ void init_egl(ctx_t * ctx) {
     // - glEGLImageTargetTexture2DOES: for converting EGLImages to GL textures
     ctx->egl.glEGLImageTargetTexture2DOES = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)eglGetProcAddress("glEGLImageTargetTexture2DOES");
     if (ctx->egl.glEGLImageTargetTexture2DOES == NULL) {
-        log_error("egl::init_egl(): failed to get pointer to glEGLImageTargetTexture2DOES\n");
+        log_error("egl::init(): failed to get pointer to glEGLImageTargetTexture2DOES\n");
         exit_fail(ctx);
     }
 
@@ -196,7 +196,7 @@ void init_egl(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(vertex_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        log_error("egl::init_egl(): failed to compile vertex shader: %s\n", errorLog);
+        log_error("egl::init(): failed to compile vertex shader: %s\n", errorLog);
         glDeleteShader(vertex_shader);
         exit_fail(ctx);
     }
@@ -209,7 +209,7 @@ void init_egl(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(fragment_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        log_error("egl::init_egl(): failed to compile fragment shader: %s\n", errorLog);
+        log_error("egl::init(): failed to compile fragment shader: %s\n", errorLog);
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
         exit_fail(ctx);
@@ -222,7 +222,7 @@ void init_egl(ctx_t * ctx) {
     glLinkProgram(ctx->egl.shader_program);
     glGetProgramiv(ctx->egl.shader_program, GL_LINK_STATUS, &success);
     if (success != GL_TRUE) {
-        log_error("egl::init_egl(): failed to link shader program\n");
+        log_error("egl::init(): failed to link shader program\n");
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
         glDeleteProgram(ctx->egl.shader_program);
@@ -253,7 +253,7 @@ void init_egl(ctx_t * ctx) {
     // draw initial frame
     draw_texture_egl(ctx);
     if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        log_error("egl::init_egl(): failed to swap buffers\n");
+        log_error("egl::init(): failed to swap buffers\n");
         exit_fail(ctx);
     }
 }
@@ -271,7 +271,7 @@ void draw_texture_egl(ctx_t *ctx) {
 // --- resize_viewport_egl ---
 
 void resize_viewport_egl(ctx_t * ctx) {
-    log_debug(ctx, "egl::resize_viewport_egl(): resizing viewport\n");
+    log_debug(ctx, "egl::resize_viewport(): resizing viewport\n");
 
     uint32_t win_width = ctx->wl.scale * ctx->wl.width;
     uint32_t win_height = ctx->wl.scale * ctx->wl.height;
@@ -354,7 +354,7 @@ void resize_viewport_egl(ctx_t * ctx) {
 // --- resize_window_egl ---
 
 void resize_window_egl(ctx_t * ctx) {
-    log_debug(ctx, "egl::resize_window_egl(): resizing EGL window\n");
+    log_debug(ctx, "egl::resize_window(): resizing EGL window\n");
 
     // resize window, then trigger viewport recalculation
     wl_egl_window_resize(ctx->egl.window, ctx->wl.scale * ctx->wl.width, ctx->wl.scale * ctx->wl.height, 0, 0);
@@ -363,7 +363,7 @@ void resize_window_egl(ctx_t * ctx) {
     // redraw frame
     draw_texture_egl(ctx);
     if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        log_error("configure_resize_egl: failed to swap buffers\n");
+        log_error("egl::resize_window(): failed to swap buffers\n");
         exit_fail(ctx);
     }
 }
@@ -394,7 +394,7 @@ void update_options_egl(ctx_t * ctx) {
 void cleanup_egl(ctx_t *ctx) {
     if (!ctx->egl.initialized) return;
 
-    log_debug(ctx, "egl::cleanup_egl(): destroying EGL objects\n");
+    log_debug(ctx, "egl::cleanup(): destroying EGL objects\n");
 
     if (ctx->egl.shader_program != 0) glDeleteProgram(ctx->egl.shader_program);
     if (ctx->egl.texture != 0) glDeleteTextures(1, &ctx->egl.texture);

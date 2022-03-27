@@ -361,7 +361,7 @@ static void registry_event_remove(
             if (id == cur->output_id) {
                 // notify mirror code of removed outputs
                 // - triggers exit if the target output disappears
-                output_removed_mirror(ctx, cur);
+                output_removed(ctx, cur);
 
                 // remove output node from linked list
                 *link = cur->next;
@@ -591,14 +591,14 @@ void init_wl(ctx_t * ctx) {
     // connect to display
     ctx->wl.display = wl_display_connect(NULL);
     if (ctx->wl.display == NULL) {
-        log_error("wayland::init_wl(): failed to connect to wayland\n");
+        log_error("wayland::init(): failed to connect to wayland\n");
         exit_fail(ctx);
     }
 
     // get registry handle
     ctx->wl.registry = wl_display_get_registry(ctx->wl.display);
     if (ctx->wl.registry == NULL) {
-        log_error("wayland::init_wl(): failed to get registry handle\n");
+        log_error("wayland::init(): failed to get registry handle\n");
         exit_fail(ctx);
     }
 
@@ -614,13 +614,13 @@ void init_wl(ctx_t * ctx) {
 
     // check for missing required protocols
     if (ctx->wl.compositor == NULL) {
-        log_error("wayland::init_wl(): compositor missing\n");
+        log_error("wayland::init(): compositor missing\n");
         exit_fail(ctx);
     } else if (ctx->wl.wm_base == NULL) {
-        log_error("wayland::init_wl(): wm_base missing\n");
+        log_error("wayland::init(): wm_base missing\n");
         exit_fail(ctx);
     } else if (ctx->wl.output_manager == NULL) {
-        log_error("wayland::init_wl(): output_manager missing\n");
+        log_error("wayland::init(): output_manager missing\n");
         exit_fail(ctx);
     }
 
@@ -631,7 +631,7 @@ void init_wl(ctx_t * ctx) {
     // create surface
     ctx->wl.surface = wl_compositor_create_surface(ctx->wl.compositor);
     if (ctx->wl.surface == NULL) {
-        log_error("wayland::init_wl(): failed to create surface\n");
+        log_error("wayland::init(): failed to create surface\n");
         exit_fail(ctx);
     }
 
@@ -643,7 +643,7 @@ void init_wl(ctx_t * ctx) {
     // create xdg surface
     ctx->wl.xdg_surface = xdg_wm_base_get_xdg_surface(ctx->wl.wm_base, ctx->wl.surface);
     if (ctx->wl.xdg_surface == NULL) {
-        log_error("wayland::init_wl(): failed to create xdg_surface\n");
+        log_error("wayland::init(): failed to create xdg_surface\n");
         exit_fail(ctx);
     }
 
@@ -654,7 +654,7 @@ void init_wl(ctx_t * ctx) {
     // create xdg toplevel
     ctx->wl.xdg_toplevel = xdg_surface_get_toplevel(ctx->wl.xdg_surface);
     if (ctx->wl.xdg_toplevel == NULL) {
-        log_error("wayland::init_wl(): failed to create xdg_toplevel\n");
+        log_error("wayland::init(): failed to create xdg_toplevel\n");
         exit_fail(ctx);
     }
 
@@ -678,7 +678,7 @@ void init_wl(ctx_t * ctx) {
     // check if surface is configured
     // - expecting surface to be configured at this point
     if (!ctx->wl.configured) {
-        log_error("wayland::init_wl(): surface not configured\n");
+        log_error("wayland::init(): surface not configured\n");
         exit_fail(ctx);
     }
 }
@@ -688,7 +688,7 @@ void init_wl(ctx_t * ctx) {
 void cleanup_wl(ctx_t *ctx) {
     if (!ctx->wl.initialized) return;
 
-    log_debug(ctx, "wayland::cleanup_wl(): destroying wayland objects\n");
+    log_debug(ctx, "wayland::cleanup(): destroying wayland objects\n");
 
     // free every output in output list
     output_list_node_t * cur = ctx->wl.outputs;

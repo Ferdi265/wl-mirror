@@ -7,17 +7,10 @@
 #include <wayland-egl.h>
 #include <EGL/egl.h>
 #include "transform.h"
+#include "mirror-backends.h"
 
 struct ctx;
 struct output_list_node;
-
-#define MIRROR_BACKEND_FATAL_FAILCOUNT 10
-
-typedef struct mirror_backend {
-    void (*on_frame)(struct ctx * ctx);
-    void (*on_cleanup)(struct ctx * ctx);
-    size_t fail_count;
-} mirror_backend_t;
 
 typedef struct ctx_mirror {
     struct output_list_node * current_target;
@@ -39,8 +32,8 @@ typedef struct ctx_mirror {
 void init_mirror(struct ctx * ctx);
 void init_mirror_backend(struct ctx * ctx);
 
-void output_removed_mirror(struct ctx * ctx, struct output_list_node * node);
-void update_title_mirror(struct ctx * ctx);
+void output_removed(struct ctx * ctx, struct output_list_node * node);
+void update_title(struct ctx * ctx);
 
 void backend_fail(struct ctx * ctx);
 void cleanup_mirror(struct ctx * ctx);
