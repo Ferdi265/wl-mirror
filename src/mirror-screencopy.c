@@ -162,12 +162,23 @@ static void on_buffer(
             return;
         }
 
+#if __linux__
         void * new_addr = mremap(backend->shm_addr, backend->shm_size, new_size, MREMAP_MAYMOVE);
         if (new_addr == MAP_FAILED) {
             log_error("mirror-screencopy::on_buffer(): failed to remap shm buffer\n");
             backend_cancel(backend);
             return;
         }
+#else
+        void * new_addr = mmap(NULL, new_size, PROT_READ | PROT_WRITE, MAP_SHARED, backend->shm_fd, 0);
+        if (new_addr == MAP_FAILED) {
+            log_error("mirror-screencopy::on_buffer(): failed to map new shm buffer\n");
+            backend_cancel(backend);
+            return;
+        } else {
+            munmap(backend->shm_addr, backend->shm_size);
+        }
+#endif
 
         backend->shm_addr = new_addr;
         backend->shm_size = new_size;
