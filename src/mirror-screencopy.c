@@ -307,7 +307,11 @@ static void on_ready(
     ctx->egl.texture_initialized = true;
 
     // set buffer flags
-    ctx->mirror.invert_y = backend->frame_flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT;
+    bool invert_y = backend->frame_flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT;
+    if (ctx->mirror.invert_y != invert_y) {
+        ctx->mirror.invert_y = invert_y;
+        update_options_egl(ctx);
+    }
 
     // set texture size and aspect ratio only if changed
     if (backend->frame_width != ctx->egl.width || backend->frame_height != ctx->egl.height) {

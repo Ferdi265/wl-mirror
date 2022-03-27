@@ -219,8 +219,12 @@ static void on_ready(
     ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, ctx->mirror.frame_image);
     ctx->egl.texture_initialized = true;
 
-    // set buffer flags
-    ctx->mirror.invert_y = backend->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
+    // set buffer flags only if changed
+    bool invert_y = backend->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
+    if (ctx->mirror.invert_y != invert_y) {
+        ctx->mirror.invert_y = invert_y;
+        update_options_egl(ctx);
+    }
 
     // set texture size and aspect ratio only if changed
     if (backend->width != ctx->egl.width || backend->height != ctx->egl.height) {
