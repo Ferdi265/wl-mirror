@@ -26,14 +26,6 @@ static void on_frame(
     ctx->mirror.frame_callback = wl_surface_frame(ctx->wl.surface);
     wl_callback_add_listener(ctx->mirror.frame_callback, &frame_callback_listener, (void *)ctx);
 
-    // render frame, set swap interval to 0 to ensure nonblocking buffer swap
-    draw_texture(ctx);
-    eglSwapInterval(ctx->egl.display, 0);
-    if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        log_error("mirror::on_frame(): failed to swap buffers\n");
-        exit_fail(ctx);
-    }
-
     if (ctx->mirror.backend != NULL) {
         // check if backend failure count exceeded
         if (ctx->mirror.backend->fail_count >= MIRROR_BACKEND_FATAL_FAILCOUNT) {
@@ -42,6 +34,18 @@ static void on_frame(
 
         // request new screen capture from backend
         ctx->mirror.backend->do_capture(ctx);
+    }
+
+    // wait for events
+    // - screencapture events from backend
+    wl_display_roundtrip(ctx->wl.display);
+
+    // render frame, set swap interval to 0 to ensure nonblocking buffer swap
+    draw_texture(ctx);
+    eglSwapInterval(ctx->egl.display, 0);
+    if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
+        log_error("mirror::on_frame(): failed to swap buffers\n");
+        exit_fail(ctx);
     }
 
     (void)frame_callback;
