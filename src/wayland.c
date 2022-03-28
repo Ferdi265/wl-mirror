@@ -5,7 +5,7 @@
 
 // --- output event handlers ---
 
-static void output_event_geometry(
+static void on_output_geometry(
     void * data, struct wl_output * output,
     int32_t x, int32_t y, int32_t physical_width, int32_t physical_height,
     int32_t subpixel, const char * make, const char * model, int32_t transform
@@ -15,11 +15,8 @@ static void output_event_geometry(
 
     // update transform only if changed
     if (node->transform != (uint32_t)transform) {
-        log_debug(ctx, "wayland::output_event_geometry(): updating output transform\n");
-        node->transform = transform;
-
         if (ctx->opt.verbose) {
-            log_debug(ctx, "wayland::output_event_geometry(): output %s has transform ", node->name);
+            log_debug(ctx, "wayland::on_output_geometry(): updating output %s (transform = ", node->name);
             switch (transform) {
                 case WL_OUTPUT_TRANSFORM_NORMAL:
                     fprintf(stderr, "normal");
@@ -45,9 +42,14 @@ static void output_event_geometry(
                 case WL_OUTPUT_TRANSFORM_FLIPPED_270:
                     fprintf(stderr, "flipX-270ccw");
                     break;
+                default:
+                    fprintf(stderr, "unknown");
+                    break;
             }
-            fprintf(stderr, "\n");
+            fprintf(stderr, ", id = %d)\n", node->output_id);
         }
+
+        node->transform = transform;
 
         // update egl viewport only if this is the target output
         if (ctx->mirror.initialized && ctx->mirror.current_target->output == output) {
@@ -65,7 +67,7 @@ static void output_event_geometry(
     (void)transform;
 }
 
-static void output_event_mode(
+static void on_output_mode(
     void * data, struct wl_output * output,
     uint32_t flags, int32_t width, int32_t height, int32_t refresh
 ) {
@@ -77,7 +79,7 @@ static void output_event_mode(
     (void)refresh;
 }
 
-static void output_event_scale(
+static void on_output_scale(
     void * data, struct wl_output * output,
     int32_t scale
 ) {
@@ -86,14 +88,12 @@ static void output_event_scale(
 
     // update scale only if changed
     if (node->scale != scale) {
-        log_debug(ctx, "wayland::output_event_scale(): updating output scale\n");
+        log_debug(ctx, "wayland::on_output_scale(): updating output %s (scale = %d, id = %d)\n", node->name, scale, node->output_id);
         node->scale = scale;
-
-        log_debug(ctx, "wayland::output_event_scale(): output %s has scale %d\n", node->name, scale);
 
         // update buffer scale only if this is the current output
         if (ctx->wl.current_output != NULL && ctx->wl.current_output->output == output) {
-            log_debug(ctx, "wayland::output_event_scale(): updating window scale\n");
+            log_debug(ctx, "wayland::on_output_scale(): updating window scale\n");
             ctx->wl.scale = scale;
             wl_surface_set_buffer_scale(ctx->wl.surface, scale);
 
@@ -105,7 +105,7 @@ static void output_event_scale(
     }
 }
 
-static void output_event_done(
+static void on_output_done(
     void * data, struct wl_output * output
 ) {
     (void)data;
@@ -113,15 +113,15 @@ static void output_event_done(
 }
 
 static const struct wl_output_listener output_listener = {
-    .geometry = output_event_geometry,
-    .mode = output_event_mode,
-    .scale = output_event_scale,
-    .done = output_event_done
+    .geometry = on_output_geometry,
+    .mode = on_output_mode,
+    .scale = on_output_scale,
+    .done = on_output_done
 };
 
 // --- xdg_output event handlers ---
 
-static void xdg_output_event_description(
+static void on_xdg_output_description(
     void * data, struct zxdg_output_v1 * xdg_output,
     const char * description
 ) {
@@ -130,55 +130,66 @@ static void xdg_output_event_description(
     (void)description;
 }
 
-static void xdg_output_event_logical_position(
+static void on_xdg_output_logical_position(
     void * data, struct zxdg_output_v1 * xdg_output,
     int32_t x, int32_t y
 ) {
     output_list_node_t * node = (output_list_node_t *)data;
     ctx_t * ctx = node->ctx;
 
-    node->x = x;
-    node->y = y;
-    log_debug(ctx, "wayland::xdg_output_event_logical_position(): output %s has logical position %d,%d\n", node->name, x, y);
+    // update position only if changed
+    if (node->x != x || node->y != y) {
+        log_debug(ctx, "wayland::on_xdg_output_logical_position(): updating output %s (position = %d,%d, id = %d)\n", node->name, x, y, node->output_id);
+
+        node->x = x;
+        node->y = y;
+    }
 
     (void)xdg_output;
 }
 
-static void xdg_output_event_logical_size(
+static void on_xdg_output_logical_size(
     void * data, struct zxdg_output_v1 * xdg_output,
     int32_t width, int32_t height
 ) {
     output_list_node_t * node = (output_list_node_t *)data;
     ctx_t * ctx = node->ctx;
 
-    node->width = width;
-    node->height = height;
-    log_debug(ctx, "wayland::xdg_output_event_logical_size(): output %s has logical size %dx%d\n", node->name, width, height);
+    // update size only if changed
+    if (node->width != width || node->height != height) {
+        log_debug(ctx, "wayland::on_xdg_output_logical_size(): updating output %s (size = %dx%d, id = %d)\n", node->name, width, height, node->output_id);
+
+        node->width = width;
+        node->height = height;
+    }
 
     (void)xdg_output;
 }
 
-static void xdg_output_event_name(
+static void on_xdg_output_name(
     void * data, struct zxdg_output_v1 * xdg_output,
     const char * name
 ) {
     output_list_node_t * node = (output_list_node_t *)data;
     ctx_t * ctx = node->ctx;
 
-    // allocate copy of name since name is owned by libwayland
-    free(node->name);
-    node->name = strdup(name);
-    if (node->name == NULL) {
-        log_error("wayland::xdg_output_event_name(): failed to allocate output name\n");
-        exit_fail(ctx);
-    }
+    // update name only if changed
+    if (node->name == NULL || strcmp(node->name, name) != 0) {
+        log_debug(ctx, "wayland::on_xdg_output_name(): updating output %s (id = %d)\n", name, node->output_id);
 
-    log_debug(ctx, "wayland::xdg_output_event_name(): found output with name %s\n", node->name);
+        // allocate copy of name since name is owned by libwayland
+        free(node->name);
+        node->name = strdup(name);
+        if (node->name == NULL) {
+            log_error("wayland::on_xdg_output_name(): failed to allocate output name\n");
+            exit_fail(ctx);
+        }
+    }
 
     (void)xdg_output;
 }
 
-static void xdg_output_event_done(
+static void on_xdg_output_done(
     void * data, struct zxdg_output_v1 * xdg_output
 ) {
     (void)data;
@@ -186,26 +197,28 @@ static void xdg_output_event_done(
 }
 
 static const struct zxdg_output_v1_listener xdg_output_listener = {
-    .description = xdg_output_event_description,
-    .logical_position = xdg_output_event_logical_position,
-    .logical_size = xdg_output_event_logical_size,
-    .name = xdg_output_event_name,
-    .done = xdg_output_event_done
+    .description = on_xdg_output_description,
+    .logical_position = on_xdg_output_logical_position,
+    .logical_size = on_xdg_output_logical_size,
+    .name = on_xdg_output_name,
+    .done = on_xdg_output_done
 };
 
 // --- registry event handlers ---
 
-static void registry_event_add(
+static void on_registry_add(
     void * data, struct wl_registry * registry,
     uint32_t id, const char * interface, uint32_t version
 ) {
     ctx_t * ctx = (ctx_t *)data;
 
+    log_debug(ctx, "wayland::on_registry_add(): %s (version = %d, id = %d)\n", interface, version, id);
+
     // bind proxy object for each protocol we need
     // bind proxy object for each output
     if (strcmp(interface, wl_compositor_interface.name) == 0) {
         if (ctx->wl.compositor != NULL) {
-            log_error("wayland::registry_event_add(): duplicate compositor\n");
+            log_error("wayland::on_registry_add(): duplicate compositor\n");
             exit_fail(ctx);
         }
 
@@ -216,7 +229,7 @@ static void registry_event_add(
         ctx->wl.compositor_id = id;
     } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
         if (ctx->wl.wm_base != NULL) {
-            log_error("wayland::registry_event_add(): duplicate wm_base\n");
+            log_error("wayland::on_registry_add(): duplicate wm_base\n");
             exit_fail(ctx);
         }
 
@@ -227,7 +240,7 @@ static void registry_event_add(
         ctx->wl.wm_base_id = id;
     } else if (strcmp(interface, zxdg_output_manager_v1_interface.name) == 0) {
         if (ctx->wl.output_manager != NULL) {
-            log_error("wayland::registry_event_add(): duplicate output_manager\n");
+            log_error("wayland::on_registry_add(): duplicate output_manager\n");
             exit_fail(ctx);
         }
 
@@ -238,7 +251,7 @@ static void registry_event_add(
         ctx->wl.output_manager_id = id;
     } else if (strcmp(interface, zwlr_export_dmabuf_manager_v1_interface.name) == 0) {
         if (ctx->wl.dmabuf_manager != NULL) {
-            log_error("wayland::registry_event_add(): duplicate dmabuf_manager\n");
+            log_error("wayland::on_registry_add(): duplicate dmabuf_manager\n");
             exit_fail(ctx);
         }
 
@@ -250,7 +263,7 @@ static void registry_event_add(
         ctx->wl.dmabuf_manager_id = id;
     } else if (strcmp(interface, zwlr_screencopy_manager_v1_interface.name) == 0) {
         if (ctx->wl.screencopy_manager != NULL) {
-            log_error("wayland::registry_event_add(): duplicate screencopy_manager\n");
+            log_error("wayland::on_registry_add(): duplicate screencopy_manager\n");
             exit_fail(ctx);
         }
 
@@ -262,7 +275,7 @@ static void registry_event_add(
         ctx->wl.screencopy_manager_id = id;
     } else if (strcmp(interface, wl_shm_interface.name) == 0) {
         if (ctx->wl.shm != NULL) {
-            log_error("wayland::registry_event_add(): duplicate shm\n");
+            log_error("wayland::on_registry_add(): duplicate shm\n");
             exit_fail(ctx);
         }
 
@@ -276,7 +289,7 @@ static void registry_event_add(
         // allocate output node
         output_list_node_t * node = malloc(sizeof (output_list_node_t));
         if (node == NULL) {
-            log_error("wayland::registry_event_add(): failed to allocate output node\n");
+            log_error("wayland::on_registry_add(): failed to allocate output node\n");
             exit_fail(ctx);
         }
 
@@ -310,7 +323,7 @@ static void registry_event_add(
         // - sway always sends outputs after protocol extensions
         // - for simplicity, only this event order is supported
         if (ctx->wl.output_manager == NULL) {
-            log_error("wayland::registry_event_add(): wl_output received before xdg_output_manager\n");
+            log_error("wayland::on_registry_add(): wl_output received before xdg_output_manager\n");
             exit_fail(ctx);
         }
 
@@ -319,7 +332,7 @@ static void registry_event_add(
             ctx->wl.output_manager, node->output
         );
         if (node->xdg_output == NULL) {
-            log_error("wayland::registry_event_add(): failed to create xdg_output\n");
+            log_error("wayland::on_registry_add(): failed to create xdg_output\n");
             exit_fail(ctx);
         }
 
@@ -333,7 +346,7 @@ static void registry_event_add(
     (void)version;
 }
 
-static void registry_event_remove(
+static void on_registry_remove(
     void * data, struct wl_registry * registry,
     uint32_t id
 ) {
@@ -342,16 +355,16 @@ static void registry_event_remove(
     // ensure protocols we need aren't removed
     // remove removed outputs from the output list
     if (id == ctx->wl.compositor_id) {
-        log_error("wayland::registry_event_remove(): compositor disapperared\n");
+        log_error("wayland::on_registry_remove(): compositor disapperared\n");
         exit_fail(ctx);
     } else if (id == ctx->wl.wm_base_id) {
-        log_error("wayland::registry_event_remove(): wm_base disapperared\n");
+        log_error("wayland::on_registry_remove(): wm_base disapperared\n");
         exit_fail(ctx);
     } else if (id == ctx->wl.output_manager_id) {
-        log_error("wayland::registry_event_remove(): output_manager disapperared\n");
+        log_error("wayland::on_registry_remove(): output_manager disapperared\n");
         exit_fail(ctx);
     } else if (id == ctx->wl.dmabuf_manager_id) {
-        log_error("wayland::registry_event_remove(): dmabuf_manager disapperared\n");
+        log_error("wayland::on_registry_remove(): dmabuf_manager disapperared\n");
         exit_fail(ctx);
     } else {
         output_list_node_t ** link = &ctx->wl.outputs;
@@ -359,6 +372,8 @@ static void registry_event_remove(
         output_list_node_t * prev = NULL;
         while (cur != NULL) {
             if (id == cur->output_id) {
+                log_debug(ctx, "wayland::on_registry_remove(): output %s removed (id = %d)\n", cur->name, id);
+
                 // notify mirror code of removed outputs
                 // - triggers exit if the target output disappears
                 output_removed(ctx, cur);
@@ -387,8 +402,8 @@ static void registry_event_remove(
 }
 
 static const struct wl_registry_listener registry_listener = {
-    .global = registry_event_add,
-    .global_remove = registry_event_remove
+    .global = on_registry_add,
+    .global_remove = on_registry_remove
 };
 
 // --- wm_base event handlers ---
