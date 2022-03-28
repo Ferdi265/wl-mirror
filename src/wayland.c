@@ -408,22 +408,21 @@ static const struct wl_registry_listener registry_listener = {
 
 // --- wm_base event handlers ---
 
-static void wm_base_event_ping(
+static void on_wm_base_ping(
     void * data, struct xdg_wm_base * xdg_wm_base, uint32_t serial
 ) {
-    ctx_t * ctx = (ctx_t *)data;
     xdg_wm_base_pong(xdg_wm_base, serial);
 
-    (void)ctx;
+    (void)data;
 }
 
 static const struct xdg_wm_base_listener wm_base_listener = {
-    .ping = wm_base_event_ping
+    .ping = on_wm_base_ping
 };
 
 // --- surface event handlers ---
 
-static void surface_event_enter(
+static void on_surface_enter(
     void * data, struct wl_surface * surface, struct wl_output * output
 ) {
     ctx_t * ctx = (ctx_t *)data;
@@ -442,7 +441,7 @@ static void surface_event_enter(
 
     // verify an output was found
     if (node == NULL) {
-        log_error("wayland::surface_event_enter(): entered nonexistant output\n");
+        log_error("wayland::on_surface_enter(): entered nonexistant output\n");
         exit_fail(ctx);
     }
 
@@ -451,7 +450,7 @@ static void surface_event_enter(
 
     // update scale only if changed
     if (node->scale != ctx->wl.scale) {
-        log_debug(ctx, "wayland::surface_event_enter(): updating window scale\n");
+        log_debug(ctx, "wayland::on_surface_enter(): updating window scale\n");
         ctx->wl.scale = node->scale;
         wl_surface_set_buffer_scale(ctx->wl.surface, node->scale);
 
@@ -464,7 +463,7 @@ static void surface_event_enter(
     (void)surface;
 }
 
-static void surface_event_leave(
+static void on_surface_leave(
     void * data, struct wl_surface * surface, struct wl_output * output
 ) {
     (void)data;
@@ -473,15 +472,15 @@ static void surface_event_leave(
 }
 
 static const struct wl_surface_listener surface_listener = {
-    .enter = surface_event_enter,
-    .leave = surface_event_leave
+    .enter = on_surface_enter,
+    .leave = on_surface_leave
 };
 
 // --- configure callbacks ---
 
-static void surface_configure_finished(ctx_t * ctx) {
+static void on_surface_configure_finished(ctx_t * ctx) {
     // acknowledge configure and commit surface to finish configure sequence
-    log_debug(ctx, "wayland::surface_configure_finished(): window configured\n");
+    log_debug(ctx, "wayland::on_surface_configure_finished(): window configured\n");
     xdg_surface_ack_configure(ctx->wl.xdg_surface, ctx->wl.last_surface_serial);
     wl_surface_commit(ctx->wl.surface);
 
@@ -493,7 +492,7 @@ static void surface_configure_finished(ctx_t * ctx) {
 
 // --- xdg_surface event handlers ---
 
-static void xdg_surface_event_configure(
+static void xdg_on_surface_configure(
     void * data, struct xdg_surface * xdg_surface, uint32_t serial
 ) {
     ctx_t * ctx = (ctx_t *)data;
@@ -504,19 +503,19 @@ static void xdg_surface_event_configure(
     // update configure sequence state machine
     ctx->wl.xdg_surface_configured = true;
     if (ctx->wl.xdg_surface_configured && ctx->wl.xdg_toplevel_configured) {
-        surface_configure_finished(ctx);
+        on_surface_configure_finished(ctx);
     }
 
     (void)xdg_surface;
 }
 
 static const struct xdg_surface_listener xdg_surface_listener = {
-    .configure = xdg_surface_event_configure,
+    .configure = xdg_on_surface_configure,
 };
 
 // --- xdg_toplevel event handlers ---
 
-static void xdg_toplevel_event_configure(
+static void on_xdg_toplevel_configure(
     void * data, struct xdg_toplevel * xdg_toplevel,
     int32_t width, int32_t height, struct wl_array * states
 ) {
@@ -528,7 +527,7 @@ static void xdg_toplevel_event_configure(
 
     // update size only if changed
     if (ctx->wl.width != (uint32_t)width || ctx->wl.height != (uint32_t)height) {
-        log_debug(ctx, "wayland::xdg_toplevel_event_configure(): window resized to %dx%d\n", width, height);
+        log_debug(ctx, "wayland::on_xdg_toplevel_configure(): window resized to %dx%d\n", width, height);
         ctx->wl.width = width;
         ctx->wl.height = height;
 
@@ -541,27 +540,27 @@ static void xdg_toplevel_event_configure(
     // update configure sequence state machine
     ctx->wl.xdg_toplevel_configured = true;
     if (ctx->wl.xdg_surface_configured && ctx->wl.xdg_toplevel_configured) {
-        surface_configure_finished(ctx);
+        on_surface_configure_finished(ctx);
     }
 
     (void)xdg_toplevel;
     (void)states;
 }
 
-static void xdg_toplevel_event_close(
+static void on_xdg_toplevel_close(
     void * data, struct xdg_toplevel * xdg_toplevel
 ) {
     ctx_t * ctx = (ctx_t *)data;
 
-    log_debug(ctx, "wayland::xdg_surface_event_close(): close request received\n");
+    log_debug(ctx, "wayland::on_xdg_toplevel_close(): close request received\n");
     ctx->wl.closing = true;
 
     (void)xdg_toplevel;
 }
 
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {
-    .configure = xdg_toplevel_event_configure,
-    .close = xdg_toplevel_event_close
+    .configure = on_xdg_toplevel_configure,
+    .close = on_xdg_toplevel_close
 };
 
 // --- init_wl ---
