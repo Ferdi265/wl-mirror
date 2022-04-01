@@ -366,6 +366,13 @@ void usage_opt(ctx_t * ctx) {
     printf("  on start, the region is translated into output coordinates\n");
     printf("  when the output moves, the captured region moves with it\n");
     printf("  when a region is specified, the <output> argument is optional\n");
+    printf("\n");
+    printf("stream mode:\n");
+    printf("  in stream mode, wl-mirror interprets lines on stdin as additional command line options\n");
+    printf("  - arguments can be quoted with single or double quotes, but every argument must be fully\n");
+    printf("    quoted or fully unquoted\n");
+    printf("  - unquoted arguments are split on whitespace\n");
+    printf("  - no escape sequences are implemented\n");
     cleanup(ctx);
     exit(0);
 }

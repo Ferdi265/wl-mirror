@@ -61,6 +61,13 @@ regions:
   on start, the region is translated into output coordinates
   when the output moves, the captured region moves with it
   when a region is specified, the <output> argument is optional
+
+stream mode:
+  in stream mode, wl-mirror interprets lines on stdin as additional command line options
+  - arguments can be quoted with single or double quotes, but every argument must be fully
+    quoted or fully unquoted
+  - unquoted arguments are split on whitespace
+  - no escape sequences are implemented
 ```
 
 The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be used.
