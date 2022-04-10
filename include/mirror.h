@@ -22,9 +22,6 @@ typedef struct ctx_mirror {
     mirror_backend_t * backend;
     size_t auto_backend_index;
 
-    // gl data
-    EGLImage frame_image;
-
     // state flags
     bool initialized;
 } ctx_mirror_t;

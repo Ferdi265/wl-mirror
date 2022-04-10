@@ -136,11 +136,6 @@ static void on_ready(
         return;
     }
 
-    if (ctx->mirror.frame_image != EGL_NO_IMAGE) {
-        log_debug(ctx, "mirror-dmabuf::on_ready(): destroying old EGL image\n");
-        eglDestroyImage(ctx->egl.display, ctx->mirror.frame_image);
-    }
-
     // create attribute array for EGLCreteImage from dmabuf
     int i = 0;
     EGLAttrib image_attribs[6 + 10 * 4 + 1];
@@ -206,9 +201,9 @@ static void on_ready(
 
     image_attribs[i++] = EGL_NONE;
 
-    // create EGLimage from dmabuf with attribute array
-    ctx->mirror.frame_image = eglCreateImage(ctx->egl.display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
-    if (ctx->mirror.frame_image == EGL_NO_IMAGE) {
+    // create EGLImage from dmabuf with attribute array
+    EGLImage frame_image = eglCreateImage(ctx->egl.display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
+    if (frame_image == EGL_NO_IMAGE) {
         log_error("mirror-dmabuf::on_ready(): failed to create EGL image from dmabuf\n");
         backend_fail(ctx);
         return;
@@ -216,8 +211,11 @@ static void on_ready(
 
     // convert EGLImage to GL texture
     glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
-    ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, ctx->mirror.frame_image);
+    ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, frame_image);
     ctx->egl.texture_initialized = true;
+
+    // destroy temporary EGLImage
+    eglDestroyImage(ctx->egl.display, frame_image);
 
     // set buffer flags only if changed
     bool invert_y = backend->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;

@@ -452,12 +452,6 @@ void init_mirror_screencopy(ctx_t * ctx) {
     // set backend object as current backend
     ctx->mirror.backend = (mirror_backend_t *)backend;
 
-    // destroy EGLImage if previous backend created it
-    // - this backend does not need EGLImages
-    if (ctx->mirror.frame_image != EGL_NO_IMAGE) {
-        eglDestroyImage(ctx->egl.display, ctx->mirror.frame_image);
-    }
-
     // create shm fd
     backend->shm_fd = memfd_create("wl_shm_buffer", 0);
     if (backend->shm_fd == -1) {

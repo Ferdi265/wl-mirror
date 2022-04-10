@@ -68,8 +68,6 @@ void init_mirror(ctx_t * ctx) {
     ctx->mirror.backend = NULL;
     ctx->mirror.auto_backend_index = 0;
 
-    ctx->mirror.frame_image = EGL_NO_IMAGE;
-
     ctx->mirror.initialized = true;
 
     // finding target output
@@ -196,7 +194,6 @@ void cleanup_mirror(ctx_t * ctx) {
 
     if (ctx->mirror.backend != NULL) ctx->mirror.backend->do_cleanup(ctx);
     if (ctx->mirror.frame_callback != NULL) wl_callback_destroy(ctx->mirror.frame_callback);
-    if (ctx->mirror.frame_image != EGL_NO_IMAGE) eglDestroyImage(ctx->egl.display, ctx->mirror.frame_image);
 
     ctx->mirror.initialized = false;
 }
