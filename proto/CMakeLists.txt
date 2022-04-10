@@ -41,43 +41,43 @@ set(protocols-found TRUE)
 add_library(protocols STATIC)
 target_include_directories(protocols INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include/")
 foreach(proto ${PROTOCOLS})
-    cmake_path(GET proto STEM protobase)
-    cmake_path(APPEND WL_PROTOCOL_DIR ${proto} OUTPUT_VARIABLE wl_protofile)
-    cmake_path(APPEND WLR_PROTOCOL_DIR ${proto} OUTPUT_VARIABLE wlr_protofile)
+    cmake_path(GET proto STEM proto-base)
+    cmake_path(APPEND WL_PROTOCOL_DIR ${proto} OUTPUT_VARIABLE wl-proto-file)
+    cmake_path(APPEND WLR_PROTOCOL_DIR ${proto} OUTPUT_VARIABLE wlr-proto-file)
 
-    if(EXISTS ${wl_protofile})
+    if(EXISTS ${wl-proto-file})
         message(STATUS "using ${proto} from wayland-protocols")
-        set(protofile ${wl_protofile})
-    elseif(EXISTS ${wlr_protofile})
+        set(proto-file ${wl-proto-file})
+    elseif(EXISTS ${wlr-proto-file})
         message(STATUS "using ${proto} from wlr-protocols")
-        set(protofile ${wlr_protofile})
+        set(proto-file ${wlr-proto-file})
     else()
         message(STATUS "error: protocol ${proto} not found")
         set(protocols-found FALSE)
     endif()
 
-    set(protoheader "${CMAKE_CURRENT_BINARY_DIR}/include/${protobase}.h")
-    set(protosource "${CMAKE_CURRENT_BINARY_DIR}/src/${protobase}.c")
+    set(proto-header "${CMAKE_CURRENT_BINARY_DIR}/include/${proto-base}.h")
+    set(proto-source "${CMAKE_CURRENT_BINARY_DIR}/src/${proto-base}.c")
 
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/")
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/")
     add_custom_command(
-        OUTPUT "${protoheader}"
-        MAIN_DEPENDENCY "${protofile}"
-        COMMAND wayland-scanner client-header "${protofile}" "${protoheader}"
+        OUTPUT "${proto-header}"
+        MAIN_DEPENDENCY "${proto-file}"
+        COMMAND wayland-scanner client-header "${proto-file}" "${proto-header}"
     )
     add_custom_command(
-        OUTPUT "${protosource}"
-        MAIN_DEPENDENCY "${protofile}"
-        COMMAND wayland-scanner private-code "${protofile}" "${protosource}"
+        OUTPUT "${proto-source}"
+        MAIN_DEPENDENCY "${proto-file}"
+        COMMAND wayland-scanner private-code "${proto-file}" "${proto-source}"
     )
-    add_custom_target(gen-${protobase} DEPENDS "${protoheader}" "${protosource}")
+    add_custom_target(gen-${proto-base} DEPENDS "${proto-header}" "${proto-source}")
 
-    set_source_files_properties("${protoheader}" PROPERTIES GENERATED 1)
-    set_source_files_properties("${protosource}" PROPERTIES GENERATED 1)
+    set_source_files_properties("${proto-header}" PROPERTIES GENERATED 1)
+    set_source_files_properties("${proto-source}" PROPERTIES GENERATED 1)
 
-    add_dependencies(protocols gen-${protobase})
-    target_sources(protocols PRIVATE "${protosource}")
+    add_dependencies(protocols gen-${proto-base})
+    target_sources(protocols PRIVATE "${proto-source}")
 endforeach()
 
 if(NOT ${protocols-found})
