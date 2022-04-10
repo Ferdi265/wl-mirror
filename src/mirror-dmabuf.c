@@ -212,6 +212,7 @@ static void on_ready(
     // convert EGLImage to GL texture
     glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
     ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, frame_image);
+    ctx->egl.texture_region_aware = false;
     ctx->egl.texture_initialized = true;
 
     // destroy temporary EGLImage

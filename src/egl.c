@@ -86,6 +86,7 @@ void init_egl(ctx_t * ctx) {
     ctx->egl.texture_transform_uniform = 0;
     ctx->egl.invert_colors_uniform = 0;
 
+    ctx->egl.texture_region_aware = false;
     ctx->egl.texture_initialized = false;
     ctx->egl.initialized = true;
 
@@ -288,7 +289,7 @@ void resize_viewport(ctx_t * ctx) {
     // clamp texture dimensions to specified region
     region_t output_region;
     region_t clamp_region;
-    if (ctx->egl.texture_initialized && ctx->opt.has_region) {
+    if (ctx->egl.texture_initialized && ctx->opt.has_region && !ctx->egl.texture_region_aware) {
         output_region = (region_t){
             .x = 0, .y = 0,
             .width = tex_width, .height = tex_height
@@ -337,7 +338,7 @@ void resize_viewport(ctx_t * ctx) {
         mat3_apply_invert_y(&texture_transform, true);
         mat3_apply_transform(&texture_transform, ctx->opt.transform);
 
-        if (ctx->opt.has_region) {
+        if (ctx->opt.has_region && !ctx->egl.texture_region_aware) {
             mat3_apply_region_transform(&texture_transform, &clamp_region, &output_region);
         }
 

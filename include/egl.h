@@ -32,6 +32,7 @@ typedef struct ctx_egl {
     GLint invert_colors_uniform;
 
     // state flags
+    bool texture_region_aware;
     bool texture_initialized;
     bool initialized;
 } ctx_egl_t;
