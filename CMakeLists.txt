@@ -22,11 +22,14 @@ set(PROTOCOLS
 # wayland protocol wrapper generation with wayland-scanner
 add_subdirectory(proto)
 
+# shader file embedding
+add_subdirectory(glsl)
+
 # main target
 file(GLOB sources src/*.c)
 add_executable(wl-mirror ${sources})
 target_compile_options(wl-mirror PRIVATE -Wall -Wextra)
-target_link_libraries(wl-mirror PRIVATE wayland-client wayland-egl EGL GLESv2 protocols)
+target_link_libraries(wl-mirror PRIVATE wayland-client wayland-egl EGL GLESv2 protocols shaders)
 target_include_directories(wl-mirror PRIVATE include/)
 
 # installation rules

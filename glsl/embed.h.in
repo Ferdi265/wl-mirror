@@ -1,0 +1,6 @@
+#ifndef WL_MIRROR_GLSL_@FILENAME@_
+#define WL_MIRROR_GLSL_@FILENAME@_
+
+extern const char glsl_@FILENAME@[];
+
+#endif

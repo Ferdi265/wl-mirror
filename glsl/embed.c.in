@@ -1,0 +1,4 @@
+const char glsl_@FILENAME@[] = {
+    @DATA@
+    0
+};

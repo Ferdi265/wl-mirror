@@ -4,37 +4,8 @@
 #include <string.h>
 #include "context.h"
 #include "transform.h"
-
-// --- shaders ---
-
-const char * vertex_shader_source =
-    "#version 100\n"
-    "precision mediump float;\n"
-    "uniform mat3 uTexTransform;\n"
-    "attribute vec2 aPosition;\n"
-    "attribute vec2 aTexCoord;\n"
-    "varying vec2 vTexCoord;\n"
-    "void main() {\n"
-    "    gl_Position = vec4(aPosition, 0.0, 1.0);\n"
-    "    vTexCoord = (uTexTransform * vec3(aTexCoord, 1.0)).xy;\n"
-    "}\n"
-;
-
-const char * fragment_shader_source =
-    "#version 100\n"
-    "precision mediump float;\n"
-    "uniform sampler2D uTexture;\n"
-    "uniform bool uInvertColors;\n"
-    "varying vec2 vTexCoord;\n"
-    "void main() {\n"
-    "    vec4 color = texture2D(uTexture, vTexCoord);\n"
-    "    if (uInvertColors) {\n"
-    "        gl_FragColor = vec4(1.0 - color.r, 1.0 - color.g, 1.0 - color.b, color.a);\n"
-    "    } else {\n"
-    "        gl_FragColor = color;\n"
-    "    }\n"
-    "}\n"
-;
+#include "glsl_vertex_shader.h"
+#include "glsl_fragment_shader.h"
 
 // --- buffers ---
 
@@ -187,11 +158,13 @@ void init_egl(ctx_t * ctx) {
 
     // error log for shader compilation error messages
     GLint success;
+    const char * shader_source = NULL;
     char errorLog[1024] = { 0 };
 
     // compile vertex shader
+    shader_source = glsl_vertex_shader;
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_shader_source, NULL);
+    glShaderSource(vertex_shader, 1, &shader_source, NULL);
     glCompileShader(vertex_shader);
     glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
     if (success != GL_TRUE) {
@@ -203,8 +176,9 @@ void init_egl(ctx_t * ctx) {
     }
 
     // compile fragment shader
+    shader_source = glsl_fragment_shader;
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_shader_source, NULL);
+    glShaderSource(fragment_shader, 1, &shader_source, NULL);
     glCompileShader(fragment_shader);
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
     if (success != GL_TRUE) {
