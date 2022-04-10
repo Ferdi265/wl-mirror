@@ -76,6 +76,8 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
   of the `-S` option to interactively present on Sway.  
   This script is especially useful when binding the `wl-present` subcommands to
   keyboard shortcuts.
+- [`release.sh`](scripts/release.sh) Generates a release tar ball for the
+  currently checked out commit if there's a release tag on it.
 
 ## Dependencies
 
