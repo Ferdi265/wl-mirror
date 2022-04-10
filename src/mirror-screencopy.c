@@ -315,7 +315,7 @@ static void on_ready(
         0, format->gl_format, format->gl_type, backend->shm_addr
     );
     glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
-    ctx->egl.texture_region_aware = false;
+    ctx->egl.texture_region_aware = true;
     ctx->egl.texture_initialized = true;
 
     // set buffer flags
@@ -377,9 +377,19 @@ static void do_capture(ctx_t * ctx) {
         backend->state = STATE_WAIT_BUFFER;
 
         // create screencopy_frame
-        backend->screencopy_frame = zwlr_screencopy_manager_v1_capture_output(
-            ctx->wl.screencopy_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output
-        );
+        if (ctx->opt.has_region) {
+            backend->screencopy_frame = zwlr_screencopy_manager_v1_capture_output_region(
+                ctx->wl.screencopy_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output,
+                ctx->mirror.current_target->x + ctx->mirror.current_region.x,
+                ctx->mirror.current_target->y + ctx->mirror.current_region.y,
+                ctx->mirror.current_region.width,
+                ctx->mirror.current_region.height
+            );
+        } else {
+            backend->screencopy_frame = zwlr_screencopy_manager_v1_capture_output(
+                ctx->wl.screencopy_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output
+            );
+        }
         if (backend->screencopy_frame == NULL) {
             log_error("do_capture: failed to create wlr_screencopy_frame\n");
             backend_fail(ctx);
