@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "context.h"
+#include "version.h"
 
 void init_opt(ctx_t * ctx) {
     ctx->opt.verbose = false;
@@ -329,6 +330,7 @@ void usage_opt(ctx_t * ctx) {
     printf("\n");
     printf("options:\n");
     printf("  -h,   --help             show this help\n");
+    printf("  -V,   --version          print version\n");
     printf("  -v,   --verbose          enable debug logging\n");
     printf("        --no-verbose       disable debug logging (default)\n");
     printf("  -c,   --show-cursor      show the cursor on the mirrored screen (default)\n");
@@ -377,6 +379,12 @@ void usage_opt(ctx_t * ctx) {
     exit(0);
 }
 
+void version_opt(ctx_t * ctx) {
+    printf("wl-mirror %s\n", VERSION);
+    cleanup(ctx);
+    exit(0);
+}
+
 void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     bool is_cli_args = !ctx->opt.stream;
     bool new_backend = false;
@@ -388,6 +396,8 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     while (argc > 0 && argv[0][0] == '-') {
         if (is_cli_args && (strcmp(argv[0], "-h") == 0 || strcmp(argv[0], "--help") == 0)) {
             usage_opt(ctx);
+        } else if (strcmp(argv[0], "-V") == 0 || strcmp(argv[0], "--version") == 0) {
+            version_opt(ctx);
         } else if (strcmp(argv[0], "-v") == 0 || strcmp(argv[0], "--verbose") == 0) {
             ctx->opt.verbose = true;
         } else if (strcmp(argv[0], "--no-verbose") == 0) {

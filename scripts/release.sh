@@ -48,6 +48,9 @@ rm -rf "wl-mirror-$VERSION/proto/wlr-protocols/.git"
 mkdir -p "wl-mirror-$VERSION/proto/wayland-protocols/.git"
 mkdir -p "wl-mirror-$VERSION/proto/wlr-protocols/.git"
 
+echo "- adding version file"
+echo "$TAG" > "wl-mirror-$VERSION/version.txt"
+
 echo "- creating archive"
 tar caf "$REPODIR/wl-mirror-$VERSION.tar.gz" "wl-mirror-$VERSION/"
 

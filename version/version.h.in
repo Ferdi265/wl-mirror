@@ -1,0 +1,6 @@
+#ifndef WL_MIRROR_VERSION_H_
+#define WL_MIRROR_VERSION_H_
+
+#define VERSION "@VERSION@"
+
+#endif
