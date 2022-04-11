@@ -1,7 +1,7 @@
 add_library(version STATIC)
 target_include_directories(version INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include/")
 
-set(dummy-source "${CMAKE_CURRENT_SOURCE_DIR}/src/dummy.c")
+set(dummy-source "${CMAKE_CURRENT_BINARY_DIR}/src/dummy.c")
 set(version-header "${CMAKE_CURRENT_BINARY_DIR}/include/version.h")
 set(version-template "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in")
 
