@@ -24,6 +24,7 @@ usage: wl-mirror [options] <output>
 
 options:
   -h,   --help             show this help
+  -V,   --version          print version
   -v,   --verbose          enable debug logging
         --no-verbose       disable debug logging (default)
   -c,   --show-cursor      show the cursor on the mirrored screen (default)
