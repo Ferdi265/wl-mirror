@@ -227,6 +227,16 @@ static void on_registry_add(
             registry, id, &wl_compositor_interface, 4
         );
         ctx->wl.compositor_id = id;
+    } else if (strcmp(interface, wl_seat_interface.name) == 0) {
+        if (ctx->wl.seat != NULL) {
+            log_error("wayland::on_registry_add(): duplicate wl_seat\n");
+            exit_fail(ctx);
+        }
+
+        // bind wl_seat object
+        ctx->wl.seat = (struct wl_seat *)wl_registry_bind(
+            registry, id, &wl_seat_interface, 1
+        );
     } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
         if (ctx->wl.wm_base != NULL) {
             log_error("wayland::on_registry_add(): duplicate wm_base\n");
@@ -356,6 +366,9 @@ static void on_registry_remove(
     // remove removed outputs from the output list
     if (id == ctx->wl.compositor_id) {
         log_error("wayland::on_registry_remove(): compositor disapperared\n");
+        exit_fail(ctx);
+    } else if (id == ctx->wl.seat_id) {
+        log_error("wayland::on_registry_remove(): seat disapperared\n");
         exit_fail(ctx);
     } else if (id == ctx->wl.wm_base_id) {
         log_error("wayland::on_registry_remove(): wm_base disapperared\n");
@@ -572,6 +585,8 @@ void init_wl(ctx_t * ctx) {
 
     ctx->wl.compositor = NULL;
     ctx->wl.compositor_id = 0;
+    ctx->wl.seat = NULL;
+    ctx->wl.seat_id = 0;
     ctx->wl.wm_base = NULL;
     ctx->wl.wm_base_id = 0;
     ctx->wl.output_manager = NULL;
@@ -727,6 +742,7 @@ void cleanup_wl(ctx_t *ctx) {
     if (ctx->wl.surface != NULL) wl_surface_destroy(ctx->wl.surface);
     if (ctx->wl.output_manager != NULL) zxdg_output_manager_v1_destroy(ctx->wl.output_manager);
     if (ctx->wl.wm_base != NULL) xdg_wm_base_destroy(ctx->wl.wm_base);
+    if (ctx->wl.seat != NULL) wl_seat_destroy(ctx->wl.seat);
     if (ctx->wl.compositor != NULL) wl_compositor_destroy(ctx->wl.compositor);
     if (ctx->wl.registry != NULL) wl_registry_destroy(ctx->wl.registry);
     if (ctx->wl.display != NULL) wl_display_disconnect(ctx->wl.display);

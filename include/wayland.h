@@ -31,10 +31,12 @@ typedef struct ctx_wl {
 
     // registry objects
     struct wl_compositor * compositor;
+    struct wl_seat * seat;
     struct xdg_wm_base * wm_base;
     struct zxdg_output_manager_v1 * output_manager;
     // registry ids
     uint32_t compositor_id;
+    uint32_t seat_id;
     uint32_t wm_base_id;
     uint32_t output_manager_id;
 
