@@ -6,7 +6,7 @@ set(shader "${CMAKE_ARGV3}")
 set(shader-template "${CMAKE_ARGV4}")
 set(shader-source "${CMAKE_ARGV5}")
 
-cmake_path(GET shader STEM shader-base)
+get_filename_component(shader-base "${shader}" NAME_WE)
 
 file(READ ${shader} shader-data HEX)
 string(REPEAT "[0-9a-f]" 2 byte-regex)

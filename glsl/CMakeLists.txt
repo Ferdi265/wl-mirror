@@ -2,7 +2,7 @@ add_library(shaders STATIC)
 target_include_directories(shaders INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include/")
 file(GLOB shaders "*.glsl")
 foreach(shader ${shaders})
-    cmake_path(GET shader STEM shader-base)
+    get_filename_component(shader-base "${shader}" NAME_WE)
 
     set(shader-template "${CMAKE_CURRENT_SOURCE_DIR}/embed.c.in")
     set(shader-header "${CMAKE_CURRENT_BINARY_DIR}/include/glsl_${shader-base}.h")
