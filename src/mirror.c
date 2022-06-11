@@ -119,11 +119,11 @@ static void auto_backend_fallback(ctx_t * ctx) {
         // initialize next backend
         next_backend->init(ctx);
 
+        // increment backend index for next attempt
+        ctx->mirror.auto_backend_index++;
+
         // break if backend loading succeeded
         if (ctx->mirror.backend != NULL) break;
-
-        // try next backend
-        ctx->mirror.auto_backend_index++;
     }
 }
 
