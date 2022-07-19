@@ -88,6 +88,7 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 - `libEGL`
 - `libGLESv2`
 - `wayland-scanner`
+- `scdoc` (for manual pages)
 
 ## Script Dependencies
 
@@ -105,6 +106,7 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 ## CMake Options
 
 - `INSTALL_EXAMPLE_SCRIPTS`: also install example scripts (default `OFF`)
+- `INSTALL_DOCUMENTATION`: also build and install manual pages (default `OFF`)
 - `FORCE_SYSTEM_WL_PROTOCOLS`: always use system-installed wayland-protocols, do not use submodules (default `OFF`)
 - `FORCE_SYSTEM_WLR_PROTOCOLS`: always use system-installed wlr-protocols, do not use submodules (default `OFF`)
 - `WL_PROTOCOL_DIR`: directory where system-installed wayland-protocols are located (default `/usr/share/wayland-protocols`)
