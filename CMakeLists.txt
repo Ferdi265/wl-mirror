@@ -50,6 +50,7 @@ if (${INSTALL_EXAMPLE_SCRIPTS})
 endif()
 
 if (${INSTALL_DOCUMENTATION})
+    include(GNUInstallDirs) # CMAKE_INSTALL_MANDIR
     install_scdoc_man_page(wl-mirror 1)
     if (${INSTALL_EXAMPLE_SCRIPTS})
         install_scdoc_man_page(wl-present 1)
