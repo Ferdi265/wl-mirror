@@ -5,6 +5,7 @@ project(wl-mirror C)
 
 # options
 option(INSTALL_EXAMPLE_SCRIPTS "install wl-mirror example scripts" OFF)
+option(INSTALL_DOCUMENTATION "install wl-mirror manual pages" OFF)
 
 # wayland protocols needed by wl-mirror
 option(FORCE_SYSTEM_WL_PROTOCOLS "force use of system wayland-protocols" OFF)
@@ -28,6 +29,14 @@ add_subdirectory(glsl)
 # version embedding
 add_subdirectory(version)
 
+# manual pages
+find_program(SCDOC scdoc)
+if (SCDOC)
+    add_subdirectory(man)
+    build_scdoc_man_page(wl-mirror 1)
+    build_scdoc_man_page(wl-present 1)
+endif()
+
 # main target
 file(GLOB sources src/*.c)
 add_executable(wl-mirror ${sources})
@@ -39,4 +48,11 @@ target_include_directories(wl-mirror PRIVATE include/)
 install(TARGETS wl-mirror DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
 if (${INSTALL_EXAMPLE_SCRIPTS})
     install(PROGRAMS scripts/wl-present DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+endif()
+
+if (SCDOC AND ${INSTALL_DOCUMENTATION})
+    install_scdoc_man_page(wl-mirror 1)
+    if (${INSTALL_EXAMPLE_SCRIPTS})
+        install_scdoc_man_page(wl-present 1)
+    endif()
 endif()
