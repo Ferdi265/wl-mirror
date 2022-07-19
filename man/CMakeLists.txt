@@ -1,3 +1,18 @@
+# check if documentation must be built
+if (${INSTALL_DOCUMENTATION})
+    set(SCDOC_REQUIRED REQUIRED)
+else()
+    set(SCDOC_REQUIRED)
+endif()
+
+# determine if documentation can be built
+find_program(SCDOC scdoc ${SCDOC_REQUIRED})
+if (SCDOC)
+    set(BUILD_DOCUMENTATION ON PARENT_SCOPE)
+else()
+    set(BUILD_DOCUMENTATION OFF PARENT_SCOPE)
+endif()
+
 function(build_scdoc_man_page name section)
     file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/man/")
     set(man-src "${CMAKE_SOURCE_DIR}/man/${name}.${section}.scd")
