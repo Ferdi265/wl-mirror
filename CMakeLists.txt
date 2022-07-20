@@ -44,13 +44,14 @@ target_link_libraries(wl-mirror PRIVATE wayland-client wayland-egl EGL GLESv2 pr
 target_include_directories(wl-mirror PRIVATE include/)
 
 # installation rules
-install(TARGETS wl-mirror DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+include(GNUInstallDirs)
+
+install(TARGETS wl-mirror DESTINATION "${CMAKE_INSTALL_BINDIR}")
 if (${INSTALL_EXAMPLE_SCRIPTS})
-    install(PROGRAMS scripts/wl-present DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+    install(PROGRAMS scripts/wl-present DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()
 
 if (${INSTALL_DOCUMENTATION})
-    include(GNUInstallDirs) # CMAKE_INSTALL_MANDIR
     install_scdoc_man_page(wl-mirror 1)
     if (${INSTALL_EXAMPLE_SCRIPTS})
         install_scdoc_man_page(wl-present 1)
