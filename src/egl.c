@@ -270,6 +270,7 @@ void resize_viewport(ctx_t * ctx) {
         };
         clamp_region = ctx->mirror.current_region;
 
+        region_scale(&clamp_region, ctx->mirror.current_target->scale);
         region_clamp(&clamp_region, &output_region);
 
         tex_width = clamp_region.width;
