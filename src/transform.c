@@ -178,6 +178,13 @@ bool region_contains(const region_t * region, const region_t * output) {
     return true;
 }
 
+void region_scale(region_t * region, int32_t scale) {
+    region->x *= scale;
+    region->y *= scale;
+    region->width *= scale;
+    region->height *= scale;
+}
+
 void region_clamp(region_t * region, const region_t * output) {
     if (region->x < output->x) {
         region->width -= output->x - region->x;
