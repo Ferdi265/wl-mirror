@@ -1,6 +1,6 @@
 [submodule "proto/wlr-protocols"]
 	path = proto/wlr-protocols
-	url = https://gitlab.freedesktop.org/wlroots/wlr-protocols.git
+	url = https://gitlab.freedesktop.org/wlroots/wlr-protocols.git/
 [submodule "proto/wayland-protocols"]
 	path = proto/wayland-protocols
-	url = https://gitlab.freedesktop.org/wayland/wayland-protocols.git
+	url = https://gitlab.freedesktop.org/wayland/wayland-protocols.git/
