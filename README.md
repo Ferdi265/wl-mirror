@@ -99,7 +99,7 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 ## Building
 
 - Install Dependencies
-- Clone Submodules `git clone --recurse-submodules ...`
+- Clone Submodules (`git submodule update --init`)
 - Run `cmake -B build`
 - Run `make -C build`
 
