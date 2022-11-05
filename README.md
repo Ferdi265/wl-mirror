@@ -80,6 +80,21 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 - [`release.sh`](scripts/release.sh) Generates a release tar ball for the
   currently checked out commit if there's a release tag on it.
 
+## Installation
+
+`wl-mirror` is already packaged in many distros and can be installed via the
+package manager:
+
+- Arch Linux AUR: `yay -S wl-mirror` or `yay pacman -S wl-mirror-git`
+- Fedora: `dnf install wl-mirror`
+- Ubuntu: .deb file download in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/), official package in progress
+- Debian: .deb file download in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/), official package in progress
+- Alpine Linux: `apk add wl-mirror wl-mirror-doc`
+- NixOS: `nix profile install nixpkgs#wl-mirror`
+- Void Linux: `xbps-install -S wl-mirror`
+- FreeBSD Ports: [x11/wl-mirror](https://www.freshports.org/x11/wl-mirror)
+- DragonflyBSD Ports: [x11/wl-mirror](https://github.com/DragonFlyBSD/DPorts/tree/master/x11/wl-mirror) (outdated)
+
 ## Dependencies
 
 - `CMake`
