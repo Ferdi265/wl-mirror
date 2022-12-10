@@ -85,7 +85,7 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 `wl-mirror` is already packaged in many distros and can be installed via the
 package manager:
 
-- Arch Linux AUR: `yay -S wl-mirror` or `yay pacman -S wl-mirror-git`
+- Arch Linux AUR: `yay -S wl-mirror` or `yay -S wl-mirror-git`
 - Fedora: `dnf install wl-mirror`
 - Ubuntu: .deb file download in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/), official package in progress
 - Debian: .deb file download in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/), official package in progress
