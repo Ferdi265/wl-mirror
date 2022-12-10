@@ -93,7 +93,9 @@ package manager:
 - NixOS: `nix profile install nixpkgs#wl-mirror`
 - Void Linux: `xbps-install -S wl-mirror`
 - FreeBSD Ports: [x11/wl-mirror](https://www.freshports.org/x11/wl-mirror)
-- DragonflyBSD Ports: [x11/wl-mirror](https://github.com/DragonFlyBSD/DPorts/tree/master/x11/wl-mirror) (outdated)
+- DragonflyBSD Ports: [x11/wl-mirror](https://github.com/DragonFlyBSD/DPorts/tree/master/x11/wl-mirror)
+- Gentoo GURU: [gui-apps/wl-mirror](https://github.com/gentoo-mirror/guru/tree/master/gui-apps/wl-mirror)
+- LiGurOS: [gui-apps/wl-mirror](https://gitlab.com/liguros/liguros-repo/-/tree/develop/gui-apps/wl-mirror)
 
 ## Dependencies
 
