@@ -78,6 +78,11 @@ bool wlm_opt_parse_backend(backend_t * backend, const char * backend_arg) {
     } else if (strcmp(backend_arg, "extcopy-dmabuf") == 0) {
         *backend = BACKEND_EXTCOPY_DMABUF;
         return true;
+#ifdef WITH_XDG_PORTAL_BACKEND
+    } else if (strcmp(backend_arg, "xdg-portal") == 0 || strcmp(backend_arg, "pipewire") == 0) {
+        *backend = BACKEND_XDG_PORTAL;
+        return true;
+#endif
     } else {
         return false;
     }
