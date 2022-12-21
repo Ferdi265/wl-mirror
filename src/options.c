@@ -57,6 +57,11 @@ bool parse_backend_opt(backend_t * backend, const char * backend_arg) {
     } else if (strcmp(backend_arg, "screencopy") == 0) {
         *backend = BACKEND_SCREENCOPY;
         return true;
+#ifdef WITH_XDG_PORTAL_BACKEND
+    } else if (strcmp(backend_arg, "xdg-portal") == 0 || strcmp(backend_arg, "pipewire") == 0) {
+        *backend = BACKEND_XDG_PORTAL;
+        return true;
+#endif
     } else {
         return false;
     }

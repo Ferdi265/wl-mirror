@@ -22,7 +22,10 @@ typedef enum {
 typedef enum {
     BACKEND_AUTO,
     BACKEND_DMABUF,
-    BACKEND_SCREENCOPY
+    BACKEND_SCREENCOPY,
+#ifdef WITH_XDG_PORTAL_BACKEND
+    BACKEND_XDG_PORTAL,
+#endif
 } backend_t;
 
 typedef struct ctx_opt {

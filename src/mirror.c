@@ -101,6 +101,9 @@ typedef struct {
 static fallback_backend_t auto_fallback_backends[] = {
     { "dmabuf", init_mirror_dmabuf },
     { "screencopy", init_mirror_screencopy },
+#ifdef WITH_XDG_PORTAL_BACKEND
+    { "xdg-portal", init_mirror_xdg_portal },
+#endif
     { NULL, NULL }
 };
 
@@ -152,6 +155,12 @@ void init_mirror_backend(ctx_t * ctx) {
         case BACKEND_SCREENCOPY:
             init_mirror_screencopy(ctx);
             break;
+
+#ifdef WITH_XDG_PORTAL_BACKEND
+        case BACKEND_XDG_PORTAL:
+            init_mirror_xdg_portal(ctx);
+            break;
+#endif
     }
 
     if (ctx->mirror.backend == NULL) exit_fail(ctx);
