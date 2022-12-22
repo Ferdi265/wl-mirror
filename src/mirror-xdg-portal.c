@@ -246,6 +246,7 @@ static void screencast_create_session(ctx_t * ctx, xdg_portal_mirror_backend_t *
     free(session_token);
 }
 
+static int on_session_closed(sd_bus_message * reply, void * data, sd_bus_error * err);
 static void screencast_select_sources(ctx_t * ctx, xdg_portal_mirror_backend_t * backend);
 static int on_create_session_response(ctx_t * ctx, xdg_portal_mirror_backend_t * backend, sd_bus_message * reply) {
     const char * key;
@@ -268,8 +269,35 @@ static int on_create_session_response(ctx_t * ctx, xdg_portal_mirror_backend_t *
         return 1;
     }
 
+    if (sd_bus_match_signal_async(backend->bus, &backend->session_slot,
+        "org.freedesktop.portal.Desktop",
+        backend->session_handle,
+        "org.freedesktop.portal.Session", "Closed",
+        on_session_closed, NULL, (void *)ctx
+    ) < 0) {
+        log_error("mirror-xdg-portal::on_request_reply(): failed to register response listener\n");
+        backend_fail_async(backend);
+        return 1;
+    }
+
     screencast_select_sources(ctx, backend);
     return 0;
+}
+
+static int on_session_closed(sd_bus_message * reply, void * data, sd_bus_error * err) {
+    ctx_t * ctx = (ctx_t *)data;
+    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    if (sd_bus_message_is_method_error(reply, NULL)) {
+        sd_bus_error_copy(err, sd_bus_message_get_error(reply));
+        log_error("mirror-xdg-portal::on_session_closed(): dbus error received: %s, %s\n", err->name, err->name);
+        backend_fail_async(backend);
+        return 1;
+    }
+
+    log_error("mirror-xdg-portal::on_session_closed(): session closed unexpectedly\n");
+    backend_fail_async(backend);
+    return 1;
 }
 
 static int on_select_sources_response(ctx_t * ctx, xdg_portal_mirror_backend_t * backend, sd_bus_message * reply);
@@ -517,6 +545,8 @@ static int on_open_pipewire_reply(sd_bus_message * reply, void * data, sd_bus_er
 
 static void screencast_pipewire_init(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_PW_INIT;
+
+    log_debug(ctx, "mirror-xdg-portal::screencast_pipewire_init(): not yet implemented\n");
 }
 
 // --- backend event handlers ---
