@@ -428,7 +428,7 @@ void init_mirror_screencopy(ctx_t * ctx) {
         log_error("mirror-screencopy::init(): missing wl_shm protocol\n");
         return;
     } else if (ctx->wl.screencopy_manager == NULL) {
-        log_error("mirror-screencopy::init(): missing wlr_screencopy_manager protocol\n");
+        log_error("mirror-screencopy::init(): missing wlr_screencopy protocol\n");
         return;
     }
 
