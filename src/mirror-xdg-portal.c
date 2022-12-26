@@ -543,10 +543,146 @@ static int on_open_pipewire_reply(sd_bus_message * reply, void * data, sd_bus_er
 
 // --- pipewire functions ---
 
+static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_backend_t * backend);
+static void on_pw_core_info(void * data, const struct pw_core_info * info);
+static void on_pw_core_done(void * data, uint32_t id, int seq);
+static void on_pw_core_error(void * data, uint32_t id, int seq, int res, const char * msg);
+
+static const struct pw_core_events pw_core_events = {
+    .version = PW_VERSION_CORE_EVENTS,
+    .info = on_pw_core_info,
+    .done = on_pw_core_done,
+    .error = on_pw_core_error
+};
+
 static void screencast_pipewire_init(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_PW_INIT;
 
-    log_debug(ctx, "mirror-xdg-portal::screencast_pipewire_init(): not yet implemented\n");
+    log_debug(ctx, "mirror-xdg-portal::screencast_pipewire_init(): initializing pipewire event loop\n");
+
+    backend->pw_core = pw_context_connect_fd(backend->pw_context, backend->pw_fd, NULL, 0);
+    backend->pw_fd = -1;
+    if (backend->pw_core == NULL) {
+        log_error("mirror-xdg-portal::screencast_pipewire_init(): failed to create pipewire core\n");
+        backend_fail_async(backend);
+        return;
+    }
+
+    // add core event listener for info callback to check version
+    pw_core_add_listener(backend->pw_core, &backend->pw_core_listener, &pw_core_events, (void *)ctx);
+}
+
+static void on_pw_core_info(void * data, const struct pw_core_info * info) {
+    ctx_t * ctx = (ctx_t *)data;
+    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    // TODO: actually check versions
+    log_debug(ctx, "mirror-xdg-portal::on_pw_core_info(): got core info: %p\n", info);
+
+    screencast_pipewire_create_stream(ctx, backend);
+}
+
+static void on_pw_core_done(void * data, uint32_t id, int seq) {
+    ctx_t * ctx = (ctx_t *)data;
+    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    // TODO: actually do something with the serial
+    log_debug(ctx, "mirror-xdg-portal::on_pw_core_done(): got core info: id = %d, seq = %d\n", id, seq);
+
+    (void)backend;
+}
+
+static void on_pw_core_error(void * data, uint32_t id, int seq, int res, const char * msg) {
+    ctx_t * ctx = (ctx_t *)data;
+    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    // TODO: do something more useful with the error
+    log_error("mirror-xdg-portal::on_pw_core_done(): got error: id = %d, seq = %d, res = %d, msg = %s\n", id, seq, res, msg);
+    backend_fail_async(backend);
+}
+
+
+static void on_pw_renegotiate(void * data, uint64_t expirations);
+static void on_pw_process(void * data);
+static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod * param);
+static void on_pw_state_changed(void * data, enum pw_stream_state old, enum pw_stream_state new, const char * error);
+
+static const struct pw_stream_events pw_stream_events = {
+    .version = PW_VERSION_STREAM_EVENTS,
+    .state_changed = on_pw_state_changed,
+    .param_changed = on_pw_param_changed,
+    .process = on_pw_process
+};
+
+static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
+    backend->state = STATE_PW_CREATE_STREAM;
+
+    log_debug(ctx, "mirror-xdg-portal::screencast_pipewire_create_stream(): creating video stream\n");
+
+    backend->pw_renegotiate = pw_loop_add_event(backend->pw_loop, on_pw_renegotiate, (void *)ctx);
+
+    backend->pw_stream = pw_stream_new(
+        backend->pw_core, "wl-mirror",
+        pw_properties_new(
+            PW_KEY_MEDIA_TYPE, "Video",
+            PW_KEY_MEDIA_CATEGORY, "Capture",
+            PW_KEY_MEDIA_ROLE, "Screen",
+            NULL
+        )
+    );
+
+    pw_stream_add_listener(backend->pw_stream, &backend->pw_stream_listener, &pw_stream_events, (void *)ctx);
+
+    // TODO: create stream parameters pod
+    const struct spa_pod ** params = NULL;
+    uint32_t num_params = 0;
+
+    // TODO: actually create params before doing this
+    //pw_stream_connect(
+    //    backend->pw_stream, PW_DIRECTION_INPUT, backend->pw_node_id,
+    //    PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS,
+    //    params, num_params
+    //);
+}
+
+static void on_pw_renegotiate(void * data, uint64_t expirations) {
+    ctx_t * ctx = (ctx_t *)data;
+    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    // TODO: actually do something here
+    log_debug(ctx, "mirror-xdg-portal::on_pw_renegotiate(): need to renegotiate, expirations = %ld\n", expirations);
+
+    (void)backend;
+}
+
+static void on_pw_process(void * data) {
+    ctx_t * ctx = (ctx_t *)data;
+    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    // TODO: actually do something here
+    log_debug(ctx, "mirror-xdg-portal::on_pw_process(): new video data\n");
+
+    (void)backend;
+}
+
+static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod * param) {
+    ctx_t * ctx = (ctx_t *)data;
+    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    // TODO: actually do something here
+    log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): id = %d, param = %p\n", id, param);
+
+    (void)backend;
+}
+
+static void on_pw_state_changed(void * data, enum pw_stream_state old, enum pw_stream_state new, const char * error) {
+    ctx_t * ctx = (ctx_t *)data;
+    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    // TODO: actually do something here
+    log_debug(ctx, "mirror-xdg-portal::on_pw_state_changed(): old = %d, new = %d, error = %s\n", old, new, error);
+
+    (void)backend;
 }
 
 // --- backend event handlers ---
@@ -568,13 +704,28 @@ static void do_cleanup(ctx_t * ctx) {
 
     log_debug(ctx, "mirror-xdg-portal::do_cleanup(): destroying mirror-xdg-portal objects\n");
 
-    // deregister event handler
-    event_remove_fd(ctx, &backend->event_handler);
+    // deregister event handlers
+    if (backend->bus != NULL) event_remove_fd(ctx, &backend->dbus_event_handler);
+    if (backend->pw_loop != NULL) event_remove_fd(ctx, &backend->pw_event_handler);
 
+    // stop the pipewire event loop before releasing resources
+    if (backend->pw_loop != NULL) pw_loop_leave(backend->pw_loop);
+
+    // release pipewire resources
+    if (backend->pw_stream != NULL) pw_stream_destroy(backend->pw_stream);
+    if (backend->pw_core != NULL) pw_core_disconnect(backend->pw_core);
+    if (backend->pw_context != NULL) pw_context_destroy(backend->pw_context);
+    if (backend->pw_loop != NULL) pw_loop_destroy(backend->pw_loop);
+
+    // release sd-bus resources
+    // FIXME: maybe call close on session
     if (backend->pw_fd != -1) close(backend->pw_fd);
     if (backend->session_slot != NULL) sd_bus_slot_unref(backend->session_slot);
     if (backend->call_slot != NULL) sd_bus_slot_unref(backend->call_slot);
     if (backend->bus != NULL) sd_bus_unref(backend->bus);
+
+    // deinitialize pipewire
+    pw_deinit();
 
     free(backend);
     ctx->mirror.backend = NULL;
@@ -583,7 +734,7 @@ static void do_cleanup(ctx_t * ctx) {
 // --- loop event handlers ---
 
 static bool update_bus_events(xdg_portal_mirror_backend_t * backend) {
-    if ((backend->event_handler.fd = sd_bus_get_fd(backend->bus)) < 0) {
+    if ((backend->dbus_event_handler.fd = sd_bus_get_fd(backend->bus)) < 0) {
         return false;
     }
 
@@ -593,7 +744,7 @@ static bool update_bus_events(xdg_portal_mirror_backend_t * backend) {
     }
 
     // TODO: don't assume POLL and EPOLL event constants are the same
-    backend->event_handler.events = events;
+    backend->dbus_event_handler.events = events;
 
     uint64_t timeout;
     if (sd_bus_get_timeout(backend->bus, &timeout) < 0) {
@@ -601,15 +752,15 @@ static bool update_bus_events(xdg_portal_mirror_backend_t * backend) {
     }
 
     if (timeout == UINT64_MAX) {
-        backend->event_handler.timeout_ms = -1;
+        backend->dbus_event_handler.timeout_ms = -1;
     } else {
-        backend->event_handler.timeout_ms = timeout / 1000;
+        backend->dbus_event_handler.timeout_ms = timeout / 1000;
     }
 
     return true;
 }
 
-static void on_loop_event(ctx_t * ctx) {
+static void on_loop_dbus_event(ctx_t * ctx) {
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
     int ret;
 
@@ -617,19 +768,39 @@ static void on_loop_event(ctx_t * ctx) {
     while ((ret = sd_bus_process(backend->bus, NULL) > 0));
 
     if (ret < 0) {
-        log_error("mirror-xdg-portal::on_loop_event(): failed to process dbus events\n");
+        log_error("mirror-xdg-portal::on_loop_pw_event(): failed to process dbus events\n");
         backend_fail(ctx);
     }
 }
 
-static void on_loop_each(ctx_t * ctx) {
+static void on_loop_dbus_each(ctx_t * ctx) {
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
+    int old_fd = backend->dbus_event_handler.fd;
     if (!update_bus_events(backend)) {
-        log_error("mirror-xdg-portal::on_loop_each(): failed to update dbus pollfd\n");
+        log_error("mirror-xdg-portal::on_loop_dbus_each(): failed to update dbus pollfd\n");
         backend_fail(ctx);
     }
-    event_change_fd(ctx, &backend->event_handler);
+
+    int new_fd = backend->dbus_event_handler.fd;
+    if (old_fd != new_fd) {
+        event_handler_t handler;
+        handler.fd = old_fd;
+
+        event_remove_fd(ctx, &handler);
+        event_add_fd(ctx, &backend->dbus_event_handler);
+    } else {
+        event_change_fd(ctx, &backend->dbus_event_handler);
+    }
+}
+
+static void on_loop_pw_event(ctx_t * ctx) {
+    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    if (pw_loop_iterate(backend->pw_loop, -1) < 0) {
+        log_error("mirror-xdg-portal::on_loop_pw_event(): failed to process pipewire events\n");
+        backend_fail(ctx);
+    }
 }
 
 // --- init_mirror_xdg_portal ---
@@ -654,27 +825,19 @@ void init_mirror_xdg_portal(ctx_t * ctx) {
     backend->header.do_cleanup = do_cleanup;
     backend->header.fail_count = 0;
 
-    backend->bus = NULL;
-    backend->event_handler.fd = -1;
-    backend->event_handler.timeout_ms = -1;
-    backend->event_handler.events = 0;
-    backend->event_handler.on_event = on_loop_event;
-    backend->event_handler.on_each = on_loop_each;
-    backend->event_handler.next = NULL;
+    // general info
+    backend->x = 0;
+    backend->y = 0;
+    backend->w = 0;
+    backend->h = 0;
 
+    // sd-bus state
     backend->screencast_properties = (screencast_properties_t) {
         .source_types = 0,
         .cursor_modes = 0,
         .version = 0
     };
     backend->session_handle = NULL;
-
-    backend->pw_fd = -1;
-    backend->pw_node_id = 0;
-    backend->x = 0;
-    backend->y = 0;
-    backend->w = 0;
-    backend->h = 0;
 
     backend->rctx = (request_ctx_t) {
         .ctx = NULL,
@@ -684,7 +847,34 @@ void init_mirror_xdg_portal(ctx_t * ctx) {
 
     backend->call_slot = NULL;
     backend->session_slot = NULL;
+    backend->bus = NULL;
+    backend->dbus_event_handler.fd = -1;
+    backend->dbus_event_handler.timeout_ms = -1;
+    backend->dbus_event_handler.events = 0;
+    backend->dbus_event_handler.on_event = on_loop_dbus_event;
+    backend->dbus_event_handler.on_each = on_loop_dbus_each;
+    backend->dbus_event_handler.next = NULL;
+
+    // pipewire state
+    backend->pw_fd = -1;
+    backend->pw_node_id = 0;
+
+    backend->pw_loop = NULL;
+    backend->pw_context = NULL;
+    backend->pw_core = NULL;
+    backend->pw_stream = NULL;
+    backend->pw_renegotiate = NULL;
+    backend->pw_event_handler.fd = -1;
+    backend->pw_event_handler.timeout_ms = -1;
+    backend->pw_event_handler.events = 0;
+    backend->pw_event_handler.on_event = on_loop_pw_event;
+    backend->pw_event_handler.on_each = NULL;
+    backend->pw_event_handler.next = NULL;
+
     backend->state = STATE_IDLE;
+
+    // initialize pipewire
+    pw_init(NULL, NULL);
 
     // set backend object as current backend
     ctx->mirror.backend = (mirror_backend_t *)backend;
@@ -695,15 +885,40 @@ void init_mirror_xdg_portal(ctx_t * ctx) {
         return;
     }
 
-    backend->event_handler.fd = sd_bus_get_fd(backend->bus);
     if (!update_bus_events(backend)) {
         log_error("mirror-xdg-portal::init(): failed to update DBus epoll events\n");
+
+        // clean this up here, otherwise unknown if event listener registered
+        sd_bus_unref(backend->bus);
+        backend->bus = NULL;
 
         backend_fail(ctx);
         return;
     }
 
-    event_add_fd(ctx, &backend->event_handler);
+    backend->pw_loop = pw_loop_new(NULL);
+    if (backend->pw_loop == NULL) {
+        log_error("mirror-xdg-portal::init(): failed to create pipewire event loop\n");
+
+        backend_fail(ctx);
+        return;
+    }
+
+    backend->pw_event_handler.fd = pw_loop_get_fd(backend->pw_loop);
+    backend->pw_event_handler.events = EPOLLIN;
+    // start the pipewire event loop
+    pw_loop_enter(backend->pw_loop);
+
+    backend->pw_context = pw_context_new(backend->pw_loop, NULL, 0);
+    if (backend->pw_context == NULL) {
+        log_error("mirror-xdg-portal::init(): failed to create pipewire context\n");
+
+        backend_fail(ctx);
+        return;
+    }
+
+    event_add_fd(ctx, &backend->dbus_event_handler);
+    event_add_fd(ctx, &backend->pw_event_handler);
 }
 
 #endif

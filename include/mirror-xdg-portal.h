@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <systemd/sd-bus.h>
+#include <pipewire/pipewire.h>
 
 #include "event.h"
 #include "mirror.h"
@@ -45,6 +46,7 @@ typedef enum {
     STATE_START,
     STATE_OPEN_PIPEWIRE_REMOTE,
     STATE_PW_INIT,
+    STATE_PW_CREATE_STREAM,
     STATE_RUNNING,
     STATE_BROKEN
 } xdg_portal_state_t;
@@ -52,19 +54,32 @@ typedef enum {
 typedef struct xdg_portal_mirror_backend {
     mirror_backend_t header;
 
-    sd_bus * bus;
-    event_handler_t event_handler;
+    // general info
+    uint32_t x, y, w, h;
 
+    // sd-bus state
     screencast_properties_t screencast_properties;
     char * session_handle;
-
-    int pw_fd;
-    uint32_t pw_node_id;
-    uint32_t x, y, w, h;
 
     request_ctx_t rctx;
     sd_bus_slot * call_slot;
     sd_bus_slot * session_slot;
+    sd_bus * bus;
+    event_handler_t dbus_event_handler;
+
+    // pipewire state
+    int pw_fd;
+    uint32_t pw_node_id;
+
+    struct pw_loop * pw_loop;
+    struct pw_context * pw_context;
+    struct pw_core * pw_core;
+    struct pw_stream * pw_stream;
+    struct spa_source * pw_renegotiate;
+    struct spa_hook pw_core_listener;
+    struct spa_hook pw_stream_listener;
+    event_handler_t pw_event_handler;
+
     xdg_portal_state_t state;
 } xdg_portal_mirror_backend_t;
 
