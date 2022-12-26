@@ -59,6 +59,7 @@ typedef struct xdg_portal_mirror_backend {
 
     // sd-bus state
     screencast_properties_t screencast_properties;
+    char * request_handle;
     char * session_handle;
 
     request_ctx_t rctx;

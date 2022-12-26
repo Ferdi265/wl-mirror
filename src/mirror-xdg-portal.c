@@ -4,19 +4,62 @@
 #include <wlm/context.h>
 #include <wlm/mirror-xdg-portal.h>
 
-static void backend_fail_async(xdg_portal_mirror_backend_t * backend) {
+static void wlm_mirror_backend_fail_async(xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_BROKEN;
 }
 
 static char * generate_token() {
-    size_t length = strlen("wl_mirror_") + (2 * sizeof (uint32_t)) + 1;
+    const char * prefix = "wl_mirror_";
+
+    size_t length = strlen(prefix) + (2 * sizeof (uint32_t)) + 1;
     char * token_buffer = malloc(length);
     if (token_buffer == NULL) {
         return NULL;
     }
 
-    snprintf(token_buffer, length, "wl_mirror_%04x", rand());
+    snprintf(token_buffer, length, "%s%04x", prefix, rand());
     return token_buffer;
+}
+
+static char * get_unique_name_identifier(xdg_portal_mirror_backend_t * backend) {
+    const char * unique_name;
+    sd_bus_get_unique_name(backend->bus, &unique_name);
+    if (unique_name[0] != ':') {
+        return NULL;
+    }
+
+    size_t length = strlen(unique_name);
+    char * ident_buffer = malloc(length);
+    if (ident_buffer == NULL) {
+        return NULL;
+    }
+
+    strncpy(ident_buffer, unique_name + 1, length);
+    for (size_t i = 0; i < length - 1; i++) {
+        if (ident_buffer[i] == '.') {
+            ident_buffer[i] = '_';
+        }
+    }
+
+    return ident_buffer;
+}
+
+static char * generate_handle(xdg_portal_mirror_backend_t * backend, const char * prefix, const char * token) {
+    char * ident = get_unique_name_identifier(backend);
+    if (ident == NULL) {
+        return NULL;
+    }
+
+    size_t length = strlen(prefix) + 1 + strlen(ident) + 1 + strlen(token) + 1;
+    char * handle_buffer = malloc(length);
+    if (handle_buffer == NULL) {
+        free(ident);
+        return NULL;
+    }
+
+    snprintf(handle_buffer, length, "%s/%s/%s", prefix, ident, token);
+    free(ident);
+    return handle_buffer;
 }
 
 static char * get_window_handle(ctx_t * ctx) {
@@ -38,6 +81,67 @@ static char * get_window_handle(ctx_t * ctx) {
 // --- dbus method call helpers ---
 
 static int on_request_response(sd_bus_message * reply, void * data, sd_bus_error * err);
+static char * register_new_request(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
+    char * token = generate_token();
+    if (token == NULL) {
+        wlm_log_error("mirror-xdg-portal::reqister_new_request(): failed to allocate request token\n");
+        return NULL;
+    }
+
+    char * request_handle = generate_handle(backend, "/org/freedesktop/portal/desktop/request", token);
+    if (request_handle == NULL) {
+        wlm_log_error("mirror-xdg-portal::reqister_new_request(): failed to allocate request handle\n");
+        free(token);
+        return NULL;
+    }
+
+    if (sd_bus_match_signal_async(backend->bus, &backend->call_slot,
+        "org.freedesktop.portal.Desktop",
+        request_handle,
+        "org.freedesktop.portal.Request", "Response",
+        on_request_response, NULL, (void *)&backend->rctx
+    ) < 0) {
+        wlm_log_error("mirror-xdg-portal::reqister_new_request(): failed to register response listener\n");
+        free(token);
+        free(request_handle);
+        return NULL;
+    }
+
+    backend->request_handle = request_handle;
+    return token;
+}
+
+static int on_session_closed(sd_bus_message * reply, void * data, sd_bus_error * err);
+static char * register_new_session(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
+    char * token = generate_token();
+    if (token == NULL) {
+        wlm_log_error("mirror-xdg-portal::reqister_new_session(): failed to allocate session token\n");
+        return NULL;
+    }
+
+    char * session_handle = generate_handle(backend, "/org/freedesktop/portal/desktop/session", token);
+    if (session_handle == NULL) {
+        wlm_log_error("mirror-xdg-portal::reqister_new_session(): failed to allocate session handle\n");
+        free(token);
+        return NULL;
+    }
+
+    if (sd_bus_match_signal_async(backend->bus, &backend->session_slot,
+        "org.freedesktop.portal.Desktop",
+        backend->session_handle,
+        "org.freedesktop.portal.Session", "Closed",
+        on_session_closed, NULL, (void *)ctx
+    ) < 0) {
+        wlm_log_error("mirror-xdg-portal::reqister_new_session(): failed to register session closed listener\n");
+        free(token);
+        free(session_handle);
+        return NULL;
+    }
+
+    backend->session_handle = session_handle;
+    return token;
+}
+
 static int on_request_reply(sd_bus_message * reply, void * data, sd_bus_error * err) {
     request_ctx_t * rctx = (request_ctx_t *)data;
     ctx_t * ctx = rctx->ctx;
@@ -49,27 +153,28 @@ static int on_request_reply(sd_bus_message * reply, void * data, sd_bus_error * 
     if (sd_bus_message_is_method_error(reply, NULL)) {
         sd_bus_error_copy(err, sd_bus_message_get_error(reply));
         wlm_log_error("mirror-xdg-portal::on_request_reply(): dbus error received: %s, %s\n", err->name, err->name);
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
     const char * request_handle = NULL;
     if (sd_bus_message_read_basic(reply, 'o', &request_handle) < 0) {
         wlm_log_error("mirror-xdg-portal::on_request_reply(): failed to read reply\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
-    wlm_log_debug(ctx, "mirror-xdg-portal::on_request_reply(): received request handle for %s: %s\n", rctx->name, request_handle);
+    if (backend->request_handle == NULL) {
+        wlm_log_error("mirror-xdg-portal::on_request_reply(): no ongoing request\n");
+        wlm_mirror_backend_fail_async(backend);
+        return 1;
+    }
 
-    if (sd_bus_match_signal_async(backend->bus, &backend->call_slot,
-        "org.freedesktop.portal.Desktop",
-        request_handle,
-        "org.freedesktop.portal.Request", "Response",
-        on_request_response, NULL, (void *)rctx
-    ) < 0) {
-        wlm_log_error("mirror-xdg-portal::on_request_reply(): failed to register response listener\n");
-        backend_fail_async(backend);
+    if (strcmp(backend->request_handle, request_handle) != 0) {
+        wlm_log_error("mirror-xdg-portal::on_request_reply(): request handles differ: expected %s, got %s\n",
+            backend->request_handle, request_handle
+        );
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
@@ -84,14 +189,14 @@ static int on_request_response(sd_bus_message * reply, void * data, sd_bus_error
     if (sd_bus_message_is_method_error(reply, NULL)) {
         sd_bus_error_copy(err, sd_bus_message_get_error(reply));
         wlm_log_error("mirror-xdg-portal::on_request_response(): dbus error received: %s, %s\n", err->name, err->name);
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
     uint32_t status;
     if (sd_bus_message_read_basic(reply, 'u', &status) < 0) {
         wlm_log_error("mirror-xdg-portal::on_request_response(): failed to read reply\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     } else if (status != 0) {
         wlm_log_error("mirror-xdg-portal::on_request_response(): request %s failed: %s\n",
@@ -100,9 +205,18 @@ static int on_request_response(sd_bus_message * reply, void * data, sd_bus_error
             (status == 2) ? "other error" :
                             "unknown error"
         );
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
+
+    if (backend->request_handle == NULL) {
+        wlm_log_error("mirror-xdg-portal::on_request_response(): no ongoing request\n");
+        wlm_mirror_backend_fail_async(backend);
+        return 1;
+    }
+
+    free(backend->request_handle);
+    backend->request_handle = NULL;
 
     request_ctx_handler_t handler = rctx->handler;
     *rctx = (request_ctx_t) {
@@ -129,7 +243,7 @@ static void screencast_get_properties(ctx_t * ctx, xdg_portal_mirror_backend_t *
         "org.freedesktop.portal.ScreenCast"
     ) < 0) {
         wlm_log_error("mirror-xdg-portal::screencast_get_properties(): failed to call method\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
     }
 }
 
@@ -144,7 +258,7 @@ static int on_get_properties_reply(sd_bus_message * reply, void * data, sd_bus_e
     if (sd_bus_message_is_method_error(reply, NULL)) {
         sd_bus_error_copy(err, sd_bus_message_get_error(reply));
         wlm_log_error("mirror-xdg-portal::on_get_properties_reply(): dbus error received: %s, %s\n", err->name, err->name);
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
@@ -156,7 +270,7 @@ static int on_get_properties_reply(sd_bus_message * reply, void * data, sd_bus_e
         &keys[2], "u", &values[2]
     ) < 0) {
         wlm_log_error("mirror-xdg-portal::on_get_properties_reply(): failed to read reply\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
@@ -178,7 +292,7 @@ static int on_get_properties_reply(sd_bus_message * reply, void * data, sd_bus_e
         wlm_log_error("mirror-xdg-portal::on_get_properties_reply(): got interface version %d, need at least %d\n",
             properties.version, SCREENCAST_MIN_VERSION
         );
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
@@ -200,21 +314,22 @@ static int on_get_properties_reply(sd_bus_message * reply, void * data, sd_bus_e
     return 0;
 }
 
+static int on_session_closed(sd_bus_message * reply, void * data, sd_bus_error * err);
 static int on_create_session_response(ctx_t * ctx, xdg_portal_mirror_backend_t * backend, sd_bus_message * reply);
 static void screencast_create_session(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_CREATE_SESSION;
 
-    char * request_token = generate_token();
+    char * request_token = register_new_request(ctx, backend);
     if (request_token == NULL) {
-        wlm_log_error("mirror-xdg-portal::screencast_create_session(): failed to allocate request token\n");
-        backend_fail_async(backend);
+        wlm_log_error("mirror-xdg-portal::screencast_create_session(): failed to register request\n");
+        wlm_mirror_backend_fail_async(backend);
         return;
     }
 
-    char * session_token = generate_token();
+    char * session_token = register_new_session(ctx, backend);
     if (session_token == NULL) {
-        wlm_log_error("mirror-xdg-portal::screencast_create_session(): failed to allocate session token\n");
-        backend_fail_async(backend);
+        wlm_log_error("mirror-xdg-portal::screencast_create_session(): failed to register session\n");
+        wlm_mirror_backend_fail_async(backend);
 
         free(request_token);
         return;
@@ -239,49 +354,15 @@ static void screencast_create_session(ctx_t * ctx, xdg_portal_mirror_backend_t *
         "session_handle_token", "s", session_token
     ) < 0) {
         wlm_log_error("mirror-xdg-portal::screencast_create_session(): failed to call method\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
+
+        free(request_token);
+        free(session_token);
+        return;
     }
 
     free(request_token);
     free(session_token);
-}
-
-static int on_session_closed(sd_bus_message * reply, void * data, sd_bus_error * err);
-static void screencast_select_sources(ctx_t * ctx, xdg_portal_mirror_backend_t * backend);
-static int on_create_session_response(ctx_t * ctx, xdg_portal_mirror_backend_t * backend, sd_bus_message * reply) {
-    const char * key;
-    const char * session_handle;
-    if (sd_bus_message_read(reply, "a{sv}", 1,
-        &key, "s", &session_handle
-    ) < 0) {
-        wlm_log_error("mirror-xdg-portal::on_create_session_response(): failed to read reply\n");
-        backend_fail_async(backend);
-        return 1;
-    } else if (strcmp(key, "session_handle") != 0) {
-        wlm_log_warn("mirror-xdg-portal::on_create_session_response(): unexpected key: %s\n", key);
-    }
-
-    wlm_log_debug(ctx, "mirror-xdg-portal::on_create_session_response(): got session handle path: %s\n", session_handle);
-    backend->session_handle = strdup(session_handle);
-    if (backend->session_handle == NULL) {
-        wlm_log_error("mirror-xdg-portal::on_create_session_response(): failed to allocate session handle path\n");
-        backend_fail_async(backend);
-        return 1;
-    }
-
-    if (sd_bus_match_signal_async(backend->bus, &backend->session_slot,
-        "org.freedesktop.portal.Desktop",
-        backend->session_handle,
-        "org.freedesktop.portal.Session", "Closed",
-        on_session_closed, NULL, (void *)ctx
-    ) < 0) {
-        wlm_log_error("mirror-xdg-portal::on_request_reply(): failed to register response listener\n");
-        backend_fail_async(backend);
-        return 1;
-    }
-
-    screencast_select_sources(ctx, backend);
-    return 0;
 }
 
 static int on_session_closed(sd_bus_message * reply, void * data, sd_bus_error * err) {
@@ -291,23 +372,55 @@ static int on_session_closed(sd_bus_message * reply, void * data, sd_bus_error *
     if (sd_bus_message_is_method_error(reply, NULL)) {
         sd_bus_error_copy(err, sd_bus_message_get_error(reply));
         wlm_log_error("mirror-xdg-portal::on_session_closed(): dbus error received: %s, %s\n", err->name, err->name);
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
     wlm_log_error("mirror-xdg-portal::on_session_closed(): session closed unexpectedly\n");
-    backend_fail_async(backend);
+    wlm_mirror_backend_fail_async(backend);
     return 1;
+}
+
+static void screencast_select_sources(ctx_t * ctx, xdg_portal_mirror_backend_t * backend);
+static int on_create_session_response(ctx_t * ctx, xdg_portal_mirror_backend_t * backend, sd_bus_message * reply) {
+    const char * key;
+    const char * session_handle;
+    if (sd_bus_message_read(reply, "a{sv}", 1,
+        &key, "s", &session_handle
+    ) < 0) {
+        wlm_log_error("mirror-xdg-portal::on_create_session_response(): failed to read reply\n");
+        wlm_mirror_backend_fail_async(backend);
+        return 1;
+    } else if (strcmp(key, "session_handle") != 0) {
+        wlm_log_warn("mirror-xdg-portal::on_create_session_response(): unexpected key: %s\n", key);
+    }
+
+    if (backend->session_handle == NULL) {
+        wlm_log_error("mirror-xdg-portal::on_create_session_response(): no ongoing session\n");
+        wlm_mirror_backend_fail_async(backend);
+        return 1;
+    }
+
+    if (strcmp(backend->session_handle, session_handle) != 0) {
+        wlm_log_error("mirror-xdg-portal::on_create_session_response(): session handles differ: expected %s, got %s\n",
+            backend->session_handle, session_handle
+        );
+        wlm_mirror_backend_fail_async(backend);
+        return 1;
+    }
+
+    screencast_select_sources(ctx, backend);
+    return 0;
 }
 
 static int on_select_sources_response(ctx_t * ctx, xdg_portal_mirror_backend_t * backend, sd_bus_message * reply);
 static void screencast_select_sources(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_SELECT_SOURCES;
 
-    char * request_token = generate_token();
+    char * request_token = register_new_request(ctx, backend);
     if (request_token == NULL) {
-        wlm_log_error("mirror-xdg-portal::screencast_select_sources(): failed to allocate request token\n");
-        backend_fail_async(backend);
+        wlm_log_error("mirror-xdg-portal::screencast_select_sources(): failed to register request\n");
+        wlm_mirror_backend_fail_async(backend);
         return;
     }
 
@@ -321,7 +434,8 @@ static void screencast_select_sources(ctx_t * ctx, xdg_portal_mirror_backend_t *
     else if (backend->screencast_properties.source_types & SCREENCAST_VIRTUAL) source_type = SCREENCAST_VIRTUAL;
     else {
         wlm_log_error("mirror-xdg-portal::screencast_select_sources(): failed to find valid source type\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
+
         free(request_token);
         return;
     }
@@ -333,7 +447,8 @@ static void screencast_select_sources(ctx_t * ctx, xdg_portal_mirror_backend_t *
     else if (backend->screencast_properties.source_types & SCREENCAST_HIDDEN) cursor_mode = SCREENCAST_HIDDEN;
     else {
         wlm_log_error("mirror-xdg-portal::screencast_select_sources(): failed to find valid cursor mode\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
+
         free(request_token);
         return;
     }
@@ -356,7 +471,10 @@ static void screencast_select_sources(ctx_t * ctx, xdg_portal_mirror_backend_t *
         "cursor_mode", "u", cursor_mode
     ) < 0) {
         wlm_log_error("mirror-xdg-portal::screencast_select_sources(): failed to call method\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
+
+        free(request_token);
+        return;
     }
 
     free(request_token);
@@ -375,17 +493,17 @@ static int on_start_response(ctx_t * ctx, xdg_portal_mirror_backend_t * backend,
 static void screencast_start(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_START;
 
-    char * request_token = generate_token();
+    char * request_token = register_new_request(ctx, backend);
     if (request_token == NULL) {
-        wlm_log_error("mirror-xdg-portal::screencast_start(): failed to allocate request token\n");
-        backend_fail_async(backend);
+        wlm_log_error("mirror-xdg-portal::screencast_start(): failed to register request\n");
+        wlm_mirror_backend_fail_async(backend);
         return;
     }
 
     char * window_handle = get_window_handle(ctx);
     if (window_handle == NULL) {
         wlm_log_error("mirror-xdg-portal::screencast_start(): failed to allocate window handle\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
 
         free(request_token);
         return;
@@ -412,7 +530,11 @@ static void screencast_start(ctx_t * ctx, xdg_portal_mirror_backend_t * backend)
         "handle_token", "s", request_token
     ) < 0) {
         wlm_log_error("mirror-xdg-portal::screencast_start(): failed to call method\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
+
+        free(request_token);
+        free(window_handle);
+        return;
     }
 
     free(request_token);
@@ -483,12 +605,12 @@ static int on_start_response(ctx_t * ctx, xdg_portal_mirror_backend_t * backend,
 
 too_many:
     wlm_log_error("mirror-xdg-portal::on_start_response(): to many array entries, expected 1\n");
-    backend_fail_async(backend);
+    wlm_mirror_backend_fail_async(backend);
     return 1;
 
 fail:
     wlm_log_error("mirror-xdg-portal::on_start_response(): failed to read reply\n");
-    backend_fail_async(backend);
+    wlm_mirror_backend_fail_async(backend);
     return 1;
 }
 
@@ -508,7 +630,7 @@ static void screencast_open_pipewire(ctx_t * ctx, xdg_portal_mirror_backend_t * 
         0
     ) < 0) {
         wlm_log_error("mirror-xdg-portal::screencast_open_pipewire(): failed to call method\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
     }
 }
 
@@ -523,14 +645,14 @@ static int on_open_pipewire_reply(sd_bus_message * reply, void * data, sd_bus_er
     if (sd_bus_message_is_method_error(reply, NULL)) {
         sd_bus_error_copy(err, sd_bus_message_get_error(reply));
         wlm_log_error("mirror-xdg-portal::on_open_pipewire_reply(): dbus error received: %s, %s\n", err->name, err->name);
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
     int fd;
     if (sd_bus_message_read_basic(reply, 'h', &fd) < 0) {
         wlm_log_error("mirror-xdg-portal::on_open_pipewire_reply(): failed to read reply\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return 1;
     }
 
@@ -564,12 +686,23 @@ static void screencast_pipewire_init(ctx_t * ctx, xdg_portal_mirror_backend_t * 
     backend->pw_fd = -1;
     if (backend->pw_core == NULL) {
         wlm_log_error("mirror-xdg-portal::screencast_pipewire_init(): failed to create pipewire core\n");
-        backend_fail_async(backend);
+        wlm_mirror_backend_fail_async(backend);
         return;
     }
 
     // add core event listener for info callback to check version
     pw_core_add_listener(backend->pw_core, &backend->pw_core_listener, &pw_core_events, (void *)ctx);
+
+    // trigger core done event
+    pw_core_sync(backend->pw_core, PW_ID_CORE, 0);
+
+    // for some reason events only fire when we wait here
+    // for some reason the info event never fires
+    // TODO: investigate
+    //pw_thread_loop_wait(backend->pw_loop);
+
+    wlm_log_debug(ctx, "mirror-xdg-portal::screencast_pipewire_init(): pipewire core created\n");
+
 }
 
 static void on_pw_core_info(void * data, const struct pw_core_info * info) {
@@ -587,7 +720,7 @@ static void on_pw_core_done(void * data, uint32_t id, int seq) {
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
     // TODO: actually do something with the serial
-    wlm_log_debug(ctx, "mirror-xdg-portal::on_pw_core_done(): got core info: id = %d, seq = %d\n", id, seq);
+    wlm_log_debug(ctx, "mirror-xdg-portal::on_pw_core_done(): got core done: id = %d, seq = %d\n", id, seq);
 
     (void)backend;
 }
@@ -598,9 +731,8 @@ static void on_pw_core_error(void * data, uint32_t id, int seq, int res, const c
 
     // TODO: do something more useful with the error
     wlm_log_error("mirror-xdg-portal::on_pw_core_done(): got error: id = %d, seq = %d, res = %d, msg = %s\n", id, seq, res, msg);
-    backend_fail_async(backend);
+    wlm_mirror_backend_fail_async(backend);
 }
-
 
 static void on_pw_renegotiate(void * data, uint64_t expirations);
 static void on_pw_process(void * data);
@@ -722,6 +854,8 @@ static void do_cleanup(ctx_t * ctx) {
     if (backend->pw_fd != -1) close(backend->pw_fd);
     if (backend->session_slot != NULL) sd_bus_slot_unref(backend->session_slot);
     if (backend->call_slot != NULL) sd_bus_slot_unref(backend->call_slot);
+    if (backend->request_handle != NULL) free(backend->request_handle);
+    if (backend->session_handle != NULL) free(backend->session_handle);
     if (backend->bus != NULL) sd_bus_unref(backend->bus);
 
     // deinitialize pipewire
@@ -837,6 +971,7 @@ void wlm_mirror_xdg_portal_init(ctx_t * ctx) {
         .cursor_modes = 0,
         .version = 0
     };
+    backend->request_handle = NULL;
     backend->session_handle = NULL;
 
     backend->rctx = (request_ctx_t) {
