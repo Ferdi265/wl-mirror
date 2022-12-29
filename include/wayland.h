@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "event.h"
 #include "xdg-shell.h"
 #include "xdg-output-unstable-v1.h"
 #include "wlr-export-dmabuf-unstable-v1.h"
@@ -63,6 +64,9 @@ typedef struct ctx_wl {
     uint32_t width;
     uint32_t height;
     int32_t scale;
+
+    // event handler
+    event_handler_t event_handler;
 
     // state flags
     uint32_t last_surface_serial;

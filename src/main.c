@@ -10,8 +10,9 @@ void cleanup(ctx_t * ctx) {
     if (ctx->mirror.initialized) cleanup_mirror(ctx);
     if (ctx->egl.initialized) cleanup_egl(ctx);
     if (ctx->wl.initialized) cleanup_wl(ctx);
+    if (ctx->stream.initialized) cleanup_stream(ctx);
+    if (ctx->event.initialized) cleanup_event(ctx);
 
-    cleanup_event(ctx);
     cleanup_opt(ctx);
 }
 
@@ -23,6 +24,8 @@ noreturn void exit_fail(ctx_t * ctx) {
 int main(int argc, char ** argv) {
     ctx_t ctx;
 
+    ctx.event.initialized = false;
+    ctx.stream.initialized = false;
     ctx.wl.initialized = false;
     ctx.egl.initialized = false;
     ctx.mirror.initialized = false;
@@ -37,6 +40,9 @@ int main(int argc, char ** argv) {
     }
 
     parse_opt(&ctx, argc, argv);
+
+    log_debug(&ctx, "main::main(): initializing stream\n");
+    init_stream(&ctx);
 
     log_debug(&ctx, "main::main(): initializing wayland\n");
     init_wl(&ctx);

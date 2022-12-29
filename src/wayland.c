@@ -576,6 +576,16 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener = {
     .close = on_xdg_toplevel_close
 };
 
+static void on_loop_event(ctx_t * ctx) {
+    if (wl_display_dispatch(ctx->wl.display) == -1) {
+        ctx->wl.closing = true;
+    }
+}
+
+static void on_loop_each(ctx_t * ctx) {
+    wl_display_flush(ctx->wl.display);
+}
+
 // --- init_wl ---
 
 void init_wl(ctx_t * ctx) {
@@ -610,6 +620,11 @@ void init_wl(ctx_t * ctx) {
     ctx->wl.height = 0;
     ctx->wl.scale = 1;
 
+    ctx->wl.event_handler.fd = -1;
+    ctx->wl.event_handler.events = EPOLLIN;
+    ctx->wl.event_handler.on_event = on_loop_event;
+    ctx->wl.event_handler.on_each = on_loop_each;
+
     ctx->wl.last_surface_serial = 0;
     ctx->wl.xdg_surface_configured = false;
     ctx->wl.xdg_toplevel_configured = false;
@@ -623,6 +638,10 @@ void init_wl(ctx_t * ctx) {
         log_error("wayland::init(): failed to connect to wayland\n");
         exit_fail(ctx);
     }
+
+    // register event loop
+    ctx->wl.event_handler.fd = wl_display_get_fd(ctx->wl.display);
+    event_add_fd(ctx, &ctx->wl.event_handler);
 
     // get registry handle
     ctx->wl.registry = wl_display_get_registry(ctx->wl.display);
@@ -718,6 +737,9 @@ void cleanup_wl(ctx_t *ctx) {
     if (!ctx->wl.initialized) return;
 
     log_debug(ctx, "wayland::cleanup(): destroying wayland objects\n");
+
+    // deregister event handler
+    event_remove_fd(ctx, &ctx->wl.event_handler);
 
     // free every output in output list
     output_list_node_t * cur = ctx->wl.outputs;

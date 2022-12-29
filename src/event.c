@@ -1,202 +1,127 @@
-#include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
-#include <ctype.h>
 #include <fcntl.h>
-#include <poll.h>
 #include <errno.h>
 #include "context.h"
+#include "event.h"
+
+static void add_handler(ctx_t * ctx, event_handler_t * handler) {
+    handler->next = ctx->event.handlers;
+    ctx->event.handlers = handler;
+}
+
+static void remove_handler(ctx_t * ctx, int fd) {
+    event_handler_t ** pcur = &ctx->event.handlers;
+    event_handler_t * cur = *pcur;
+    while (cur != NULL) {
+        if (cur->fd == fd) {
+            *pcur = cur->next;
+            return;
+        }
+
+        pcur = &cur->next;
+        cur = cur->next;
+    }
+}
+
+static void call_each_handler(ctx_t * ctx) {
+    event_handler_t * cur = ctx->event.handlers;
+    while (cur != NULL) {
+        if (cur->on_each != NULL) {
+            cur->on_each(ctx);
+        }
+
+        cur = cur->next;
+    }
+}
+
+
+static event_handler_t * min_timeout(ctx_t * ctx) {
+    event_handler_t * min = NULL;
+    event_handler_t * cur = ctx->event.handlers;
+    while (cur != NULL) {
+        if (cur->timeout_ms != -1) {
+            if (min == NULL || cur->timeout_ms < min->timeout_ms) min = cur;
+        }
+
+        cur = cur->next;
+    }
+
+    return min;
+}
+
+void event_add_fd(ctx_t * ctx, event_handler_t * handler) {
+    struct epoll_event event;
+    event.events = handler->events;
+    event.data.ptr = handler;
+
+    if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_ADD, handler->fd, &event) == -1) {
+        log_error("event::add_fd(): failed to add fd to epoll instance\n");
+        exit_fail(ctx);
+    }
+
+    add_handler(ctx, handler);
+}
+
+void event_change_fd(ctx_t * ctx, event_handler_t * handler) {
+    struct epoll_event event;
+    event.events = handler->events;
+    event.data.ptr = handler;
+
+    if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_MOD, handler->fd, &event) == -1) {
+        log_error("event::change_fd(): failed to modify fd in epoll instance\n");
+        exit_fail(ctx);
+    }
+}
+
+void event_remove_fd(ctx_t * ctx, event_handler_t * handler) {
+    if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_DEL, handler->fd, NULL) == -1) {
+        log_error("event::remove_fd(): failed to remove fd from epoll instance\n");
+        exit_fail(ctx);
+    }
+
+    remove_handler(ctx, handler->fd);
+    handler->next = NULL;
+}
+
+#define MAX_EVENTS 10
+void event_loop(ctx_t * ctx) {
+    struct epoll_event events[MAX_EVENTS];
+    int num_events;
+
+    event_handler_t * timeout_handler;
+    int timeout_ms;
+
+    timeout_handler = min_timeout(ctx);
+    timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
+
+    while ((num_events = epoll_wait(ctx->event.pollfd, events, MAX_EVENTS, timeout_ms)) != -1 && !ctx->wl.closing) {
+        for (int i = 0; i < num_events; i++) {
+            event_handler_t * handler = (event_handler_t *)events[i].data.ptr;
+            handler->on_event(ctx);
+        }
+
+        if (num_events == 0 && timeout_handler != NULL) {
+            timeout_handler->on_event(ctx);
+        }
+
+        timeout_handler = min_timeout(ctx);
+        timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
+        call_each_handler(ctx);
+    }
+}
 
 void init_event(ctx_t * ctx) {
-    // initialize context structure
-    ctx->event.line = NULL;
-    ctx->event.line_len = 0;
-    ctx->event.line_cap = 0;
+    ctx->event.pollfd = epoll_create(1);
+    if (ctx->event.pollfd == -1) {
+        log_error("event::init(): failed to create epoll instance\n");
+        exit_fail(ctx);
+        return;
+    }
 
-    ctx->event.args = NULL;
-    ctx->event.args_len = 0;
-    ctx->event.args_cap = 0;
+    ctx->event.handlers = NULL;
+    ctx->event.initialized = true;
 }
 
 void cleanup_event(ctx_t * ctx) {
-    free(ctx->event.line);
-    free(ctx->event.args);
-}
-
-#define ARGS_MIN_CAP 8
-static void args_push(ctx_t * ctx, char * arg) {
-    if (ctx->event.args_len == ctx->event.args_cap) {
-        size_t new_cap = ctx->event.args_cap * 2;
-        if (new_cap == 0) new_cap = ARGS_MIN_CAP;
-
-        char ** new_args = realloc(ctx->event.args, sizeof (char *) * new_cap);
-        if (new_args == NULL) {
-            log_error("event::args_push(): failed to grow args array for option stream line\n");
-            exit_fail(ctx);
-        }
-
-        ctx->event.args = new_args;
-        ctx->event.args_cap = new_cap;
-    }
-
-    ctx->event.args[ctx->event.args_len++] = arg;
-}
-
-#define LINE_MIN_RESERVE 1024
-static void line_reserve(ctx_t * ctx) {
-    if (ctx->event.line_cap - ctx->event.line_len < LINE_MIN_RESERVE) {
-        size_t new_cap = ctx->event.line_cap * 2;
-        if (new_cap == 0) new_cap = LINE_MIN_RESERVE;
-
-        char * new_line = realloc(ctx->event.line, sizeof (char) * new_cap);
-        if (new_line == NULL) {
-            log_error("event::line_reserve(): failed to grow line buffer for option stream line\n");
-            exit_fail(ctx);
-        }
-
-        ctx->event.line = new_line;
-        ctx->event.line_cap = new_cap;
-    }
-}
-
-enum parse_state {
-    BEFORE_ARG,
-    ARG_START,
-    QUOTED_ARG,
-    UNQUOTED_ARG
-};
-static void on_line(ctx_t * ctx, char * line) {
-    char * arg_start = NULL;
-    char quote_char = '\0';
-
-    log_debug(ctx, "event::on_line(): got line '%s'\n", line);
-
-    ctx->event.args_len = 0;
-
-    enum parse_state state = BEFORE_ARG;
-    while (*line != '\0') {
-        switch (state) {
-            case BEFORE_ARG:
-                if (isspace(*line)) {
-                    line++;
-                } else {
-                    state = ARG_START;
-                }
-                break;
-
-            case ARG_START:
-                if (*line == '"' || *line == '\'') {
-                    quote_char = *line;
-                    line++;
-
-                    arg_start = line;
-                    state = QUOTED_ARG;
-                } else {
-                    arg_start = line;
-                    state = UNQUOTED_ARG;
-                }
-                break;
-
-            case QUOTED_ARG:
-                if (*line != quote_char) {
-                    line++;
-                } else {
-                    *line = '\0';
-                    args_push(ctx, arg_start);
-                    line++;
-                    state = BEFORE_ARG;
-                }
-                break;
-
-            case UNQUOTED_ARG:
-                if (!isspace(*line)) {
-                    line++;
-                } else {
-                    *line = '\0';
-                    args_push(ctx, arg_start);
-                    line++;
-                    state = BEFORE_ARG;
-                }
-                break;
-        }
-    }
-
-    if (state == QUOTED_ARG) {
-        log_error("event::on_line(): unmatched quote in argument\n");
-    }
-
-    if (state == QUOTED_ARG || state == UNQUOTED_ARG) {
-        args_push(ctx, arg_start);
-    }
-
-    log_debug(ctx, "event::on_line(): parsed %zd arguments\n", ctx->event.args_len);
-
-    parse_opt(ctx, ctx->event.args_len, ctx->event.args);
-}
-
-static void on_data(ctx_t * ctx) {
-    while (true) {
-        line_reserve(ctx);
-
-        size_t cap = ctx->event.line_cap;
-        size_t len = ctx->event.line_len;
-        ssize_t num = read(STDIN_FILENO, ctx->event.line + len, cap - len);
-        if (num == -1 && errno == EWOULDBLOCK) {
-            break;
-        } else if (num == -1) {
-            log_error("event::on_data(): failed to read data from stdin\n");
-            exit_fail(ctx);
-        } else {
-            ctx->event.line_len += num;
-        }
-    }
-
-    char * line = ctx->event.line;
-    size_t len = ctx->event.line_len;
-    for (size_t i = 0; i < len; i++) {
-        if (line[i] == '\0') {
-            line[i] = ' ';
-        } else if (line[i] == '\n') {
-            line[i] = '\0';
-            on_line(ctx, line);
-            memmove(line, line + (i + 1), len - (i + 1));
-            ctx->event.line_len -= i + 1;
-            break;
-        }
-    }
-}
-
-void event_loop(ctx_t * ctx) {
-    struct pollfd fds[2];
-    fds[0].fd = wl_display_get_fd(ctx->wl.display);
-    fds[0].events = POLLIN;
-    fds[0].revents = 0;
-    fds[1].fd = STDIN_FILENO;
-    fds[1].events = POLLIN;
-    fds[1].revents = 0;
-
-    if (!ctx->opt.stream) {
-        // disable polling for stdin if stream mode not enabled
-        fds[1].fd = -1;
-    }
-
-    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-    flags |= O_NONBLOCK;
-    fcntl(STDIN_FILENO, F_SETFL, flags);
-
-    while (poll(fds, 2, -1) >= 0 && !ctx->wl.closing) {
-        if (fds[0].revents & POLLIN) {
-            if (wl_display_dispatch(ctx->wl.display) == -1) {
-                ctx->wl.closing = true;
-            }
-        }
-
-        if (fds[1].revents & POLLIN) {
-            on_data(ctx);
-        }
-
-        fds[0].revents = 0;
-        fds[1].revents = 0;
-        wl_display_flush(ctx->wl.display);
-    }
+    close(ctx->event.pollfd);
 }

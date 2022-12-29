@@ -153,4 +153,5 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `src/mirror-dmabuf.c`: wlr-export-dmabuf-unstable-v1 backend code
 - `src/mirror-screencopy.c`: wlr-screencopy-unstable-v1 backend code
 - `src/transform.c`: matrix transformation code
-- `src/event.c`: event loop and asynchronous option stream input
+- `src/event.c`: event loop
+- `src/stream.c`: asynchronous option stream input
