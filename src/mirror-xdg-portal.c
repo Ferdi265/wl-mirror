@@ -918,9 +918,7 @@ static void on_loop_pw_event(ctx_t * ctx) {
 void wlm_mirror_xdg_portal_init(ctx_t * ctx) {
     // check for required protocols
     if (ctx->wl.xdg_exporter == NULL) {
-        // TODO: this should not be fatal
-        wlm_log_error("mirror-xdg-portal::init(): missing xdg_foreign protocol\n");
-        return;
+        wlm_log_warn("mirror-xdg-portal::init(): missing xdg_foreign protocol\n");
     }
 
     // allocate backend context structure
