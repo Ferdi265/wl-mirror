@@ -82,6 +82,8 @@ static char * get_window_handle(ctx_t * ctx) {
 
 static int on_request_response(sd_bus_message * reply, void * data, sd_bus_error * err);
 static char * register_new_request(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
+    (void)ctx;
+
     char * token = generate_token();
     if (token == NULL) {
         log_error("mirror-xdg-portal::reqister_new_request(): failed to allocate request token\n");
@@ -814,11 +816,20 @@ static void do_cleanup(ctx_t * ctx) {
     if (backend->pw_core != NULL) pw_core_disconnect(backend->pw_core);
     if (backend->pw_context != NULL) pw_context_destroy(backend->pw_context);
     if (backend->pw_loop != NULL) pw_loop_destroy(backend->pw_loop);
+    if (backend->pw_fd != -1) close(backend->pw_fd);
 
     // release sd-bus resources
-    // FIXME: maybe call close on session
-    if (backend->pw_fd != -1) close(backend->pw_fd);
-    if (backend->session_slot != NULL) sd_bus_slot_unref(backend->session_slot);
+    if (backend->session_slot != NULL) {
+        sd_bus_call_method_async(
+            backend->bus, &backend->call_slot,
+            "org.freedesktop.portal.Desktop",
+            backend->session_handle,
+            "org.freedesktop.portal.Session", "Close",
+            NULL, NULL,
+            ""
+        );
+        sd_bus_slot_unref(backend->session_slot);
+    }
     if (backend->call_slot != NULL) sd_bus_slot_unref(backend->call_slot);
     if (backend->request_handle != NULL) free(backend->request_handle);
     if (backend->session_handle != NULL) free(backend->session_handle);
