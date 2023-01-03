@@ -1,5 +1,7 @@
 #ifdef WITH_XDG_PORTAL_BACKEND
+#define _GNU_SOURCE
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include "context.h"
 #include "mirror-xdg-portal.h"
@@ -8,16 +10,17 @@ static void backend_fail_async(xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_BROKEN;
 }
 
+static int token_counter;
 static char * generate_token() {
-    const char * prefix = "wl_mirror_";
+    int pid = getpid();
+    int id = ++token_counter;
 
-    size_t length = strlen(prefix) + (2 * sizeof (uint32_t)) + 1;
-    char * token_buffer = malloc(length);
-    if (token_buffer == NULL) {
+    char * token_buffer;
+    int status = asprintf(&token_buffer, "wl_mirror_%d_%d", pid, id);
+    if (status == -1) {
         return NULL;
     }
 
-    snprintf(token_buffer, length, "%s%04x", prefix, rand());
     return token_buffer;
 }
 
@@ -50,31 +53,27 @@ static char * generate_handle(xdg_portal_mirror_backend_t * backend, const char 
         return NULL;
     }
 
-    size_t length = strlen(prefix) + 1 + strlen(ident) + 1 + strlen(token) + 1;
-    char * handle_buffer = malloc(length);
-    if (handle_buffer == NULL) {
+    char * handle_buffer;
+    int status = asprintf(&handle_buffer, "%s/%s/%s", prefix, ident, token);
+    if (status == -1) {
         free(ident);
         return NULL;
     }
 
-    snprintf(handle_buffer, length, "%s/%s/%s", prefix, ident, token);
     free(ident);
     return handle_buffer;
 }
 
 static char * get_window_handle(ctx_t * ctx) {
-    size_t length = ctx->wl.xdg_exported_handle == NULL ? 1 : strlen("wayland:") + strlen(ctx->wl.xdg_exported_handle) + 1;
-    char * handle_buffer = malloc(length);
-    if (handle_buffer == NULL) {
+    const char * prefix = ctx->wl.xdg_exported_handle != NULL ? "wayland:" : "";
+    const char * name = ctx->wl.xdg_exported_handle != NULL ? ctx->wl.xdg_exported_handle : "";
+
+    char * handle_buffer;
+    int status = asprintf(&handle_buffer, "%s%s", prefix, name);
+    if (status == -1) {
         return NULL;
     }
 
-    if (ctx->wl.xdg_exported_handle == NULL) {
-        handle_buffer[0] = '\0';
-        return handle_buffer;
-    }
-
-    snprintf(handle_buffer, length, "wayland:%s", ctx->wl.xdg_exported_handle);
     return handle_buffer;
 }
 
