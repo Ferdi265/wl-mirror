@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <poll.h>
 #include "context.h"
 #include "mirror-xdg-portal.h"
 
@@ -853,8 +854,17 @@ static bool update_bus_events(xdg_portal_mirror_backend_t * backend) {
         return false;
     }
 
-    // TODO: don't assume POLL and EPOLL event constants are the same
-    backend->dbus_event_handler.events = events;
+    int epoll_events = 0;
+    if (events & POLLIN)        epoll_events |= EPOLLIN;
+    if (events & POLLRDNORM)    epoll_events |= EPOLLRDNORM;
+    if (events & POLLRDBAND)    epoll_events |= EPOLLRDBAND;
+    if (events & POLLPRI)       epoll_events |= EPOLLPRI;
+    if (events & POLLOUT)       epoll_events |= EPOLLOUT;
+    if (events & POLLWRNORM)    epoll_events |= EPOLLWRNORM;
+    if (events & POLLWRBAND)    epoll_events |= EPOLLWRBAND;
+    if (events & POLLERR)       epoll_events |= EPOLLERR;
+    if (events & POLLHUP)       epoll_events |= EPOLLHUP;
+    backend->dbus_event_handler.events = epoll_events;
 
     uint64_t timeout;
     if (sd_bus_get_timeout(backend->bus, &timeout) < 0) {
