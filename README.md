@@ -206,6 +206,8 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `INSTALL_DOCUMENTATION`: also build and install manual pages (default `OFF`)
 - `WITH_LIBDECOR`: build with libdecor for window decoration (default `OFF`)
 - `WITH_GBM`: build with GBM and libdrm for DMA-BUF allocation (default `OFF`)
+- `WITH_XDG_PORTAL_BACKEND`: enable the xdg-desktop-portal and pipewire screen capture backend (default `OFF`)
+- `SD_BUS_PROVIDER`: the library used to provide sd-bus (default `AUTO`)
 - `FORCE_WAYLAND_SCANNER_PATH`: always use the provided path for wayland-scanner, do not use pkg-config (default empty)
 - `FORCE_SYSTEM_WL_PROTOCOLS`: always use system-installed wayland-protocols, do not use submodules (default `OFF`)
 - `FORCE_SYSTEM_WLR_PROTOCOLS`: always use system-installed wlr-protocols, do not use submodules (default `OFF`)
