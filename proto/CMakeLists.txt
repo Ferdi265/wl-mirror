@@ -36,6 +36,9 @@ if (NOT ${wl-protocols-found} OR NOT ${wlr-protocols-found})
     message(FATAL_ERROR "wayland-protocols or wlr-protocols not found")
 endif()
 
+# find wayland-scanner codegen tool
+find_program(WAYLAND_SCANNER wayland-scanner REQUIRED)
+
 # wayland protocol wrapper generation with wayland-scanner
 set(protocols-found TRUE)
 add_library(protocols STATIC)
@@ -65,12 +68,12 @@ foreach(proto ${PROTOCOLS})
     add_custom_command(
         OUTPUT "${proto-header}"
         MAIN_DEPENDENCY "${proto-file}"
-        COMMAND wayland-scanner client-header "${proto-file}" "${proto-header}"
+        COMMAND "${WAYLAND_SCANNER}" client-header "${proto-file}" "${proto-header}"
     )
     add_custom_command(
         OUTPUT "${proto-source}"
         MAIN_DEPENDENCY "${proto-file}"
-        COMMAND wayland-scanner private-code "${proto-file}" "${proto-source}"
+        COMMAND "${WAYLAND_SCANNER}" private-code "${proto-file}" "${proto-source}"
     )
     add_custom_target(gen-${proto-base} DEPENDS "${proto-header}" "${proto-source}")
 
