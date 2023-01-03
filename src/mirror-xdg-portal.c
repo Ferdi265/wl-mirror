@@ -378,6 +378,8 @@ static int on_session_closed(sd_bus_message * reply, void * data, sd_bus_error *
         return 1;
     }
 
+    backend->session_open = false;
+
     log_error("mirror-xdg-portal::on_session_closed(): session closed unexpectedly\n");
     backend_fail_async(backend);
     return 1;
@@ -410,6 +412,8 @@ static int on_create_session_response(ctx_t * ctx, xdg_portal_mirror_backend_t *
         backend_fail_async(backend);
         return 1;
     }
+
+    backend->session_open = true;
 
     screencast_select_sources(ctx, backend);
     return 0;
@@ -818,18 +822,20 @@ static void do_cleanup(ctx_t * ctx) {
     if (backend->pw_loop != NULL) pw_loop_destroy(backend->pw_loop);
     if (backend->pw_fd != -1) close(backend->pw_fd);
 
-    // release sd-bus resources
-    if (backend->session_slot != NULL) {
+    // close portal session
+    if (backend->session_open) {
         sd_bus_call_method_async(
-            backend->bus, &backend->call_slot,
+            backend->bus, NULL,
             "org.freedesktop.portal.Desktop",
             backend->session_handle,
             "org.freedesktop.portal.Session", "Close",
             NULL, NULL,
             ""
         );
-        sd_bus_slot_unref(backend->session_slot);
     }
+
+    // release sd-bus resources
+    if (backend->session_slot != NULL) sd_bus_slot_unref(backend->session_slot);
     if (backend->call_slot != NULL) sd_bus_slot_unref(backend->call_slot);
     if (backend->request_handle != NULL) free(backend->request_handle);
     if (backend->session_handle != NULL) free(backend->session_handle);
@@ -957,6 +963,7 @@ void init_mirror_xdg_portal(ctx_t * ctx) {
     };
     backend->request_handle = NULL;
     backend->session_handle = NULL;
+    backend->session_open = false;
 
     backend->rctx = (request_ctx_t) {
         .ctx = NULL,
