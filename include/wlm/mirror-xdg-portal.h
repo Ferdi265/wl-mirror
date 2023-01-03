@@ -76,7 +76,6 @@ typedef struct xdg_portal_mirror_backend {
     struct pw_context * pw_context;
     struct pw_core * pw_core;
     struct pw_stream * pw_stream;
-    struct spa_source * pw_renegotiate;
     struct spa_hook pw_core_listener;
     struct spa_hook pw_stream_listener;
     event_handler_t pw_event_handler;
