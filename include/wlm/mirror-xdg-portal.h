@@ -61,6 +61,7 @@ typedef struct xdg_portal_mirror_backend {
     screencast_properties_t screencast_properties;
     char * request_handle;
     char * session_handle;
+    bool session_open;
 
     request_ctx_t rctx;
     sd_bus_slot * call_slot;
