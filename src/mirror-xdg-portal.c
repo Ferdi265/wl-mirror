@@ -669,15 +669,12 @@ static int on_open_pipewire_reply(sd_bus_message * reply, void * data, sd_bus_er
 
 // --- pipewire functions ---
 
-static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_backend_t * backend);
 static void on_pw_core_info(void * data, const struct pw_core_info * info);
-static void on_pw_core_done(void * data, uint32_t id, int seq);
 static void on_pw_core_error(void * data, uint32_t id, int seq, int res, const char * msg);
 
 static const struct pw_core_events pw_core_events = {
     .version = PW_VERSION_CORE_EVENTS,
     .info = on_pw_core_info,
-    .done = on_pw_core_done,
     .error = on_pw_core_error
 };
 
@@ -701,32 +698,21 @@ static void screencast_pipewire_init(ctx_t * ctx, xdg_portal_mirror_backend_t * 
 
 }
 
+static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_backend_t * backend);
 static void on_pw_core_info(void * data, const struct pw_core_info * info) {
     ctx_t * ctx = (ctx_t *)data;
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
-    // TODO: actually check versions
-    log_debug(ctx, "mirror-xdg-portal::on_pw_core_info(): got core info: %p\n", info);
+    log_debug(ctx, "mirror-xdg-portal::on_pw_core_info(): pipewire version = %s\n", info->version);
 
     screencast_pipewire_create_stream(ctx, backend);
-}
-
-static void on_pw_core_done(void * data, uint32_t id, int seq) {
-    ctx_t * ctx = (ctx_t *)data;
-    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
-
-    // TODO: actually do something with the serial
-    log_debug(ctx, "mirror-xdg-portal::on_pw_core_done(): got core done: id = %d, seq = %d\n", id, seq);
-
-    (void)backend;
 }
 
 static void on_pw_core_error(void * data, uint32_t id, int seq, int res, const char * msg) {
     ctx_t * ctx = (ctx_t *)data;
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
-    // TODO: do something more useful with the error
-    log_error("mirror-xdg-portal::on_pw_core_done(): got error: id = %d, seq = %d, res = %d, msg = %s\n", id, seq, res, msg);
+    log_error("mirror-xdg-portal::on_pw_core_error(): got error: id = %d, seq = %d, res = %d, msg = %s\n", id, seq, res, msg);
     backend_fail_async(backend);
 }
 
