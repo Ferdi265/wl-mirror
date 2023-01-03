@@ -656,8 +656,12 @@ static int on_open_pipewire_reply(sd_bus_message * reply, void * data, sd_bus_er
         return 1;
     }
 
-    log_debug(ctx, "mirror-xdg-portal::on_open_pipewire_reply(): received pipewire fd: %d\n", fd);
-    backend->pw_fd = fd;
+    backend->pw_fd = dup(fd);
+    if (backend->pw_fd == -1) {
+        log_error("mirror-xdg-portal::on_open_pipewire_reply(): failed to duplicate pipewire fd\n");
+    }
+
+    log_debug(ctx, "mirror-xdg-portal::on_open_pipewire_reply(): received pipewire fd: %d\n", backend->pw_fd);
 
     screencast_pipewire_init(ctx, backend);
     return 0;
