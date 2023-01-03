@@ -716,8 +716,7 @@ static void on_pw_core_error(void * data, uint32_t id, int seq, int res, const c
     backend_fail_async(backend);
 }
 
-static void on_pw_renegotiate(void * data, uint64_t expirations);
-static void on_pw_process(void * data);
+static void on_pw_stream_process(void * data);
 static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod * param);
 static void on_pw_state_changed(void * data, enum pw_stream_state old, enum pw_stream_state new, const char * error);
 
@@ -725,15 +724,13 @@ static const struct pw_stream_events pw_stream_events = {
     .version = PW_VERSION_STREAM_EVENTS,
     .state_changed = on_pw_state_changed,
     .param_changed = on_pw_param_changed,
-    .process = on_pw_process
+    .process = on_pw_stream_process
 };
 
 static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_PW_CREATE_STREAM;
 
     log_debug(ctx, "mirror-xdg-portal::screencast_pipewire_create_stream(): creating video stream\n");
-
-    backend->pw_renegotiate = pw_loop_add_event(backend->pw_loop, on_pw_renegotiate, (void *)ctx);
 
     backend->pw_stream = pw_stream_new(
         backend->pw_core, "wl-mirror",
@@ -759,22 +756,12 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
     //);
 }
 
-static void on_pw_renegotiate(void * data, uint64_t expirations) {
+static void on_pw_stream_process(void * data) {
     ctx_t * ctx = (ctx_t *)data;
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
     // TODO: actually do something here
-    log_debug(ctx, "mirror-xdg-portal::on_pw_renegotiate(): need to renegotiate, expirations = %ld\n", expirations);
-
-    (void)backend;
-}
-
-static void on_pw_process(void * data) {
-    ctx_t * ctx = (ctx_t *)data;
-    xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
-
-    // TODO: actually do something here
-    log_debug(ctx, "mirror-xdg-portal::on_pw_process(): new video data\n");
+    log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): new video data\n");
 
     (void)backend;
 }
@@ -977,7 +964,6 @@ void init_mirror_xdg_portal(ctx_t * ctx) {
     backend->pw_context = NULL;
     backend->pw_core = NULL;
     backend->pw_stream = NULL;
-    backend->pw_renegotiate = NULL;
     backend->pw_event_handler.fd = -1;
     backend->pw_event_handler.timeout_ms = -1;
     backend->pw_event_handler.events = 0;
