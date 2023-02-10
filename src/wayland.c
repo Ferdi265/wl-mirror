@@ -454,7 +454,7 @@ static void on_surface_enter(
 
     // verify an output was found
     if (node == NULL) {
-        log_error("wayland::on_surface_enter(): entered nonexistant output\n");
+        log_error("wayland::on_surface_enter(): entered nonexistent output\n");
         exit_fail(ctx);
     }
 
