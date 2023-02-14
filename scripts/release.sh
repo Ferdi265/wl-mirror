@@ -54,7 +54,7 @@ echo "$TAG" > "wl-mirror-$VERSION/version.txt"
 echo "- creating archive"
 tar caf "$REPODIR/wl-mirror-$VERSION.tar.gz" "wl-mirror-$VERSION/"
 
-if [[ ! -z "$SIGKEY" ]]; then
+if [[ ! -z "${SIGKEY+z}" ]]; then
     echo "- signing archive"
     gpg --yes -u "$SIGKEY" -o "$REPODIR/wl-mirror-$VERSION.tar.gz.sig" --detach-sig "$REPODIR/wl-mirror-$VERSION.tar.gz"
 else
