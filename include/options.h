@@ -25,6 +25,7 @@ typedef struct ctx_opt {
     bool stream;
     bool show_cursor;
     bool invert_colors;
+    bool freeze;
     bool has_region;
     scale_t scaling;
     backend_t backend;

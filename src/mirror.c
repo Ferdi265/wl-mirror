@@ -32,8 +32,10 @@ static void on_frame(
             backend_fail(ctx);
         }
 
-        // request new screen capture from backend
-        ctx->mirror.backend->do_capture(ctx);
+        if (!ctx->opt.freeze) {
+            // request new screen capture from backend
+            ctx->mirror.backend->do_capture(ctx);
+        }
     }
 
     // wait for events

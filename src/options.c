@@ -9,6 +9,7 @@ void init_opt(ctx_t * ctx) {
     ctx->opt.stream = false;
     ctx->opt.show_cursor = true;
     ctx->opt.invert_colors = false;
+    ctx->opt.freeze = false;
     ctx->opt.has_region = false;
     ctx->opt.scaling = SCALE_LINEAR;
     ctx->opt.backend = BACKEND_AUTO;
@@ -337,6 +338,8 @@ void usage_opt(ctx_t * ctx) {
     printf("        --no-show-cursor   don't show the cursor on the mirrored screen\n");
     printf("  -i,   --invert-colors    invert colors in the mirrored screen\n");
     printf("        --no-invert-colors don't invert colors in the mirrored screen (default)\n");
+    printf("  -f,   --freeze           freeze the current image on the screen\n");
+    printf("        --no-freeze        resume the screen capture after a freeze\n");
     printf("  -s l, --scaling linear   use linear scaling (default)\n");
     printf("  -s n, --scaling nearest  use nearest neighbor scaling\n");
     printf("  -s e, --scaling exact    only scale to exact multiples of the output size\n");
@@ -413,6 +416,10 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             ctx->opt.invert_colors = true;
         } else if (strcmp(argv[0], "--no-invert-colors") == 0) {
             ctx->opt.invert_colors = false;
+        } else if (strcmp(argv[0], "-f") == 0 || strcmp(argv[0], "--freeze") == 0) {
+            ctx->opt.freeze = true;
+        } else if (strcmp(argv[0], "--no-freeze") == 0) {
+            ctx->opt.freeze = false;
         } else if (strcmp(argv[0], "-s") == 0 || strcmp(argv[0], "--scaling") == 0) {
             if (argc < 2) {
                 log_error("options::parse(): option %s requires an argument\n", argv[0]);

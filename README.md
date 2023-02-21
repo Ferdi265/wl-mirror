@@ -31,6 +31,8 @@ options:
         --no-show-cursor   don't show the cursor on the mirrored screen
   -i,   --invert-colors    invert colors in the mirrored screen
         --no-invert-colors don't invert colors in the mirrored screen (default)
+  -f,   --freeze           freeze the current image on the screen
+        --no-freeze        resume the screen capture after a freeze
   -s l, --scaling linear   use linear scaling (default)
   -s n, --scaling nearest  use nearest neighbor scaling
   -s e, --scaling exact    only scale to exact multiples of the output size
