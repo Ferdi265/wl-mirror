@@ -53,6 +53,8 @@ void init_egl(ctx_t * ctx) {
 
     ctx->egl.vbo = 0;
     ctx->egl.texture = 0;
+    ctx->egl.freeze_texture = 0;
+    ctx->egl.freeze_framebuffer = 0;
     ctx->egl.shader_program = 0;
     ctx->egl.texture_transform_uniform = 0;
     ctx->egl.invert_colors_uniform = 0;
@@ -156,6 +158,24 @@ void init_egl(ctx_t * ctx) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 
+    // create freeze texture and set scaling mode
+    glGenTextures(1, &ctx->egl.freeze_texture);
+    glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
+    if (ctx->opt.scaling == SCALE_LINEAR) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+    // create freeze framebuffer
+    glGenFramebuffers(1, &ctx->egl.freeze_framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, ctx->egl.freeze_framebuffer);
+    glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ctx->egl.texture, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     // error log for shader compilation error messages
     GLint success;
     const char * shader_source = NULL;
@@ -236,6 +256,7 @@ void init_egl(ctx_t * ctx) {
 // --- draw_texture ---
 
 void draw_texture(ctx_t *ctx) {
+    glBindTexture(GL_TEXTURE_2D, ctx->opt.freeze ? ctx->egl.freeze_texture : ctx->egl.texture);
     glClear(GL_COLOR_BUFFER_BIT);
 
     if (ctx->egl.texture_initialized) {
@@ -365,6 +386,15 @@ void update_uniforms(ctx_t * ctx) {
 
 }
 
+// --- freeze_framebuffer ---
+
+void freeze_framebuffer(struct ctx * ctx) {
+    glBindFramebuffer(GL_FRAMEBUFFER, ctx->egl.freeze_framebuffer);
+    glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, ctx->egl.width, ctx->egl.height, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 // --- cleanup_egl ---
 
 void cleanup_egl(ctx_t *ctx) {
@@ -373,6 +403,8 @@ void cleanup_egl(ctx_t *ctx) {
     log_debug(ctx, "egl::cleanup(): destroying EGL objects\n");
 
     if (ctx->egl.shader_program != 0) glDeleteProgram(ctx->egl.shader_program);
+    if (ctx->egl.freeze_framebuffer != 0) glDeleteFramebuffers(1, &ctx->egl.freeze_framebuffer);
+    if (ctx->egl.freeze_texture != 0) glDeleteTextures(1, &ctx->egl.freeze_texture);
     if (ctx->egl.texture != 0) glDeleteTextures(1, &ctx->egl.texture);
     if (ctx->egl.vbo != 0) glDeleteBuffers(1, &ctx->egl.vbo);
     if (ctx->egl.context != EGL_NO_CONTEXT) eglDestroyContext(ctx->egl.display, ctx->egl.context);

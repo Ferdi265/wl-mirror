@@ -339,7 +339,8 @@ void usage_opt(ctx_t * ctx) {
     printf("  -i,   --invert-colors    invert colors in the mirrored screen\n");
     printf("        --no-invert-colors don't invert colors in the mirrored screen (default)\n");
     printf("  -f,   --freeze           freeze the current image on the screen\n");
-    printf("        --no-freeze        resume the screen capture after a freeze\n");
+    printf("        --unfreeze         resume the screen capture after a freeze\n");
+    printf("        --toggle-freeze    toggle freeze state of screen capture\n");
     printf("  -s l, --scaling linear   use linear scaling (default)\n");
     printf("  -s n, --scaling nearest  use nearest neighbor scaling\n");
     printf("  -s e, --scaling exact    only scale to exact multiples of the output size\n");
@@ -390,6 +391,7 @@ void version_opt(ctx_t * ctx) {
 
 void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     bool is_cli_args = !ctx->opt.stream;
+    bool was_frozen = ctx->opt.freeze;
     bool new_backend = false;
     bool new_region = false;
     bool new_output = false;
@@ -418,8 +420,10 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             ctx->opt.invert_colors = false;
         } else if (strcmp(argv[0], "-f") == 0 || strcmp(argv[0], "--freeze") == 0) {
             ctx->opt.freeze = true;
-        } else if (strcmp(argv[0], "--no-freeze") == 0) {
+        } else if (strcmp(argv[0], "--unfreeze") == 0) {
             ctx->opt.freeze = false;
+        } else if (strcmp(argv[0], "--toggle-freeze") == 0) {
+            ctx->opt.freeze ^= 1;
         } else if (strcmp(argv[0], "-s") == 0 || strcmp(argv[0], "--scaling") == 0) {
             if (argc < 2) {
                 log_error("options::parse(): option %s requires an argument\n", argv[0]);
@@ -558,6 +562,10 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
 
     if (!is_cli_args && new_backend) {
         init_mirror_backend(ctx);
+    }
+
+    if (!is_cli_args && !was_frozen && ctx->opt.freeze) {
+        freeze_framebuffer(ctx);
     }
 
     if (!is_cli_args) {

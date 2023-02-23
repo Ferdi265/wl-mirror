@@ -27,6 +27,8 @@ typedef struct ctx_egl {
     // gl objects
     GLuint vbo;
     GLuint texture;
+    GLuint freeze_texture;
+    GLuint freeze_framebuffer;
     GLuint shader_program;
     GLint texture_transform_uniform;
     GLint invert_colors_uniform;
@@ -43,6 +45,7 @@ void draw_texture(struct ctx * ctx);
 void resize_viewport(struct ctx * ctx);
 void resize_window(struct ctx * ctx);
 void update_uniforms(struct ctx * ctx);
+void freeze_framebuffer(struct ctx * ctx);
 
 void cleanup_egl(struct ctx * ctx);
 

@@ -12,7 +12,8 @@ usage() {
     echo "  set-region [region] set the recorded region (default asks via slurp)"
     echo "  set-scaling [scale] set the scaling mode (default asks via rofi)"
     echo "  freeze              freeze the screen"
-    echo "  no-freeze           resume the screen capture after freeze"
+    echo "  unfreeze            resume the screen capture after freeze"
+    echo "  toggle-freeze       toggle freeze state of screen capture"
     echo "  custom [options]    send custom options to wl-mirror (default asks via rofi)"
     echo
     echo "dependencies:"
@@ -82,6 +83,9 @@ ask-custom() {
 --no-show-cursor
 --invert-colors
 --no-invert-colors
+--freeze
+--unfreeze
+--toggle-freeze
 --scaling linear
 --scaling nearest
 --scaling exact
@@ -103,7 +107,8 @@ case "$1" in
     set-region) set-region "${2:-$(ask-region)}";;
     set-scaling) set-scaling "${2:-$(ask-scaling)}";;
     freeze) mirror-cmd --freeze;;
-    no-freeze) mirror-cmd --no-freeze;;
+    unfreeze) mirror-cmd --unfreeze;;
+    toggle-freeze) mirror-cmd --toggle-freeze;;
     custom) mirror-cmd "${2:-$(ask-custom)}";;
     *) usage;;
 esac
