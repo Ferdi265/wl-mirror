@@ -51,6 +51,7 @@ void init_egl(ctx_t * ctx) {
 
     ctx->egl.width = 1;
     ctx->egl.height = 1;
+    ctx->egl.format = 0;
 
     ctx->egl.vbo = 0;
     ctx->egl.texture = 0;
@@ -392,7 +393,7 @@ void update_uniforms(ctx_t * ctx) {
 void freeze_framebuffer(struct ctx * ctx) {
     glBindFramebuffer(GL_FRAMEBUFFER, ctx->egl.freeze_framebuffer);
     glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8_OES, 0, 0, ctx->egl.width, ctx->egl.height, 0);
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, ctx->egl.format, 0, 0, ctx->egl.width, ctx->egl.height, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 

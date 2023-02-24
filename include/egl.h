@@ -23,6 +23,7 @@ typedef struct ctx_egl {
     // texture size
     uint32_t width;
     uint32_t height;
+    uint32_t format;
 
     // gl objects
     GLuint vbo;

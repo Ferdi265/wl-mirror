@@ -136,7 +136,7 @@ static void on_ready(
         return;
     }
 
-    // create attribute array for EGLCreteImage from dmabuf
+    // create attribute array for EGLCreateImage from dmabuf
     int i = 0;
     EGLAttrib image_attribs[6 + 10 * 4 + 1];
 
@@ -212,6 +212,7 @@ static void on_ready(
     // convert EGLImage to GL texture
     glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
     ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, frame_image);
+    ctx->egl.format = GL_RGB8_OES; // FIXME: find out actual format
     ctx->egl.texture_region_aware = false;
     ctx->egl.texture_initialized = true;
 

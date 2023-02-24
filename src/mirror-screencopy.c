@@ -315,6 +315,7 @@ static void on_ready(
         0, format->gl_format, format->gl_type, backend->shm_addr
     );
     glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
+    ctx->egl.format = format->gl_format;
     ctx->egl.texture_region_aware = true;
     ctx->egl.texture_initialized = true;
 
