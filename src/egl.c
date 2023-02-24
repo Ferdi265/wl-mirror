@@ -379,6 +379,7 @@ void update_uniforms(ctx_t * ctx) {
     glUniform1i(ctx->egl.invert_colors_uniform, invert_colors);
 
     // set texture scaling mode
+    glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
     if (ctx->opt.scaling == SCALE_LINEAR) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -387,6 +388,14 @@ void update_uniforms(ctx_t * ctx) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 
+    glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
+    if (ctx->opt.scaling == SCALE_LINEAR) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
 }
 
 // --- freeze_framebuffer ---
