@@ -1,4 +1,5 @@
 #include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -391,7 +392,7 @@ void update_uniforms(ctx_t * ctx) {
 void freeze_framebuffer(struct ctx * ctx) {
     glBindFramebuffer(GL_FRAMEBUFFER, ctx->egl.freeze_framebuffer);
     glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, ctx->egl.width, ctx->egl.height, 0);
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8_OES, 0, 0, ctx->egl.width, ctx->egl.height, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
