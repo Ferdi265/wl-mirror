@@ -114,7 +114,8 @@ void init_egl(ctx_t * ctx) {
 
     // create egl context with support for OpenGL ES 2.0
     EGLint context_attribs[] = {
-        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_CONTEXT_MAJOR_VERSION, 2,
+        EGL_CONTEXT_MINOR_VERSION, 0,
         EGL_NONE
     };
     ctx->egl.context = eglCreateContext(ctx->egl.display, ctx->egl.config, EGL_NO_CONTEXT, context_attribs);
