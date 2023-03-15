@@ -1,7 +1,7 @@
 find_package(PkgConfig REQUIRED)
 
-file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/dummy.c)
-add_library(deps STATIC ${CMAKE_CURRENT_BINARY_DIR}/dummy.c)
+add_library(deps INTERFACE)
+add_library(proto_deps INTERFACE)
 
 # helper function for finding one of a list of packages
 function(do_pkg_search_module name)
@@ -17,6 +17,11 @@ pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET "wayland-client")
 pkg_check_modules(WaylandEGL REQUIRED IMPORTED_TARGET "wayland-egl")
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET "egl")
 pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET "glesv2")
-target_link_libraries(deps PUBLIC
+
+# link dependencies
+target_link_libraries(deps INTERFACE
     PkgConfig::WaylandClient PkgConfig::WaylandEGL PkgConfig::EGL PkgConfig::GLESv2
+)
+target_link_libraries(proto_deps INTERFACE
+    PkgConfig::WaylandClient
 )
