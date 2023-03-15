@@ -20,6 +20,9 @@ set(PROTOCOLS
     "unstable/wlr-screencopy-unstable-v1.xml"
 )
 
+# required dependencies
+add_subdirectory(deps)
+
 # wayland protocol wrapper generation with wayland-scanner
 add_subdirectory(proto)
 
@@ -40,8 +43,8 @@ endif()
 file(GLOB sources src/*.c)
 add_executable(wl-mirror ${sources})
 target_compile_options(wl-mirror PRIVATE -Wall -Wextra)
-target_link_libraries(wl-mirror PRIVATE wayland-client wayland-egl EGL GLESv2 protocols shaders version)
 target_include_directories(wl-mirror PRIVATE include/)
+target_link_libraries(wl-mirror PRIVATE deps protocols shaders version)
 
 # installation rules
 include(GNUInstallDirs)
