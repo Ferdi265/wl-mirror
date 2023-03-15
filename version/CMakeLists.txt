@@ -1,5 +1,4 @@
-file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/dummy.c)
-add_library(version STATIC ${CMAKE_CURRENT_BINARY_DIR}/dummy.c)
+add_library(version INTERFACE)
 target_include_directories(version INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include/")
 
 set(version-header "${CMAKE_CURRENT_BINARY_DIR}/include/version.h")
