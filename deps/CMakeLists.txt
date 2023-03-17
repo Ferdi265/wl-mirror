@@ -12,11 +12,23 @@ function(do_pkg_search_module name)
     message(STATUS "  Found ${module_name}, version ${module_version}")
 endfunction()
 
-# find required dependencies
+# required dependencies
 pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET "wayland-client")
 pkg_check_modules(WaylandEGL REQUIRED IMPORTED_TARGET "wayland-egl")
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET "egl")
 pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET "glesv2")
+pkg_check_modules(WaylandScanner REQUIRED "wayland-scanner")
+pkg_get_variable(WAYLAND_SCANNER "wayland-scanner" "wayland_scanner")
+set(WAYLAND_SCANNER "${WAYLAND_SCANNER}" PARENT_SCOPE)
+
+# man dependencies
+if (${INSTALL_DOCUMENTATION})
+    pkg_check_modules(SCDOC REQUIRED "scdoc")
+else()
+    pkg_check_modules(SCDOC "scdoc")
+endif()
+pkg_get_variable(SCDOC "scdoc" "scdoc")
+set(SCDOC "${SCDOC}" PARENT_SCOPE)
 
 # link dependencies
 target_link_libraries(deps INTERFACE

@@ -36,9 +36,6 @@ if (NOT ${wl-protocols-found} OR NOT ${wlr-protocols-found})
     message(FATAL_ERROR "wayland-protocols or wlr-protocols not found")
 endif()
 
-# find wayland-scanner codegen tool
-find_program(WAYLAND_SCANNER wayland-scanner REQUIRED)
-
 # wayland protocol wrapper generation with wayland-scanner
 set(protocols-found TRUE)
 add_library(protocols STATIC)
