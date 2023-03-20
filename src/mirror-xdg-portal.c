@@ -8,6 +8,8 @@
 #include <spa/param/format-utils.h>
 #include <spa/param/video/raw-utils.h>
 #include <libdrm/drm_fourcc.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
 #include "context.h"
 #include "mirror-xdg-portal.h"
 
@@ -764,7 +766,22 @@ static void on_pw_core_info(void * data, const struct pw_core_info * info) {
 
     log_debug(ctx, "mirror-xdg-portal::on_pw_core_info(): pipewire version = %s\n", info->version);
 
+    uint32_t major, minor, patch;
+    if (sscanf(info->version, "%d.%d.%d", &major, &minor, &patch) != 3) {
+        log_error("mirror-xdg-portal::on_pw_core_info(): failed to parse pipewire version\n");
+        backend_fail_async(backend);
+        return;
+    }
+
+    backend->pw_major = major;
+    backend->pw_minor = minor;
+    backend->pw_patch = patch;
+
     screencast_pipewire_create_stream(ctx, backend);
+}
+
+static bool screencast_pipewire_check_version(xdg_portal_mirror_backend_t * backend, uint32_t major, uint32_t minor, uint32_t patch) {
+    return backend->pw_major == major && backend->pw_minor == minor && backend->pw_patch >= patch;
 }
 
 static void on_pw_core_error(void * data, uint32_t id, int seq, int res, const char * msg) {
@@ -859,11 +876,79 @@ static void on_pw_stream_process(void * data) {
     if (spa_buffer->datas[0].type == SPA_DATA_DmaBuf) {
         log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): received DMA buf\n");
 
-        uint32_t planes = spa_buffer->n_datas;
-        // TODO: figure out format and import DMA BUF
+        if (spa_buffer->n_datas > MAX_PLANES) {
+            log_error("mirror-xdg-portal::on_pw_stream_process(): max %d planes are supported, got %d planes\n", MAX_PLANES, spa_buffer->n_datas);
+            pw_stream_queue_buffer(backend->pw_stream, buffer);
+            backend_fail_async(backend);
+            return;
+        }
 
-        log_error("mirror-xdg-portal::on_pw_stream_process(): DMA buffers not yet implemented\n");
-        backend_fail_async(backend);
+        log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): w=%d h=%d gl_format=%x drm_format=%08x drm_modifier=%016lx\n",
+            backend->w, backend->h, backend->gl_format, backend->drm_format, backend->drm_modifier
+        );
+
+        dmabuf_t dmabuf;
+        dmabuf.width = backend->w;
+        dmabuf.height = backend->h;
+        dmabuf.drm_format = backend->drm_format;
+        dmabuf.planes = spa_buffer->n_datas;
+        dmabuf.fds = malloc(dmabuf.planes * sizeof (int));
+        dmabuf.offsets = malloc(dmabuf.planes * sizeof (uint32_t));
+        dmabuf.strides = malloc(dmabuf.planes * sizeof (uint32_t));
+        dmabuf.modifier = backend->drm_modifier;
+        if (dmabuf.fds == NULL || dmabuf.offsets == NULL || dmabuf.strides == NULL) {
+            log_error("mirror-xdg-portal::on_pw_stream_process(): failed to allocate dmabuf storage\n");
+            pw_stream_queue_buffer(backend->pw_stream, buffer);
+            backend_fail_async(backend);
+            return;
+        }
+
+        bool corrupted = false;
+        for (size_t i = 0; i < dmabuf.planes; i++) {
+            dmabuf.fds[i] = spa_buffer->datas[i].fd;
+            dmabuf.offsets[i] = spa_buffer->datas[i].chunk->offset;
+            dmabuf.strides[i] = spa_buffer->datas[i].chunk->stride;
+            corrupted |= (bool)(spa_buffer->datas[i].chunk->flags & SPA_CHUNK_FLAG_CORRUPTED);
+
+            log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): fd=%d offset=% 10d stride=% 10d type=%d\n",
+                dmabuf.fds[i], dmabuf.offsets[i], dmabuf.strides[i], spa_buffer->datas[i].type
+            );
+        }
+
+        if (corrupted) {
+            log_error("mirror-xdg-portal::on_pw_stream_process(): received corrupt dmabuf\n");
+            pw_stream_queue_buffer(backend->pw_stream, buffer);
+            backend_fail_async(backend);
+            free(dmabuf.fds);
+            free(dmabuf.offsets);
+            free(dmabuf.strides);
+            return;
+        }
+
+        if (!dmabuf_to_texture(ctx, &dmabuf)) {
+            log_error("mirror-xdg-portal::on_pw_stream_process(): failed to import dmabuf\n");
+            pw_stream_queue_buffer(backend->pw_stream, buffer);
+            backend_fail_async(backend);
+            free(dmabuf.fds);
+            free(dmabuf.offsets);
+            free(dmabuf.strides);
+            return;
+        }
+
+        free(dmabuf.fds);
+        free(dmabuf.offsets);
+        free(dmabuf.strides);
+        ctx->egl.format = backend->gl_format;
+        ctx->egl.texture_region_aware = false;
+        ctx->egl.texture_initialized = true;
+
+        if (dmabuf.width != ctx->egl.width || dmabuf.height != ctx->egl.height) {
+            ctx->egl.width = dmabuf.width;
+            ctx->egl.height = dmabuf.height;
+            resize_viewport(ctx);
+        }
+
+        backend->header.fail_count = 0;
     } else if (spa_buffer->datas[0].type == SPA_DATA_MemPtr) {
         log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): received SHM buf\n");
 
@@ -920,6 +1005,9 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
             backend_fail_async(backend);
             return;
         }
+        backend->w = info_raw.size.width;
+        backend->h = info_raw.size.height;
+        backend->drm_modifier = info_raw.modifier;
 
         const spa_drm_gl_format_t * format = spa_drm_gl_format_from_spa(info_raw.format);
         if (format == NULL) {
@@ -927,11 +1015,14 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
             backend_fail_async(backend);
             return;
         }
-        backend->drm_format = format->drm_format;
         backend->gl_format = format->gl_format;
+        backend->drm_format = format->drm_format;
 
-        uint32_t supported_buffer_types = (1 << SPA_DATA_MemPtr) | (1 << SPA_DATA_DmaBuf);
-        // TODO: figure out when to advertize DmaBuf
+        uint32_t supported_buffer_types = (1 << SPA_DATA_MemPtr);
+        bool has_modifier = spa_pod_find_prop(param, NULL, SPA_FORMAT_VIDEO_modifier) != NULL;
+        if (has_modifier || screencast_pipewire_check_version(backend, 0, 3, 24)) {
+            supported_buffer_types |= (1 << SPA_DATA_DmaBuf);
+        }
 
         struct spa_pod_dynamic_builder pod_builder;
         spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 0);
@@ -1146,6 +1237,9 @@ void init_mirror_xdg_portal(ctx_t * ctx) {
     backend->y = 0;
     backend->w = 0;
     backend->h = 0;
+    backend->gl_format = 0;
+    backend->drm_format = 0;
+    backend->drm_modifier = 0;
 
     // sd-bus state
     backend->screencast_properties = (screencast_properties_t) {
@@ -1176,6 +1270,9 @@ void init_mirror_xdg_portal(ctx_t * ctx) {
     // pipewire state
     backend->pw_fd = -1;
     backend->pw_node_id = 0;
+    backend->pw_major = 0;
+    backend->pw_minor = 0;
+    backend->pw_patch = 0;
 
     backend->pw_loop = NULL;
     backend->pw_context = NULL;
