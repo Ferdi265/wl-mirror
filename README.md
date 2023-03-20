@@ -103,6 +103,7 @@ package manager:
 ## Dependencies
 
 - `CMake`
+- `pkg-config`
 - `libwayland-client`
 - `libwayland-egl`
 - `libEGL`
