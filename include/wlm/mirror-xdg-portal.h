@@ -56,8 +56,9 @@ typedef struct xdg_portal_mirror_backend {
 
     // general info
     uint32_t x, y, w, h;
-    uint32_t drm_format;
     uint32_t gl_format;
+    uint32_t drm_format;
+    uint64_t drm_modifier;
 
     // sd-bus state
     screencast_properties_t screencast_properties;
@@ -74,6 +75,9 @@ typedef struct xdg_portal_mirror_backend {
     // pipewire state
     int pw_fd;
     uint32_t pw_node_id;
+    uint32_t pw_major;
+    uint32_t pw_minor;
+    uint32_t pw_patch;
 
     struct pw_loop * pw_loop;
     struct pw_context * pw_context;
