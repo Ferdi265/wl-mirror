@@ -10,6 +10,8 @@
 #include "context.h"
 #include "mirror-xdg-portal.h"
 
+#define ARRAY_LENGTH(arr) ((sizeof ((arr))) / (sizeof ((arr)[0])))
+
 static void backend_fail_async(xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_BROKEN;
 }
@@ -846,8 +848,44 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
             backend_fail_async(backend);
             return;
         }
+        // TODO: remember format info
 
-        // TODO: remember param, do some format negotiation
+        uint32_t supported_buffer_types = (1 << SPA_DATA_MemPtr) | (1 << SPA_DATA_DmaBuf);
+        // TODO: figure out when to advertize DmaBuf
+
+        struct spa_pod_dynamic_builder pod_builder;
+        spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 0);
+
+        const struct spa_pod * params[] = {
+            // buffer options
+            spa_pod_builder_add_object(&pod_builder.b,
+                SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers,
+                SPA_PARAM_BUFFERS_dataType, SPA_POD_Int(supported_buffer_types)
+            ),
+            // meta header
+            spa_pod_builder_add_object(&pod_builder.b,
+                SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta,
+                SPA_PARAM_META_type, SPA_POD_Id(SPA_META_Header),
+                SPA_PARAM_META_size, SPA_POD_Int(sizeof (struct spa_meta_header))
+            ),
+            // region
+            spa_pod_builder_add_object(&pod_builder.b,
+                SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta,
+                SPA_PARAM_META_type, SPA_POD_Id(SPA_META_VideoCrop),
+                SPA_PARAM_META_size, SPA_POD_Int(sizeof (struct spa_meta_region))
+            ),
+            // transform
+            spa_pod_builder_add_object(&pod_builder.b,
+                SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta,
+                SPA_PARAM_META_type, SPA_POD_Id(SPA_META_VideoTransform),
+                SPA_PARAM_META_size, SPA_POD_Int(sizeof (struct spa_meta_videotransform))
+            ),
+        };
+
+        pw_stream_update_params(backend->pw_stream, params, ARRAY_LENGTH(params));
+        // TODO: remember that negotiation already happened
+
+        spa_pod_dynamic_builder_clean(&pod_builder);
     } else {
         log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): unknown param id = %d\n", id);
     }
