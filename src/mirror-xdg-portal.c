@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <poll.h>
+#include <spa/pod/dynamic.h>
+#include <spa/param/format-utils.h>
+#include <spa/param/video/raw-utils.h>
 #include "context.h"
 #include "mirror-xdg-portal.h"
 
@@ -754,30 +757,100 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
     const struct spa_pod ** params = NULL;
     uint32_t num_params = 0;
 
-    // TODO: actually create params before doing this
-    //pw_stream_connect(
-    //    backend->pw_stream, PW_DIRECTION_INPUT, backend->pw_node_id,
-    //    PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS,
-    //    params, num_params
-    //);
+    struct spa_pod_dynamic_builder pod_builder;
+    spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 0);
+
+    pw_stream_connect(
+        backend->pw_stream, PW_DIRECTION_INPUT, backend->pw_node_id,
+        PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS,
+        params, num_params
+    );
+
+    spa_pod_dynamic_builder_clean(&pod_builder);
 }
 
 static void on_pw_stream_process(void * data) {
     ctx_t * ctx = (ctx_t *)data;
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
-    // TODO: actually do something here
     log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): new video data\n");
 
-    (void)backend;
+    struct pw_buffer * buffer = NULL;
+    struct pw_buffer * next_buffer = NULL;
+    while ((next_buffer = pw_stream_dequeue_buffer(backend->pw_stream)) != NULL) {
+        if (buffer != NULL) {
+            pw_stream_queue_buffer(backend->pw_stream, buffer);
+        }
+
+        buffer = next_buffer;
+    }
+
+    if (buffer == NULL) {
+        log_warn("mirror-xdg-portal::on_pw_stream_process(): out of buffers\n");
+        return;
+    }
+
+    struct spa_buffer * spa_buffer = buffer->buffer;
+    struct spa_meta_header * meta = spa_buffer_find_meta_data(spa_buffer, SPA_META_Header, sizeof (struct spa_meta_header));
+    if (meta != NULL && (meta->flags & SPA_META_HEADER_FLAG_CORRUPTED) != 0) {
+        log_error("mirror-xdg-portal::on_pw_stream_process(): received corrupt buffer\n");
+        pw_stream_queue_buffer(backend->pw_stream, buffer);
+        return;
+    }
+
+    if (spa_buffer->datas[0].type == SPA_DATA_DmaBuf) {
+        log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): received DMA buf\n");
+
+        uint32_t planes = spa_buffer->n_datas;
+        // TODO: figure out format and import DMA BUF
+
+        log_error("mirror-xdg-portal::on_pw_stream_process(): DMA buffers not yet implemented\n");
+        backend_fail_async(backend);
+    } else if (spa_buffer->datas[0].type == SPA_DATA_MemPtr) {
+        log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): received SHM buf\n");
+
+        log_error("mirror-xdg-portal::on_pw_stream_process(): SHM buffers not yet implemented\n");
+        backend_fail_async(backend);
+    } else {
+        log_error("mirror-xdg-portal::on_pw_stream_process(): received unknown buffer type\n");
+        backend_fail_async(backend);
+    }
+
+    pw_stream_queue_buffer(backend->pw_stream, buffer);
 }
 
 static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod * param) {
     ctx_t * ctx = (ctx_t *)data;
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
-    // TODO: actually do something here
-    log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): id = %d, param = %p\n", id, param);
+    if (id == SPA_PARAM_Format) {
+        log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): format changed\n");
+
+        uint32_t media_type;
+        uint32_t media_subtype;
+        if (spa_format_parse(param, &media_type, &media_subtype) < 0) {
+            log_error("mirror-xdg-portal::on_pw_param_changed(): failed to parse SPA format\n");
+            backend_fail_async(backend);
+            return;
+        }
+
+        if (media_type != SPA_MEDIA_TYPE_video && media_subtype != SPA_MEDIA_SUBTYPE_raw) {
+            log_error("mirror-xdg-portal::on_pw_param_changed(): unsupported media type '%d.%d'\n", media_type, media_subtype);
+            backend_fail_async(backend);
+            return;
+        }
+
+        struct spa_video_info_raw info_raw;
+        if (spa_format_video_raw_parse(param, &info_raw) < 0) {
+            log_error("mirror-xdg-portal::on_pw_param_changed(): failed to parse SPA raw format\n");
+            backend_fail_async(backend);
+            return;
+        }
+
+        // TODO: remember param, do some format negotiation
+    } else {
+        log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): unknown param id = %d\n", id);
+    }
 
     (void)backend;
 }
@@ -786,8 +859,9 @@ static void on_pw_state_changed(void * data, enum pw_stream_state old, enum pw_s
     ctx_t * ctx = (ctx_t *)data;
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
-    // TODO: actually do something here
-    log_debug(ctx, "mirror-xdg-portal::on_pw_state_changed(): old = %d, new = %d, error = %s\n", old, new, error);
+    const char * old_s = pw_stream_state_as_string(old);
+    const char * new_s = pw_stream_state_as_string(new);
+    log_debug(ctx, "mirror-xdg-portal::on_pw_state_changed(): state = %s -> %s, error = %s\n", old_s, new_s, error);
 
     (void)backend;
 }
