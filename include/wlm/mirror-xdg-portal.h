@@ -56,6 +56,8 @@ typedef struct xdg_portal_mirror_backend {
 
     // general info
     uint32_t x, y, w, h;
+    uint32_t drm_format;
+    uint32_t gl_format;
 
     // sd-bus state
     screencast_properties_t screencast_properties;
