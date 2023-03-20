@@ -7,12 +7,60 @@
 #include <spa/pod/dynamic.h>
 #include <spa/param/format-utils.h>
 #include <spa/param/video/raw-utils.h>
+#include <libdrm/drm_fourcc.h>
 #include <wlm/context.h>
 #include <wlm/mirror-xdg-portal.h>
 #include <wlm/util.h>
 
 static void wlm_mirror_backend_fail_async(xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_BROKEN;
+}
+
+typedef struct {
+    uint32_t spa_format;
+    uint32_t drm_format;
+    GLint gl_format;
+} spa_drm_gl_format_t;
+
+static const spa_drm_gl_format_t spa_drm_gl_formats[] = {
+    {
+        .spa_format = SPA_VIDEO_FORMAT_BGRA,
+        .drm_format = DRM_FORMAT_ARGB8888,
+        .gl_format = GL_BGRA_EXT,
+    },
+    {
+        .spa_format = SPA_VIDEO_FORMAT_RGBA,
+        .drm_format = DRM_FORMAT_ABGR8888,
+        .gl_format = GL_RGBA,
+    },
+    {
+        .spa_format = SPA_VIDEO_FORMAT_BGRx,
+        .drm_format = DRM_FORMAT_XRGB8888,
+        .gl_format = GL_BGR_EXT,
+    },
+    {
+        .spa_format = SPA_VIDEO_FORMAT_RGBx,
+        .drm_format = DRM_FORMAT_XBGR8888,
+        .gl_format = GL_RGB,
+    },
+    {
+        .spa_format = -1U,
+        .drm_format = -1U,
+        .gl_format = -1U
+    }
+};
+
+static const spa_drm_gl_format_t * spa_drm_gl_format_from_spa(uint32_t spa_format) {
+    const spa_drm_gl_format_t * format = spa_drm_gl_formats;
+    while (format->spa_format != -1U) {
+        if (format->spa_format == spa_format) {
+            return format;
+        }
+
+        format++;
+    }
+
+    return NULL;
 }
 
 static int token_counter;
@@ -871,7 +919,15 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
             wlm_mirror_backend_fail_async(backend);
             return;
         }
-        // TODO: remember format info
+
+        const spa_drm_gl_format_t * format = spa_drm_gl_format_from_spa(info_raw.format);
+        if (format == NULL) {
+            wlm_log_error("mirror-xdg-portal::on_pw_param_changed(): unsupported SPA format '%d'\n", info_raw.format);
+            wlm_mirror_backend_fail_async(backend);
+            return;
+        }
+        backend->drm_format = format->drm_format;
+        backend->gl_format = format->gl_format;
 
         uint32_t supported_buffer_types = (1 << SPA_DATA_MemPtr) | (1 << SPA_DATA_DmaBuf);
         // TODO: figure out when to advertize DmaBuf
