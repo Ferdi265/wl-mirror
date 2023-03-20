@@ -787,16 +787,24 @@ static void on_pw_stream_process(void * data) {
     }
 
     if (buffer == NULL) {
-        wlm_log_warn("mirror-xdg-portal::on_pw_stream_process(): out of buffers\n");
+        wlm_log_error("mirror-xdg-portal::on_pw_stream_process(): out of buffers\n");
+        wlm_mirror_backend_fail_async(backend);
         return;
     }
 
     struct spa_buffer * spa_buffer = buffer->buffer;
-    struct spa_meta_header * meta = spa_buffer_find_meta_data(spa_buffer, SPA_META_Header, sizeof (struct spa_meta_header));
-    if (meta != NULL && (meta->flags & SPA_META_HEADER_FLAG_CORRUPTED) != 0) {
-        wlm_log_error("mirror-xdg-portal::on_pw_stream_process(): received corrupt buffer\n");
-        pw_stream_queue_buffer(backend->pw_stream, buffer);
-        return;
+    struct spa_meta_header * meta = spa_buffer_find_meta_data(spa_buffer,
+        SPA_META_Header, sizeof (struct spa_meta_header)
+    );
+    if (meta != NULL) {
+        wlm_log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): received meta header\n");
+
+        if ((meta->flags & SPA_META_HEADER_FLAG_CORRUPTED) != 0) {
+            wlm_log_error("mirror-xdg-portal::on_pw_stream_process(): received corrupt buffer\n");
+            pw_stream_queue_buffer(backend->pw_stream, buffer);
+            wlm_mirror_backend_fail_async(backend);
+            return;
+        }
     }
 
     if (spa_buffer->datas[0].type == SPA_DATA_DmaBuf) {
@@ -815,6 +823,22 @@ static void on_pw_stream_process(void * data) {
     } else {
         wlm_log_error("mirror-xdg-portal::on_pw_stream_process(): received unknown buffer type\n");
         wlm_mirror_backend_fail_async(backend);
+    }
+
+    struct spa_meta_region * region = spa_buffer_find_meta_data(spa_buffer,
+        SPA_META_VideoCrop, sizeof (struct spa_meta_region)
+    );
+    if (region != NULL && spa_meta_region_is_valid(region)) {
+        wlm_log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): received meta region\n");
+        // TODO: handle region
+    }
+
+    struct spa_meta_videotransform * transform = spa_buffer_find_meta_data(spa_buffer,
+        SPA_META_VideoTransform, sizeof (struct spa_meta_videotransform)
+    );
+    if (transform != NULL) {
+        wlm_log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): received meta transform\n");
+        // TODO: handle transform
     }
 
     pw_stream_queue_buffer(backend->pw_stream, buffer);
