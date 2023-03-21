@@ -945,13 +945,7 @@ static void on_pw_stream_process(void * data) {
         free(dmabuf.strides);
         ctx->egl.format = backend->gl_format;
         ctx->egl.texture_region_aware = false;
-        ctx->egl.texture_initialized = true;
-
-        if (dmabuf.width != ctx->egl.width || dmabuf.height != ctx->egl.height) {
-            ctx->egl.width = dmabuf.width;
-            ctx->egl.height = dmabuf.height;
-            resize_viewport(ctx);
-        }
+        ctx->mirror.invert_y = false;
 
         backend->header.fail_count = 0;
     } else if (spa_buffer->datas[0].type == SPA_DATA_MemPtr) {

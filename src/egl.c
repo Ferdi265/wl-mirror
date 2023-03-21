@@ -532,9 +532,17 @@ bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
     // convert EGLImage to GL texture
     glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
     ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, frame_image);
+    ctx->egl.texture_initialized = true;
 
     // destroy temporary image
     eglDestroyImage(ctx->egl.display, frame_image);
+
+    // set texture size and aspect ratio only if changed
+    if (dmabuf->width != ctx->egl.width || dmabuf->height != ctx->egl.height) {
+        ctx->egl.width = dmabuf->width;
+        ctx->egl.height = dmabuf->height;
+        resize_viewport(ctx);
+    }
 
     return true;
 }
