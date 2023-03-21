@@ -106,6 +106,10 @@ static void on_frame(
     backend->dmabuf.drm_format = format;
     backend->dmabuf.planes = num_objects;
 
+    log_debug(ctx, "mirror-dmabuf::on_frame(): w=%d h=%d gl_format=%x drm_format=%08x drm_modifier=%016lx\n",
+        backend->dmabuf.width, backend->dmabuf.height, GL_RGB8_OES, backend->dmabuf.drm_format, backend->dmabuf_modifier
+    );
+
     for (size_t i = 0; i < num_objects; i++) {
         backend->dmabuf.fds[i] = -1;
     }
@@ -125,7 +129,9 @@ static void on_object(
     ctx_t * ctx = (ctx_t *)data;
     dmabuf_mirror_backend_t * backend = (dmabuf_mirror_backend_t *)ctx->mirror.backend;
 
-    log_debug(ctx, "mirror-dmabuf::on_object(): received %d byte object with plane_index %d\n", size, plane_index);
+    log_debug(ctx, "mirror-dmabuf::on_object(): fd=%d offset=% 10d stride=% 10d\n",
+        fd, offset, stride
+    );
     if (backend->state != STATE_WAIT_OBJECTS) {
         log_error("mirror-dmabuf::on_object(): got object while in state %d\n", backend->state);
         close(fd);
@@ -138,6 +144,7 @@ static void on_object(
         return;
     }
 
+
     backend->dmabuf.fds[index] = fd;
     backend->dmabuf.offsets[index] = offset;
     backend->dmabuf.strides[index] = stride;
@@ -149,6 +156,8 @@ static void on_object(
     }
 
     (void)frame;
+    (void)size;
+    (void)plane_index;
 }
 
 static void on_ready(
