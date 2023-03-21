@@ -840,6 +840,11 @@ static void on_pw_stream_process(void * data) {
     ctx_t * ctx = (ctx_t *)data;
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
+    if (backend->state != STATE_RUNNING) {
+        log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): called while not running\n");
+        return;
+    }
+
     log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): new video data\n");
 
     struct pw_buffer * buffer = NULL;
@@ -982,6 +987,11 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
     ctx_t * ctx = (ctx_t *)data;
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
+    if (backend->state != STATE_RUNNING && backend->state != STATE_PW_CREATE_STREAM) {
+        log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): called while not running\n");
+        return;
+    }
+
     if (id == SPA_PARAM_Format) {
         log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): format changed\n");
 
@@ -1054,9 +1064,11 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
         };
 
         pw_stream_update_params(backend->pw_stream, params, ARRAY_LENGTH(params));
-        // TODO: remember that negotiation already happened
 
         spa_pod_dynamic_builder_clean(&pod_builder);
+
+        // TODO: remember that negotiation already happened
+        backend->state = STATE_RUNNING;
     } else {
         log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): unknown param id = %d\n", id);
     }
@@ -1091,6 +1103,8 @@ static void do_capture(ctx_t * ctx) {
 
 static void do_cleanup(ctx_t * ctx) {
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
+
+    backend->state = STATE_BROKEN;
 
     log_debug(ctx, "mirror-xdg-portal::do_cleanup(): destroying mirror-xdg-portal objects\n");
 
