@@ -162,6 +162,7 @@ void init_stream(ctx_t * ctx) {
     ctx->stream.event_handler.fd = STDIN_FILENO;
     ctx->stream.event_handler.events = EPOLLIN;
     ctx->stream.event_handler.on_event = on_stream_data;
+    ctx->stream.event_handler.on_each = NULL;
     ctx->stream.event_handler.next = NULL;
 
     if (ctx->opt.stream) {
