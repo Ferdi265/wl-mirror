@@ -289,8 +289,7 @@ static void on_ready(
     screencopy_mirror_backend_t * backend = (screencopy_mirror_backend_t *)ctx->mirror.backend;
 
     if (ctx->opt.verbose) {
-        log_debug(ctx, "mirror-screencopy::on_ready(): received ready event with");
-        fprintf(stderr, "width: %d, height: %d, stride: %d, format: %c%c%c%c\n",
+        log_debug(ctx, "mirror-screencopy::on_ready(): received ready event with width: %d, height: %d, stride: %d, format: %c%c%c%c\n",
             backend->frame_width, backend->frame_height,
             backend->frame_stride,
             (backend->frame_format >> 24) & 0xff,
