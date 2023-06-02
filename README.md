@@ -100,6 +100,15 @@ package manager:
 - Gentoo GURU: [gui-apps/wl-mirror](https://github.com/gentoo-mirror/guru/tree/master/gui-apps/wl-mirror)
 - LiGurOS: [gui-apps/wl-mirror](https://gitlab.com/liguros/liguros-repo/-/tree/develop/gui-apps/wl-mirror)
 
+## Supported Wayland Compositors
+
+`wl-mirror` should work on all Wayland compositors based on wlroots, such as
+sway or hyprland.
+
+`wl-mirror` currently does not work on KDE and Gnome, due to `wl-mirror` not
+supporting the XDG Desktop Portal screen sharing protocol. This is being worked
+on (see issues #16 and #17).
+
 ## Dependencies
 
 - `CMake`
