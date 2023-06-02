@@ -107,7 +107,8 @@ sway or hyprland.
 
 `wl-mirror` currently does not work on KDE and Gnome, due to `wl-mirror` not
 supporting the XDG Desktop Portal screen sharing protocol. This is being worked
-on (see issues #16 and #17).
+on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
+[#17](https://github.com/Ferdi265/wl-mirror/issues/17)).
 
 ## Dependencies
 
