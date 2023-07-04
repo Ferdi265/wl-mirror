@@ -103,8 +103,13 @@ static void on_frame(
     backend->dmabuf.drm_format = format;
     backend->dmabuf.planes = num_objects;
 
-    log_debug(ctx, "mirror-dmabuf::on_frame(): w=%d h=%d gl_format=%x drm_format=%08x drm_modifier=%016lx\n",
-        backend->dmabuf.width, backend->dmabuf.height, GL_RGB8_OES, backend->dmabuf.drm_format, backend->dmabuf.modifier
+    log_debug(ctx, "mirror-dmabuf::on_frame(): w=%d h=%d gl_format=%x drm_format=%c%c%c%c drm_modifier=%016lx\n",
+        backend->dmabuf.width, backend->dmabuf.height, GL_RGB8_OES,
+        (backend->dmabuf.drm_format >> 0) & 0xFF,
+        (backend->dmabuf.drm_format >> 8) & 0xFF,
+        (backend->dmabuf.drm_format >> 16) & 0xFF,
+        (backend->dmabuf.drm_format >> 24) & 0xFF,
+        backend->dmabuf.modifier
     );
 
     for (size_t i = 0; i < num_objects; i++) {

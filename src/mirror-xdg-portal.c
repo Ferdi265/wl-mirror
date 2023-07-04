@@ -827,6 +827,8 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
     struct spa_pod_dynamic_builder pod_builder;
     spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 0);
 
+    // TODO: video format options???
+
     pw_stream_connect(
         backend->pw_stream, PW_DIRECTION_INPUT, backend->pw_node_id,
         PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS,
@@ -888,8 +890,13 @@ static void on_pw_stream_process(void * data) {
             return;
         }
 
-        log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): w=%d h=%d gl_format=%x drm_format=%08x drm_modifier=%016lx\n",
-            backend->w, backend->h, backend->gl_format, backend->drm_format, backend->drm_modifier
+        log_debug(ctx, "mirror-xdg-portal::on_pw_stream_process(): w=%d h=%d gl_format=%x drm_format=%c%c%c%c drm_modifier=%016lx\n",
+            backend->w, backend->h, backend->gl_format,
+            (backend->drm_format >> 0) & 0xFF,
+            (backend->drm_format >> 8) & 0xFF,
+            (backend->drm_format >> 16) & 0xFF,
+            (backend->drm_format >> 24) & 0xFF,
+            backend->drm_modifier
         );
 
         dmabuf_t dmabuf;
@@ -1021,6 +1028,19 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
         }
         backend->gl_format = format->gl_format;
         backend->drm_format = format->drm_format;
+
+        log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): w=%d h=%d gl_format=%x drm_format=%c%c%c%c drm_modifier=%016lx\n",
+            backend->w, backend->h, backend->gl_format,
+            (backend->drm_format >> 0) & 0xFF,
+            (backend->drm_format >> 8) & 0xFF,
+            (backend->drm_format >> 16) & 0xFF,
+            (backend->drm_format >> 24) & 0xFF,
+            backend->drm_modifier
+        );
+
+        log_debug(ctx, "mirror-xdg-portal::on_pw_param_changed(): spa_format=%d framerate=%d/%d\n",
+            info_raw.format, info_raw.framerate.num, info_raw.framerate.denom
+        );
 
         uint32_t supported_buffer_types = (1 << SPA_DATA_MemPtr);
         bool has_modifier = spa_pod_find_prop(param, NULL, SPA_FORMAT_VIDEO_modifier) != NULL;
