@@ -6,7 +6,7 @@ wl-present - an interactive client for *wl-mirror*(1)
 
 # SYNOPSIS
 
-*wl-present* [help|mirror|set-output|set-region|set-scaling|custom] [args...]
+*wl-present* <COMMAND> [args...]
 
 # DESCRIPTION
 
@@ -30,6 +30,11 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 
 *set-scaling* [SCALING]
 	Set the scaling mode of a running *wl-present* session. If no region is given, *rofi*(1) or *dmenu*(1) is used to select a scaling mode.
+
+*freeze*
+*unfreeze*
+*toggle-freeze*
+	Set the freeze state of a running *wl-present* session.
 
 *custom* [OPTIONS]
 	Send custom options to a running *wl-present* session. If no options are given, *rofi*(1) or *dmenu*(1) are used to select an option.
