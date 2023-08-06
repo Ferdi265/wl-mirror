@@ -31,8 +31,8 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 *set-scaling* [SCALING]
 	Set the scaling mode of a running *wl-present* session. If no region is given, *rofi*(1) or *dmenu*(1) is used to select a scaling mode.
 
-*freeze*
-*unfreeze*
+*freeze*,
+*unfreeze*,
 *toggle-freeze*
 	Set the freeze state of a running *wl-present* session.
 
