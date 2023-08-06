@@ -6,7 +6,7 @@ wl-mirror - a simple Wayland output mirror client
 
 # SYNOPSIS
 
-*wl-mirror* [-h,-V,-v,-c,-i,-s S,-b B,-t T,-r R,-S] <output>
+*wl-mirror* [-h,-V,-v,-c,-i,-f,-s S,-b B,-t T,-r R,-S] <output>
 
 # OPTIONS
 
@@ -27,6 +27,11 @@ wl-mirror - a simple Wayland output mirror client
 *-i, --invert-colors*
 *    --no-invert-colors*
 	Invert colors on the mirrored surface.
+
+*-f, --freeze*
+*    --unfreeze*
+*    --toggle-freeze*
+	Freeze, unfreeze, or toggle freezing of the current image on the screen.
 
 *-s l, --scaling linear*
 	Use linear scaling (enabled by default).
