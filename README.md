@@ -90,8 +90,8 @@ package manager:
 
 - Arch Linux: `pacman -S wl-mirror`
 - Fedora: `dnf install wl-mirror`
-- Ubuntu: .deb file download in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/), official package in progress
-- Debian: `apt install wl-mirror` in unstable, .deb file download for bookworm in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/) 
+- Ubuntu: `apt install wl-mirror` in mantic (23.10), .deb file download for jammy (22.04) in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/)
+- Debian: `apt install wl-mirror` in unstable, .deb file download for bookworm (12) in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/)
 - Alpine Linux: `apk add wl-mirror wl-mirror-doc`
 - NixOS: `nix profile install nixpkgs#wl-mirror`
 - Void Linux: `xbps-install -S wl-mirror`
