@@ -8,14 +8,30 @@
 
 static void dmabuf_frame_cleanup(dmabuf_mirror_backend_t * backend) {
     // destroy dmabuf frame object
-    zwlr_export_dmabuf_frame_v1_destroy(backend->dmabuf_frame);
-    backend->dmabuf_frame = NULL;
+    if (backend->dmabuf_frame != NULL) {
+        zwlr_export_dmabuf_frame_v1_destroy(backend->dmabuf_frame);
+        backend->dmabuf_frame = NULL;
+    }
 
     // close dmabuf file descriptors
-    for (unsigned int i = 0; i < backend->num_objects; i++) {
-        if (backend->objects[i].fd != -1) close(backend->objects[i].fd);
-        backend->objects[i].fd = -1;
+    for (unsigned int i = 0; i < backend->dmabuf.planes; i++) {
+        if (backend->dmabuf.fds[i] != -1) close(backend->dmabuf.fds[i]);
     }
+
+    free(backend->dmabuf.fds);
+    free(backend->dmabuf.offsets);
+    free(backend->dmabuf.strides);
+    free(backend->dmabuf.modifiers);
+
+    backend->dmabuf_modifier = 0;
+    backend->dmabuf.width = 0;
+    backend->dmabuf.height = 0;
+    backend->dmabuf.drm_format = 0;
+    backend->dmabuf.planes = 0;
+    backend->dmabuf.fds = NULL;
+    backend->dmabuf.offsets = NULL;
+    backend->dmabuf.strides = NULL;
+    backend->dmabuf.modifiers = NULL;
 }
 
 static void backend_cancel(dmabuf_mirror_backend_t * backend) {
@@ -42,8 +58,8 @@ static void on_frame(
         log_error("mirror-dmabuf::on_frame(): got frame while in state %d\n", backend->state);
         backend_cancel(backend);
         return;
-    } else if (num_objects > 4) {
-        log_error("mirror-dmabuf::on_frame(): got frame with more than 4 objects\n");
+    } else if (num_objects > MAX_PLANES) {
+        log_error("mirror-dmabuf::on_frame(): got frame with more than %d objects\n", MAX_PLANES);
         backend_cancel(backend);
         return;
     }
@@ -68,17 +84,31 @@ static void on_frame(
         fprintf(stderr, "}\n");
     }
 
+    backend->dmabuf.planes = 0;
+    backend->dmabuf.fds = malloc(num_objects * sizeof (int));
+    backend->dmabuf.offsets = malloc(num_objects * sizeof (uint32_t));
+    backend->dmabuf.strides = malloc(num_objects * sizeof (uint32_t));
+    backend->dmabuf.modifiers = malloc(num_objects * sizeof (uint64_t));
+    if (backend->dmabuf.fds == NULL || backend->dmabuf.offsets == NULL || backend->dmabuf.modifiers == NULL) {
+        log_error("mirror-dmabuf::on_frame(): failed to allocate dmabuf storage\n");
+        backend_cancel(backend);
+        return;
+    }
+
     // save dmabuf frame info
-    backend->width = width;
-    backend->height = height;
     backend->x = x;
     backend->y = y;
     backend->buffer_flags = buffer_flags;
     backend->frame_flags = frame_flags;
-    backend->format = format;
-    backend->modifier_high = mod_high;
-    backend->modifier_low = mod_low;
-    backend->num_objects = num_objects;
+    backend->dmabuf_modifier = ((uint64_t)mod_high << 32) | mod_low;
+    backend->dmabuf.width = width;
+    backend->dmabuf.height = height;
+    backend->dmabuf.drm_format = format;
+    backend->dmabuf.planes = num_objects;
+
+    for (size_t i = 0; i < num_objects; i++) {
+        backend->dmabuf.fds[i] = -1;
+    }
 
     // update dmabuf frame state machine
     backend->state = STATE_WAIT_OBJECTS;
@@ -101,21 +131,20 @@ static void on_object(
         close(fd);
         backend_cancel(backend);
         return;
-    } else if (index >= backend->num_objects) {
+    } else if (index >= backend->dmabuf.planes) {
         log_error("mirror-dmabuf::on_object(): got object with out-of-bounds index %d\n", index);
         close(fd);
         backend_cancel(backend);
         return;
     }
 
-    backend->objects[index].fd = fd;
-    backend->objects[index].size = size;
-    backend->objects[index].offset = offset;
-    backend->objects[index].stride = stride;
-    backend->objects[index].plane_index = plane_index;
+    backend->dmabuf.fds[index] = fd;
+    backend->dmabuf.offsets[index] = offset;
+    backend->dmabuf.strides[index] = stride;
+    backend->dmabuf.modifiers[index] = backend->dmabuf_modifier;
 
     backend->processed_objects++;
-    if (backend->processed_objects == backend->num_objects) {
+    if (backend->processed_objects == backend->dmabuf.planes) {
         backend->state = STATE_WAIT_READY;
     }
 
@@ -136,88 +165,14 @@ static void on_ready(
         return;
     }
 
-    // create attribute array for EGLCreateImage from dmabuf
-    int i = 0;
-    EGLAttrib image_attribs[6 + 10 * 4 + 1];
-
-    image_attribs[i++] = EGL_WIDTH;
-    image_attribs[i++] = backend->width;
-    image_attribs[i++] = EGL_HEIGHT;
-    image_attribs[i++] = backend->height;
-    image_attribs[i++] = EGL_LINUX_DRM_FOURCC_EXT;
-    image_attribs[i++] = backend->format;
-
-    if (backend->num_objects >= 1) {
-        image_attribs[i++] = EGL_DMA_BUF_PLANE0_FD_EXT;
-        image_attribs[i++] = backend->objects[0].fd;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE0_OFFSET_EXT;
-        image_attribs[i++] = backend->objects[0].offset;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE0_PITCH_EXT;
-        image_attribs[i++] = backend->objects[0].stride;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT;
-        image_attribs[i++] = backend->modifier_low;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT;
-        image_attribs[i++] = backend->modifier_high;
+    if (!dmabuf_to_texture(ctx, &backend->dmabuf)) {
+        log_error("mirror-dmabuf::on_ready(): failed to import dmabuf\n");
+        backend_cancel(backend);
     }
 
-    if (backend->num_objects >= 2) {
-        image_attribs[i++] = EGL_DMA_BUF_PLANE1_FD_EXT;
-        image_attribs[i++] = backend->objects[1].fd;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE1_OFFSET_EXT;
-        image_attribs[i++] = backend->objects[1].offset;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE1_PITCH_EXT;
-        image_attribs[i++] = backend->objects[1].stride;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT;
-        image_attribs[i++] = backend->modifier_low;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT;
-        image_attribs[i++] = backend->modifier_high;
-    }
-
-    if (backend->num_objects >= 3) {
-        image_attribs[i++] = EGL_DMA_BUF_PLANE2_FD_EXT;
-        image_attribs[i++] = backend->objects[2].fd;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE2_OFFSET_EXT;
-        image_attribs[i++] = backend->objects[2].offset;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE2_PITCH_EXT;
-        image_attribs[i++] = backend->objects[2].stride;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT;
-        image_attribs[i++] = backend->modifier_low;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT;
-        image_attribs[i++] = backend->modifier_high;
-    }
-
-    if (backend->num_objects >= 4) {
-        image_attribs[i++] = EGL_DMA_BUF_PLANE3_FD_EXT;
-        image_attribs[i++] = backend->objects[3].fd;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE3_OFFSET_EXT;
-        image_attribs[i++] = backend->objects[3].offset;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE3_PITCH_EXT;
-        image_attribs[i++] = backend->objects[3].stride;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT;
-        image_attribs[i++] = backend->modifier_low;
-        image_attribs[i++] = EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT;
-        image_attribs[i++] = backend->modifier_high;
-    }
-
-    image_attribs[i++] = EGL_NONE;
-
-    // create EGLImage from dmabuf with attribute array
-    EGLImage frame_image = eglCreateImage(ctx->egl.display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
-    if (frame_image == EGL_NO_IMAGE) {
-        log_error("mirror-dmabuf::on_ready(): failed to create EGL image from dmabuf\n");
-        backend_fail(ctx);
-        return;
-    }
-
-    // convert EGLImage to GL texture
-    glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
-    ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, frame_image);
     ctx->egl.format = GL_RGB8_OES; // FIXME: find out actual format
     ctx->egl.texture_region_aware = false;
     ctx->egl.texture_initialized = true;
-
-    // destroy temporary EGLImage
-    eglDestroyImage(ctx->egl.display, frame_image);
 
     // set buffer flags only if changed
     bool invert_y = backend->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
@@ -227,9 +182,9 @@ static void on_ready(
     }
 
     // set texture size and aspect ratio only if changed
-    if (backend->width != ctx->egl.width || backend->height != ctx->egl.height) {
-        ctx->egl.width = backend->width;
-        ctx->egl.height = backend->height;
+    if (backend->dmabuf.width != ctx->egl.width || backend->dmabuf.height != ctx->egl.height) {
+        ctx->egl.width = backend->dmabuf.width;
+        ctx->egl.height = backend->dmabuf.height;
         resize_viewport(ctx);
     }
 
@@ -293,28 +248,11 @@ static void do_capture(ctx_t * ctx) {
 
     if (backend->state == STATE_READY || backend->state == STATE_CANCELED) {
         // clear frame state for next frame
-        backend->width = 0;
-        backend->height = 0;
         backend->x = 0;
         backend->y = 0;
         backend->buffer_flags = 0;
         backend->frame_flags = 0;
-        backend->modifier_high = 0;
-        backend->modifier_low = 0;
-        backend->format = 0;
-        backend->num_objects = 0;
-
-        dmabuf_object_t empty_obj = {
-            .fd = -1,
-            .size = 0,
-            .offset = 0,
-            .stride = 0,
-            .plane_index = 0
-        };
-        backend->objects[0] = empty_obj;
-        backend->objects[1] = empty_obj;
-        backend->objects[2] = empty_obj;
-        backend->objects[3] = empty_obj;
+        dmabuf_frame_cleanup(backend);
 
         backend->state = STATE_WAIT_FRAME;
         backend->processed_objects = 0;
@@ -343,13 +281,7 @@ static void do_cleanup(ctx_t * ctx) {
     dmabuf_mirror_backend_t * backend = (dmabuf_mirror_backend_t *)ctx->mirror.backend;
 
     log_debug(ctx, "mirror-dmabuf::do_cleanup(): destroying mirror-dmabuf objects\n");
-
-    if (backend->dmabuf_frame != NULL) zwlr_export_dmabuf_frame_v1_destroy(backend->dmabuf_frame);
-
-    for (int i = 0; i < 4; i++) {
-        if (backend->objects[i].fd != -1) close(backend->objects[i].fd);
-        backend->objects[i].fd = -1;
-    }
+    dmabuf_frame_cleanup(backend);
 
     free(backend);
     ctx->mirror.backend = NULL;
@@ -378,28 +310,19 @@ void init_mirror_dmabuf(ctx_t * ctx) {
 
     backend->dmabuf_frame = NULL;
 
-    backend->width = 0;
-    backend->height = 0;
     backend->x = 0;
     backend->y = 0;
     backend->buffer_flags = 0;
     backend->frame_flags = 0;
-    backend->modifier_high = 0;
-    backend->modifier_low = 0;
-    backend->format = 0;
-    backend->num_objects = 0;
-
-    dmabuf_object_t empty_obj = {
-        .fd = -1,
-        .size = 0,
-        .offset = 0,
-        .stride = 0,
-        .plane_index = 0
-    };
-    backend->objects[0] = empty_obj;
-    backend->objects[1] = empty_obj;
-    backend->objects[2] = empty_obj;
-    backend->objects[3] = empty_obj;
+    backend->dmabuf_modifier = 0;
+    backend->dmabuf.width = 0;
+    backend->dmabuf.height = 0;
+    backend->dmabuf.drm_format = 0;
+    backend->dmabuf.planes = 0;
+    backend->dmabuf.fds = NULL;
+    backend->dmabuf.offsets = NULL;
+    backend->dmabuf.strides = NULL;
+    backend->dmabuf.modifiers = NULL;
 
     backend->state = STATE_READY;
     backend->processed_objects = 0;
