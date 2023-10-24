@@ -59,6 +59,7 @@ backends:
   - extcopy             use the ext-image-copy-capture-v1 protocol to capture outputs (auto)
   - extcopy-dmabuf      use the ext-image-copy-capture-v1 protocol to capture outputs (via DMA-BUF)
   - extcopy-shm         use the ext-image-copy-capture-v1 protocol to capture outputs (via SHM)
+  - xdg-portal  use xdg-desktop-portal and pipewire to capture outputs or windows (WIP)
 
 transforms:
   transforms are specified as a dash-separated list of flips followed by a rotation
@@ -184,6 +185,8 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `libdecor` (see `WITH_LIBDECOR`)
 - `libgbm` (see `WITH_GBM`)
 - `libdrm` (see `WITH_GBM`)
+- `libsystemd` (for xdg-desktop-portal backend, see `WITH_XDG_PORTAL_BACKEND`)
+- `libpipewire-0.3` (for xdg-desktop-portal backend, see `WITH_XDG_PORTAL_BACKEND`)
 - `wayland-scanner`
 - `scdoc` (for manual pages, see `INSTALL_DOCUMENTATION`)
 
@@ -211,6 +214,7 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `FORCE_WAYLAND_SCANNER_PATH`: always use the provided path for wayland-scanner, do not use pkg-config (default empty)
 - `FORCE_SYSTEM_WL_PROTOCOLS`: always use system-installed wayland-protocols, do not use submodules (default `OFF`)
 - `FORCE_SYSTEM_WLR_PROTOCOLS`: always use system-installed wlr-protocols, do not use submodules (default `OFF`)
+- `WITH_XDG_PORTAL_BACKEND`: enable the xdg-desktop-portal and pipewire screen capture backend (default `OFF`)
 - `WL_PROTOCOL_DIR`: directory where system-installed wayland-protocols are located (default `/usr/share/wayland-protocols`)
 - `WLR_PROTOCOL_DIR`: directory where system-installed wlr-protocols are located (default `/usr/share/wlr-protocols`)
 
@@ -228,6 +232,7 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `src/mirror-export-dmabuf.c`: wlr-export-dmabuf-unstable-v1 backend code
 - `src/mirror-screencopy.c`: wlr-screencopy-unstable-v1 backend code
 - `src/mirror-extcopy.c`: ext-image-copy-capture-v1 backend code
+- `src/mirror-xdg-portal.c`: xdg-desktop-portal and pipewire backend code (WIP)
 - `src/transform.c`: matrix transformation code
 - `src/event.c`: event loop
 - `src/stream.c`: asynchronous option stream input
