@@ -12,6 +12,7 @@ set(FORCE_WAYLAND_SCANNER_PATH "" CACHE STRING "provide a custom path for waylan
 # wayland protocols needed by wl-mirror
 option(FORCE_SYSTEM_WL_PROTOCOLS "force use of system wayland-protocols" OFF)
 option(FORCE_SYSTEM_WLR_PROTOCOLS "force use of system wlr-protocols" OFF)
+option(WITH_XDG_PORTAL_BACKEND "enable the xdg-desktop-portal / pipewire backend" OFF)
 set(WL_PROTOCOL_DIR "/usr/share/wayland-protocols/" CACHE STRING "wayland-protocols directory")
 set(WLR_PROTOCOL_DIR "/usr/share/wlr-protocols/" CACHE STRING "wlr-protocols directory")
 set(PROTOCOLS
@@ -19,6 +20,7 @@ set(PROTOCOLS
     "stable/viewporter/viewporter.xml"
     "staging/fractional-scale/fractional-scale-v1.xml"
     "unstable/xdg-output/xdg-output-unstable-v1.xml"
+    "unstable/xdg-foreign/xdg-foreign-unstable-v2.xml"
     "unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
     "unstable/wlr-export-dmabuf-unstable-v1.xml"
     "unstable/wlr-screencopy-unstable-v1.xml"
