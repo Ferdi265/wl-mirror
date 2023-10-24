@@ -118,6 +118,7 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `libwayland-egl`
 - `libEGL`
 - `libGLESv2`
+- `epoll-shim` (on systems that do not have `epoll`, e.g. FreeBSD)
 - `wayland-scanner`
 - `scdoc` (for manual pages, see `INSTALL_DOCUMENTATION`)
 
