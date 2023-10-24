@@ -10,6 +10,19 @@
 
 struct ctx;
 
+#define MAX_PLANES 4
+typedef struct {
+    uint32_t width;
+    uint32_t height;
+    uint32_t drm_format;
+    size_t planes;
+
+    int * fds;
+    uint32_t * offsets;
+    uint32_t * strides;
+    uint64_t * modifiers;
+} dmabuf_t;
+
 typedef struct ctx_egl {
     EGLDisplay display;
     EGLContext context;
@@ -47,6 +60,7 @@ void resize_viewport(struct ctx * ctx);
 void resize_window(struct ctx * ctx);
 void update_uniforms(struct ctx * ctx);
 void freeze_framebuffer(struct ctx * ctx);
+bool dmabuf_to_texture(struct ctx * ctx, dmabuf_t * dmabuf);
 
 void cleanup_egl(struct ctx * ctx);
 

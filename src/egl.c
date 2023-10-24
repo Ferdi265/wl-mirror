@@ -1,12 +1,17 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <libdrm/drm_fourcc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "context.h"
+#include "egl.h"
 #include "transform.h"
 #include "glsl_vertex_shader.h"
 #include "glsl_fragment_shader.h"
+#include "util.h"
 
 // --- buffers ---
 
@@ -110,7 +115,7 @@ void init_egl(ctx_t * ctx) {
     }
 
     // create egl surface
-    ctx->egl.surface = eglCreateWindowSurface(ctx->egl.display, ctx->egl.config, ctx->egl.window, NULL);
+    ctx->egl.surface = eglCreateWindowSurface(ctx->egl.display, ctx->egl.config, (EGLNativeWindowType)ctx->egl.window, NULL);
 
     // create egl context with support for OpenGL ES 2.0
     EGLint context_attribs[] = {
@@ -405,6 +410,105 @@ void freeze_framebuffer(struct ctx * ctx) {
     glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
     glCopyTexImage2D(GL_TEXTURE_2D, 0, ctx->egl.format, 0, 0, ctx->egl.width, ctx->egl.height, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+// --- dmabuf_to_texture ---
+
+static const EGLAttrib fd_attribs[] = {
+    EGL_DMA_BUF_PLANE0_FD_EXT,
+    EGL_DMA_BUF_PLANE1_FD_EXT,
+    EGL_DMA_BUF_PLANE2_FD_EXT,
+    EGL_DMA_BUF_PLANE3_FD_EXT
+};
+_Static_assert(ARRAY_LENGTH(fd_attribs) == MAX_PLANES, "fd_attribs has incorrect length");
+
+static const EGLAttrib offset_attribs[] = {
+    EGL_DMA_BUF_PLANE0_OFFSET_EXT,
+    EGL_DMA_BUF_PLANE1_OFFSET_EXT,
+    EGL_DMA_BUF_PLANE2_OFFSET_EXT,
+    EGL_DMA_BUF_PLANE3_OFFSET_EXT
+};
+_Static_assert(ARRAY_LENGTH(offset_attribs) == MAX_PLANES, "offset_attribs has incorrect length");
+
+static const EGLAttrib stride_attribs[] = {
+    EGL_DMA_BUF_PLANE0_PITCH_EXT,
+    EGL_DMA_BUF_PLANE1_PITCH_EXT,
+    EGL_DMA_BUF_PLANE2_PITCH_EXT,
+    EGL_DMA_BUF_PLANE3_PITCH_EXT
+};
+_Static_assert(ARRAY_LENGTH(stride_attribs) == MAX_PLANES, "stride_attribs has incorrect length");
+
+static const EGLAttrib modifier_low_attribs[] = {
+    EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT,
+    EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT,
+    EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT,
+    EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT
+};
+_Static_assert(ARRAY_LENGTH(modifier_low_attribs) == MAX_PLANES, "modifier_low_attribs has incorrect length");
+
+static const EGLAttrib modifier_high_attribs[] = {
+    EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT,
+    EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT,
+    EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT,
+    EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT
+};
+_Static_assert(ARRAY_LENGTH(modifier_high_attribs) == MAX_PLANES, "modifier_high_attribs has incorrect length");
+
+bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
+    if (dmabuf->planes > MAX_PLANES) {
+        log_error("egl::dmabuf_to_texture(): too many planes, got %zd, can support at most %d\n", dmabuf->planes, MAX_PLANES);
+        return false;
+    }
+
+    int i = 0;
+    EGLAttrib * image_attribs = malloc((6 + 10 * dmabuf->planes + 1) * sizeof (EGLAttrib));
+    if (image_attribs == NULL) {
+        log_error("egl::dmabuf_to_texture(): failed to allocate EGL image attribs\n");
+        return false;
+    }
+
+    image_attribs[i++] = EGL_WIDTH;
+    image_attribs[i++] = dmabuf->width;
+    image_attribs[i++] = EGL_HEIGHT;
+    image_attribs[i++] = dmabuf->height;
+    image_attribs[i++] = EGL_LINUX_DRM_FOURCC_EXT;
+    image_attribs[i++] = dmabuf->drm_format;
+
+    for (size_t j = 0; j < dmabuf->planes; j++) {
+        image_attribs[i++] = fd_attribs[j];
+        image_attribs[i++] = dmabuf->fds[j];
+        image_attribs[i++] = offset_attribs[j];
+        image_attribs[i++] = dmabuf->offsets[j];
+        image_attribs[i++] = stride_attribs[j];
+        image_attribs[i++] = dmabuf->strides[j];
+        image_attribs[i++] = modifier_low_attribs[j];
+
+        if (dmabuf->modifiers[j] != DRM_FORMAT_MOD_INVALID) {
+            image_attribs[i++] = (uint32_t)dmabuf->modifiers[j];
+            image_attribs[i++] = modifier_high_attribs[j];
+            image_attribs[i++] = (uint32_t)(dmabuf->modifiers[j] >> 32);
+        }
+    }
+
+    image_attribs[i++] = EGL_NONE;
+
+    // create EGLImage from dmabuf with attribute array
+    EGLImage frame_image = eglCreateImage(ctx->egl.display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
+    free(image_attribs);
+
+    if (frame_image == EGL_NO_IMAGE) {
+        log_error("egl::dmabuf_to_texture(): failed to create EGL image from dmabuf: error = %x\n", eglGetError());
+        return false;
+    }
+
+    // convert EGLImage to GL texture
+    glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
+    ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, frame_image);
+
+    // destroy temporary image
+    eglDestroyImage(ctx->egl.display, frame_image);
+
+    return true;
 }
 
 // --- cleanup_egl ---
