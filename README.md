@@ -186,6 +186,7 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `libgbm` (see `WITH_GBM`)
 - `libdrm` (see `WITH_GBM`)
 - `libsystemd` (for xdg-desktop-portal backend, see `WITH_XDG_PORTAL_BACKEND`)
+- `libsystemd` or `libelogind` or `libbasu` (for xdg-desktop-portal backend, see `WITH_XDG_PORTAL_BACKEND`)
 - `libpipewire-0.3` (for xdg-desktop-portal backend, see `WITH_XDG_PORTAL_BACKEND`)
 - `wayland-scanner`
 - `scdoc` (for manual pages, see `INSTALL_DOCUMENTATION`)
