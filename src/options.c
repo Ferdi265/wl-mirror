@@ -375,6 +375,10 @@ void usage_opt(ctx_t * ctx) {
     printf("  - auto        automatically try the backends in order and use the first that works (default)\n");
     printf("  - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs\n");
     printf("  - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs\n");
+#ifdef WITH_XDG_PORTAL_BACKEND
+    printf("  - xdg-portal  use xdg-desktop-portal and pipewire to capture outputs or windows\n");
+    printf("  - pipewire    alias for 'xdg-portal'\n");
+#endif
     printf("\n");
     printf("transforms:\n");
     printf("  transforms are specified as a dash-separated list of flips followed by a rotation\n");
