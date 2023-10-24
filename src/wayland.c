@@ -263,6 +263,19 @@ static void on_registry_add(
             registry, id, &zxdg_output_manager_v1_interface, 2
         );
         ctx->wl.output_manager_id = id;
+#ifdef WITH_XDG_PORTAL_BACKEND
+    } else if (strcmp(interface, zxdg_exporter_v2_interface.name) == 0) {
+        if (ctx->wl.xdg_exporter != NULL) {
+            log_error("wayland::on_registry_add(): duplicate xdg_exporter\n");
+            exit_fail(ctx);
+        }
+
+        // bind exporter object
+        ctx->wl.xdg_exporter = (struct zxdg_exporter_v2 *)wl_registry_bind(
+            registry, id, &zxdg_exporter_v2_interface, 1
+        );
+        ctx->wl.xdg_exporter_id = id;
+#endif
     } else if (strcmp(interface, zwlr_export_dmabuf_manager_v1_interface.name) == 0) {
         if (ctx->wl.dmabuf_manager != NULL) {
             log_error("wayland::on_registry_add(): duplicate dmabuf_manager\n");
@@ -403,6 +416,11 @@ static void on_registry_remove(
     } else if (id == ctx->wl.output_manager_id) {
         log_error("wayland::on_registry_remove(): output_manager disappeared\n");
         exit_fail(ctx);
+#ifdef WITH_XDG_PORTAL_BACKEND
+    } else if (id == ctx->wl.xdg_exporter_id) {
+        log_error("wayland::on_registry_remove(): exporter disappeared\n");
+        exit_fail(ctx);
+#endif
     } else if (id == ctx->wl.dmabuf_manager_id) {
         log_error("wayland::on_registry_remove(): dmabuf_manager disappeared\n");
         exit_fail(ctx);
@@ -654,6 +672,32 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener = {
     .close = on_xdg_toplevel_close
 };
 
+#ifdef WITH_XDG_PORTAL_BACKEND
+// --- xdg_exported event handlers ---
+
+static void on_xdg_exported_handle(
+    void * data, struct zxdg_exported_v2 * zxdg_exported_v2, const char * handle
+) {
+    ctx_t * ctx = (ctx_t *)data;
+
+    log_debug(ctx, "wayland::on_xdg_exported_handle(): handle '%s' received\n", handle);
+    ctx->wl.xdg_exported_handle = strdup(handle);
+    if (ctx->wl.xdg_exported_handle == NULL) {
+        log_error("wayland::on_xdg_exported_handle(): failed to allocate handle\n");
+        exit_fail(ctx);
+    }
+
+    (void)zxdg_exported_v2;
+
+}
+
+static const struct zxdg_exported_v2_listener xdg_exported_listener = {
+    .handle = on_xdg_exported_handle
+};
+#endif
+
+// --- event loop ---
+
 static void on_loop_event(ctx_t * ctx) {
     if (wl_display_dispatch(ctx->wl.display) == -1) {
         ctx->wl.closing = true;
@@ -724,6 +768,12 @@ void init_wl(ctx_t * ctx) {
     ctx->wl.shm_id = 0;
     ctx->wl.screencopy_manager = NULL;
     ctx->wl.screencopy_manager_id = 0;
+
+#ifdef WITH_XDG_PORTAL_BACKEND
+    ctx->wl.xdg_exporter = NULL;
+    ctx->wl.xdg_exported_surface = NULL;
+    ctx->wl.xdg_exporter_id = 0;
+#endif
 
     ctx->wl.outputs = NULL;
     ctx->wl.seats = NULL;
@@ -853,6 +903,14 @@ void init_wl(ctx_t * ctx) {
     xdg_toplevel_set_app_id(ctx->wl.xdg_toplevel, "at.yrlf.wl_mirror");
     xdg_toplevel_set_title(ctx->wl.xdg_toplevel, "Wayland Output Mirror");
 
+#ifdef WITH_XDG_PORTAL_BACKEND
+    // export toplevel
+    if (ctx->wl.xdg_exporter != NULL) {
+        ctx->wl.xdg_exported_surface = zxdg_exporter_v2_export_toplevel(ctx->wl.xdg_exporter, ctx->wl.surface);
+        zxdg_exported_v2_add_listener(ctx->wl.xdg_exported_surface, &xdg_exported_listener, (void *)ctx);
+    }
+#endif
+
     // commit surface to trigger configure sequence
     wl_surface_commit(ctx->wl.surface);
 
@@ -968,6 +1026,11 @@ void cleanup_wl(ctx_t *ctx) {
     if (ctx->wl.viewport != NULL) wp_viewport_destroy(ctx->wl.viewport);
     if (ctx->wl.surface != NULL) wl_surface_destroy(ctx->wl.surface);
     if (ctx->wl.output_manager != NULL) zxdg_output_manager_v1_destroy(ctx->wl.output_manager);
+#ifdef WITH_XDG_PORTAL_BACKEND
+    if (ctx->wl.xdg_exported_handle != NULL) free((void *)ctx->wl.xdg_exported_handle);
+    if (ctx->wl.xdg_exported_surface != NULL) zxdg_exported_v2_destroy(ctx->wl.xdg_exported_surface);
+    if (ctx->wl.xdg_exporter != NULL) zxdg_exporter_v2_destroy(ctx->wl.xdg_exporter);
+#endif
     if (ctx->wl.wm_base != NULL) xdg_wm_base_destroy(ctx->wl.wm_base);
     if (ctx->wl.fractional_scale_manager != NULL) wp_fractional_scale_manager_v1_destroy(ctx->wl.fractional_scale_manager);
     if (ctx->wl.viewporter != NULL) wp_viewporter_destroy(ctx->wl.viewporter);
