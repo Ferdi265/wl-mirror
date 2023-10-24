@@ -402,6 +402,9 @@ void wlm_opt_usage(ctx_t * ctx) {
     printf("  - extcopy             use the ext-image-copy-capture-v1 protocol to capture outputs (auto)\n");
     printf("  - extcopy-dmabuf      use the ext-image-copy-capture-v1 protocol to capture outputs (via DMA-BUF)\n");
     printf("  - extcopy-shm         use the ext-image-copy-capture-v1 protocol to capture outputs (via SHM)\n");
+#ifdef WITH_XDG_PORTAL_BACKEND
+    printf("  - xdg-portal  use xdg-desktop-portal and pipewire to capture outputs or windows\n");
+#endif
     printf("\n");
     printf("transforms:\n");
     printf("  transforms are specified as a dash-separated list of flips followed by a rotation\n");
