@@ -119,7 +119,7 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `libEGL`
 - `libGLESv2`
 - `wayland-scanner`
-- `scdoc` (for manual pages)
+- `scdoc` (for manual pages, see `INSTALL_DOCUMENTATION`)
 
 ## Script Dependencies
 
