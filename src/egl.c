@@ -2,7 +2,6 @@
 #include <GLES2/gl2ext.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-#include <libdrm/drm_fourcc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -482,12 +481,9 @@ bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
         image_attribs[i++] = stride_attribs[j];
         image_attribs[i++] = dmabuf->strides[j];
         image_attribs[i++] = modifier_low_attribs[j];
-
-        if (dmabuf->modifiers[j] != DRM_FORMAT_MOD_INVALID) {
-            image_attribs[i++] = (uint32_t)dmabuf->modifiers[j];
-            image_attribs[i++] = modifier_high_attribs[j];
-            image_attribs[i++] = (uint32_t)(dmabuf->modifiers[j] >> 32);
-        }
+        image_attribs[i++] = (uint32_t)dmabuf->modifiers[j];
+        image_attribs[i++] = modifier_high_attribs[j];
+        image_attribs[i++] = (uint32_t)(dmabuf->modifiers[j] >> 32);
     }
 
     image_attribs[i++] = EGL_NONE;
