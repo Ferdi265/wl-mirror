@@ -1000,7 +1000,11 @@ static void on_pw_stream_process(void * data) {
         free(dmabuf.strides);
         ctx->egl.format = backend->gl_format;
         ctx->egl.texture_region_aware = false;
-        ctx->mirror.invert_y = false;
+
+        if (ctx->mirror.invert_y != false) {
+            ctx->mirror.invert_y = false;
+            update_uniforms(ctx);
+        }
 
         backend->header.fail_count = 0;
     } else if (spa_buffer->datas[0].type == SPA_DATA_MemPtr) {
