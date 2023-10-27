@@ -622,6 +622,13 @@ bool wlm_egl_dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
     image_attribs[i++] = dmabuf->height;
     image_attribs[i++] = EGL_LINUX_DRM_FOURCC_EXT;
     image_attribs[i++] = dmabuf->drm_format;
+    wlm_log_debug(ctx, "egl::dmabuf_to_texture(): w=%d h=%d drm_format=%c%c%c%c\n",
+        dmabuf->width, dmabuf->height,
+        ((dmabuf->drm_format >> 0) & 0xFF),
+        ((dmabuf->drm_format >> 8) & 0xFF),
+        ((dmabuf->drm_format >> 16) & 0xFF),
+        ((dmabuf->drm_format >> 24) & 0xFF)
+    );
 
     for (size_t j = 0; j < dmabuf->planes; j++) {
         image_attribs[i++] = fd_attribs[j];
@@ -634,9 +641,19 @@ bool wlm_egl_dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
         image_attribs[i++] = (uint32_t)dmabuf->modifier;
         image_attribs[i++] = modifier_high_attribs[j];
         image_attribs[i++] = (uint32_t)(dmabuf->modifier >> 32);
+        wlm_log_debug(ctx, "egl::dmabuf_to_texture(): fd=% 3d offset=% 10d stride=% 10d modifier=%016lx\n",
+            dmabuf->fds[j], dmabuf->offsets[j], dmabuf->strides[j], dmabuf->modifier
+        );
     }
 
     image_attribs[i++] = EGL_NONE;
+
+    wlm_log_debug(ctx, "egl::dmabuf_to_texture(): image_attribs=");
+    if (ctx->opt.verbose) {
+        for (i = 0; image_attribs[i] != EGL_NONE; i++) {
+            fprintf(stderr, "%08lx%s", image_attribs[i], image_attribs[i + 1] != EGL_NONE ? "_" : "\n");
+        }
+    }
 
     // create EGLImage from dmabuf with attribute array
     EGLImage frame_image = eglCreateImage(ctx->egl.display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
