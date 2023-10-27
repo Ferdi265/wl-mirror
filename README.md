@@ -156,3 +156,9 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `src/transform.c`: matrix transformation code
 - `src/event.c`: event loop
 - `src/stream.c`: asynchronous option stream input
+
+## License
+
+This project is licensed under the GNU GPL version 3.0 or later (SPDX
+[GPL-3.0-or-later](https://spdx.org/licenses/GPL-3.0-or-later.html)). The full
+license text can also be found in the [LICENSE](/LICENSE) file.
