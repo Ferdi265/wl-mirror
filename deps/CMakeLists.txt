@@ -41,7 +41,7 @@ target_link_libraries(proto_deps INTERFACE
 # check for epoll support in libc
 include(CheckSymbolExists)
 check_symbol_exists("epoll_wait" "sys/epoll.h" has-epoll)
-if(NOT ${has-epoll})
+if(NOT has-epoll)
     # use epoll-shim to provide epoll
     pkg_check_modules(EPoll REQUIRED IMPORTED_TARGET "epoll-shim")
     target_link_libraries(deps INTERFACE PkgConfig::EPoll)
