@@ -355,6 +355,7 @@ void resize_viewport(ctx_t * ctx) {
     log_debug(ctx, "egl::resize_viewport(): view_width = %d, view_height = %d\n", view_width, view_height);
 
     // updating GL viewport
+    log_debug(ctx, "egl::resize_viewport(): win = %dx%d, view = %dx%d, tex = %dx%d\n", win_width, win_height, view_width, view_height, tex_width, tex_height);
     log_debug(ctx, "egl::resize_viewport(): viewport %d, %d, %d, %d\n",
         (int32_t)(win_width - view_width) / 2, (int32_t)(win_height - view_height) / 2, view_width, view_height
     );
