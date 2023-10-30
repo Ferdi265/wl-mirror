@@ -365,19 +365,19 @@ static void on_registry_remove(
     // ensure protocols we need aren't removed
     // remove removed outputs from the output list
     if (id == ctx->wl.compositor_id) {
-        log_error("wayland::on_registry_remove(): compositor disapperared\n");
+        log_error("wayland::on_registry_remove(): compositor disappeared\n");
         exit_fail(ctx);
     } else if (id == ctx->wl.seat_id) {
-        log_error("wayland::on_registry_remove(): seat disapperared\n");
+        log_error("wayland::on_registry_remove(): seat disappeared\n");
         exit_fail(ctx);
     } else if (id == ctx->wl.wm_base_id) {
-        log_error("wayland::on_registry_remove(): wm_base disapperared\n");
+        log_error("wayland::on_registry_remove(): wm_base disappeared\n");
         exit_fail(ctx);
     } else if (id == ctx->wl.output_manager_id) {
-        log_error("wayland::on_registry_remove(): output_manager disapperared\n");
+        log_error("wayland::on_registry_remove(): output_manager disappeared\n");
         exit_fail(ctx);
     } else if (id == ctx->wl.dmabuf_manager_id) {
-        log_error("wayland::on_registry_remove(): dmabuf_manager disapperared\n");
+        log_error("wayland::on_registry_remove(): dmabuf_manager disappeared\n");
         exit_fail(ctx);
     } else {
         output_list_node_t ** link = &ctx->wl.outputs;
