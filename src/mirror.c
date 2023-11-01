@@ -173,7 +173,7 @@ void update_title(ctx_t * ctx) {
         exit_fail(ctx);
     }
 
-    xdg_toplevel_set_title(ctx->wl.xdg_toplevel, title);
+    set_window_title(ctx, title);
     free(title);
 }
 
