@@ -78,7 +78,7 @@ typedef struct ctx_wl {
 } ctx_wl_t;
 
 void init_wl(struct ctx * ctx);
-
+void set_window_title(struct ctx * ctx, const char * title);
 void cleanup_wl(struct ctx * ctx);
 
 #endif

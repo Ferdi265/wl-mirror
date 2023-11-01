@@ -731,6 +731,12 @@ void init_wl(ctx_t * ctx) {
     }
 }
 
+// --- set_window_title ---
+
+void set_window_title(ctx_t * ctx, const char * title) {
+    xdg_toplevel_set_title(ctx->wl.xdg_toplevel, title);
+}
+
 // --- cleanup_wl ---
 
 void cleanup_wl(ctx_t *ctx) {
