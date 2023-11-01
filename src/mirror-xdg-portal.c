@@ -861,7 +861,7 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
             ), \
             0 \
         ); \
-        spa_pod_builder_pop(&pod_builder.b, &format_frame); \
+        spa_pod_builder_pop(b, &format_frame); \
     })
 
     // TODO: don't hardcode video format options
