@@ -820,8 +820,15 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
 
     pw_stream_add_listener(backend->pw_stream, &backend->pw_stream_listener, &pw_stream_events, (void *)ctx);
 
-    struct spa_pod_dynamic_builder pod_builder;
-    spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 1);
+    struct spa_pod_dynamic_builder pod_builders[8];
+    spa_pod_dynamic_builder_init(&pod_builders[0], NULL, 0, 1);
+    spa_pod_dynamic_builder_init(&pod_builders[1], NULL, 0, 1);
+    spa_pod_dynamic_builder_init(&pod_builders[2], NULL, 0, 1);
+    spa_pod_dynamic_builder_init(&pod_builders[3], NULL, 0, 1);
+    spa_pod_dynamic_builder_init(&pod_builders[4], NULL, 0, 1);
+    spa_pod_dynamic_builder_init(&pod_builders[5], NULL, 0, 1);
+    spa_pod_dynamic_builder_init(&pod_builders[6], NULL, 0, 1);
+    spa_pod_dynamic_builder_init(&pod_builders[7], NULL, 0, 1);
 
 #define ADD_FORMAT(builder, spa_format, ...) ({ \
         struct spa_pod_builder * b = builder; \
@@ -866,14 +873,14 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
 
     // TODO: don't hardcode video format options
     const struct spa_pod * params[] = {
-        ADD_FORMAT(&pod_builder.b, SPA_VIDEO_FORMAT_ABGR, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-        ADD_FORMAT(&pod_builder.b, SPA_VIDEO_FORMAT_ARGB, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-        ADD_FORMAT(&pod_builder.b, SPA_VIDEO_FORMAT_BGRx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-        ADD_FORMAT(&pod_builder.b, SPA_VIDEO_FORMAT_RGBx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-        ADD_FORMAT(&pod_builder.b, SPA_VIDEO_FORMAT_ABGR),
-        ADD_FORMAT(&pod_builder.b, SPA_VIDEO_FORMAT_ARGB),
-        ADD_FORMAT(&pod_builder.b, SPA_VIDEO_FORMAT_BGRx),
-        ADD_FORMAT(&pod_builder.b, SPA_VIDEO_FORMAT_RGBx)
+        ADD_FORMAT(&pod_builders[0].b, SPA_VIDEO_FORMAT_ABGR, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
+        ADD_FORMAT(&pod_builders[1].b, SPA_VIDEO_FORMAT_ARGB, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
+        ADD_FORMAT(&pod_builders[2].b, SPA_VIDEO_FORMAT_BGRx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
+        ADD_FORMAT(&pod_builders[3].b, SPA_VIDEO_FORMAT_RGBx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
+        ADD_FORMAT(&pod_builders[4].b, SPA_VIDEO_FORMAT_ABGR),
+        ADD_FORMAT(&pod_builders[5].b, SPA_VIDEO_FORMAT_ARGB),
+        ADD_FORMAT(&pod_builders[6].b, SPA_VIDEO_FORMAT_BGRx),
+        ADD_FORMAT(&pod_builders[7].b, SPA_VIDEO_FORMAT_RGBx)
     };
     uint32_t num_params = ARRAY_LENGTH(params);
 
@@ -883,7 +890,14 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
         params, num_params
     );
 
-    spa_pod_dynamic_builder_clean(&pod_builder);
+    spa_pod_dynamic_builder_clean(&pod_builders[0]);
+    spa_pod_dynamic_builder_clean(&pod_builders[1]);
+    spa_pod_dynamic_builder_clean(&pod_builders[2]);
+    spa_pod_dynamic_builder_clean(&pod_builders[3]);
+    spa_pod_dynamic_builder_clean(&pod_builders[4]);
+    spa_pod_dynamic_builder_clean(&pod_builders[5]);
+    spa_pod_dynamic_builder_clean(&pod_builders[6]);
+    spa_pod_dynamic_builder_clean(&pod_builders[7]);
 }
 
 static void on_pw_stream_process(void * data) {
@@ -1100,29 +1114,32 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
             supported_buffer_types |= (1 << SPA_DATA_DmaBuf);
         }
 
-        struct spa_pod_dynamic_builder pod_builder;
-        spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 1);
+        struct spa_pod_dynamic_builder pod_builders[4];
+        spa_pod_dynamic_builder_init(&pod_builders[0], NULL, 0, 1);
+        spa_pod_dynamic_builder_init(&pod_builders[1], NULL, 0, 1);
+        spa_pod_dynamic_builder_init(&pod_builders[2], NULL, 0, 1);
+        spa_pod_dynamic_builder_init(&pod_builders[3], NULL, 0, 1);
 
         const struct spa_pod * params[] = {
             // buffer options
-            spa_pod_builder_add_object(&pod_builder.b,
+            spa_pod_builder_add_object(&pod_builders[0].b,
                 SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers,
                 SPA_PARAM_BUFFERS_dataType, SPA_POD_Int(supported_buffer_types)
             ),
             // meta header
-            spa_pod_builder_add_object(&pod_builder.b,
+            spa_pod_builder_add_object(&pod_builders[1].b,
                 SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta,
                 SPA_PARAM_META_type, SPA_POD_Id(SPA_META_Header),
                 SPA_PARAM_META_size, SPA_POD_Int(sizeof (struct spa_meta_header))
             ),
             // region
-            spa_pod_builder_add_object(&pod_builder.b,
+            spa_pod_builder_add_object(&pod_builders[2].b,
                 SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta,
                 SPA_PARAM_META_type, SPA_POD_Id(SPA_META_VideoCrop),
                 SPA_PARAM_META_size, SPA_POD_Int(sizeof (struct spa_meta_region))
             ),
             // transform
-            spa_pod_builder_add_object(&pod_builder.b,
+            spa_pod_builder_add_object(&pod_builders[3].b,
                 SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta,
                 SPA_PARAM_META_type, SPA_POD_Id(SPA_META_VideoTransform),
                 SPA_PARAM_META_size, SPA_POD_Int(sizeof (struct spa_meta_videotransform))
@@ -1132,7 +1149,10 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
 
         pw_stream_update_params(backend->pw_stream, params, num_params);
 
-        spa_pod_dynamic_builder_clean(&pod_builder);
+        spa_pod_dynamic_builder_clean(&pod_builders[0]);
+        spa_pod_dynamic_builder_clean(&pod_builders[1]);
+        spa_pod_dynamic_builder_clean(&pod_builders[2]);
+        spa_pod_dynamic_builder_clean(&pod_builders[3]);
 
         // TODO: remember that negotiation already happened
         backend->state = STATE_RUNNING;
