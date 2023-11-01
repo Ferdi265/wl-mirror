@@ -21,6 +21,11 @@ static void on_frame(
     wl_callback_destroy(ctx->mirror.frame_callback);
     ctx->mirror.frame_callback = NULL;
 
+    // don't attempt to render if window is already closing
+    if (ctx->wl.closing) {
+        return;
+    }
+
     // add new frame callback listener
     // the wayland spec says you cannot reuse the old frame callback
     ctx->mirror.frame_callback = wl_surface_frame(ctx->wl.surface);
