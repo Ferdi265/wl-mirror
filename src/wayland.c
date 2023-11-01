@@ -719,7 +719,7 @@ void init_wl(ctx_t * ctx) {
     wl_surface_commit(ctx->wl.surface);
 
     // wait for events
-    // - expecing surface configure event
+    // - expecting surface configure event
     // - expecting xdg toplevel configure event
     wl_display_roundtrip(ctx->wl.display);
 
