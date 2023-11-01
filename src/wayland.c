@@ -454,8 +454,14 @@ static void on_surface_enter(
 
     // verify an output was found
     if (node == NULL) {
-        log_error("wayland::on_surface_enter(): entered nonexistent output\n");
-        exit_fail(ctx);
+        // when multiple registries exist and different parts of the application
+        // bind separately to the same wl_output, on_surface_enter will be called
+        // multiple times.
+        //
+        // only one of those calls will give us an output in our list of outputs.
+        // we should ignore all other calls, instead of bailing completely
+        log_debug(ctx, "wayland::on_surface_enter(): entered output not in output list, possibly bound from another registry?\n");
+        return;
     }
 
     // update current output
