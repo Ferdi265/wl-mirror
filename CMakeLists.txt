@@ -6,6 +6,7 @@ project(wl-mirror C)
 # options
 option(INSTALL_EXAMPLE_SCRIPTS "install wl-mirror example scripts" OFF)
 option(INSTALL_DOCUMENTATION "install wl-mirror manual pages" OFF)
+option(WITH_LIBDECOR "use libdecor for window decoration" OFF)
 
 # wayland protocols needed by wl-mirror
 option(FORCE_SYSTEM_WL_PROTOCOLS "force use of system wayland-protocols" OFF)
