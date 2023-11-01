@@ -821,7 +821,7 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
     pw_stream_add_listener(backend->pw_stream, &backend->pw_stream_listener, &pw_stream_events, (void *)ctx);
 
     struct spa_pod_dynamic_builder pod_builder;
-    spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 0);
+    spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 1);
 
 #define ADD_FORMAT(builder, spa_format, ...) ({ \
         struct spa_pod_builder * b = builder; \
@@ -1101,7 +1101,7 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
         }
 
         struct spa_pod_dynamic_builder pod_builder;
-        spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 0);
+        spa_pod_dynamic_builder_init(&pod_builder, NULL, 0, 1);
 
         const struct spa_pod * params[] = {
             // buffer options
