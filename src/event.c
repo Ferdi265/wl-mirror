@@ -76,7 +76,6 @@ void event_change_fd(ctx_t * ctx, event_handler_t * handler) {
 void event_remove_fd(ctx_t * ctx, event_handler_t * handler) {
     if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_DEL, handler->fd, NULL) == -1) {
         log_error("event::remove_fd(): failed to remove fd from epoll instance\n");
-        exit_fail(ctx);
     }
 
     remove_handler(ctx, handler->fd);
