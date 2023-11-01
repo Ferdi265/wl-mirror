@@ -505,7 +505,7 @@ static void on_surface_configure_finished(ctx_t * ctx) {
 
 // --- xdg_surface event handlers ---
 
-static void xdg_on_surface_configure(
+static void on_xdg_surface_configure(
     void * data, struct xdg_surface * xdg_surface, uint32_t serial
 ) {
     ctx_t * ctx = (ctx_t *)data;
@@ -523,7 +523,7 @@ static void xdg_on_surface_configure(
 }
 
 static const struct xdg_surface_listener xdg_surface_listener = {
-    .configure = xdg_on_surface_configure,
+    .configure = on_xdg_surface_configure,
 };
 
 // --- xdg_toplevel event handlers ---
