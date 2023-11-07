@@ -20,7 +20,7 @@ typedef struct {
     int * fds;
     uint32_t * offsets;
     uint32_t * strides;
-    uint64_t * modifiers;
+    uint64_t modifier;
 } dmabuf_t;
 
 typedef struct ctx_egl {

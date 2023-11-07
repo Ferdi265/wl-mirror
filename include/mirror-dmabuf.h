@@ -25,7 +25,6 @@ typedef struct {
     uint32_t y;
     uint32_t buffer_flags;
     uint32_t frame_flags;
-    uint64_t dmabuf_modifier;
     dmabuf_t dmabuf;
 
     // dmabuf state flags

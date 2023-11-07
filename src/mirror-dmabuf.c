@@ -21,9 +21,7 @@ static void dmabuf_frame_cleanup(dmabuf_mirror_backend_t * backend) {
     free(backend->dmabuf.fds);
     free(backend->dmabuf.offsets);
     free(backend->dmabuf.strides);
-    free(backend->dmabuf.modifiers);
 
-    backend->dmabuf_modifier = 0;
     backend->dmabuf.width = 0;
     backend->dmabuf.height = 0;
     backend->dmabuf.drm_format = 0;
@@ -31,7 +29,7 @@ static void dmabuf_frame_cleanup(dmabuf_mirror_backend_t * backend) {
     backend->dmabuf.fds = NULL;
     backend->dmabuf.offsets = NULL;
     backend->dmabuf.strides = NULL;
-    backend->dmabuf.modifiers = NULL;
+    backend->dmabuf.modifier = 0;
 }
 
 static void backend_cancel(dmabuf_mirror_backend_t * backend) {
@@ -88,8 +86,8 @@ static void on_frame(
     backend->dmabuf.fds = malloc(num_objects * sizeof (int));
     backend->dmabuf.offsets = malloc(num_objects * sizeof (uint32_t));
     backend->dmabuf.strides = malloc(num_objects * sizeof (uint32_t));
-    backend->dmabuf.modifiers = malloc(num_objects * sizeof (uint64_t));
-    if (backend->dmabuf.fds == NULL || backend->dmabuf.offsets == NULL || backend->dmabuf.modifiers == NULL) {
+    backend->dmabuf.modifier = ((uint64_t)mod_high << 32) | mod_low;
+    if (backend->dmabuf.fds == NULL || backend->dmabuf.offsets == NULL) {
         log_error("mirror-dmabuf::on_frame(): failed to allocate dmabuf storage\n");
         backend_cancel(backend);
         return;
@@ -100,14 +98,13 @@ static void on_frame(
     backend->y = y;
     backend->buffer_flags = buffer_flags;
     backend->frame_flags = frame_flags;
-    backend->dmabuf_modifier = ((uint64_t)mod_high << 32) | mod_low;
     backend->dmabuf.width = width;
     backend->dmabuf.height = height;
     backend->dmabuf.drm_format = format;
     backend->dmabuf.planes = num_objects;
 
     log_debug(ctx, "mirror-dmabuf::on_frame(): w=%d h=%d gl_format=%x drm_format=%08x drm_modifier=%016lx\n",
-        backend->dmabuf.width, backend->dmabuf.height, GL_RGB8_OES, backend->dmabuf.drm_format, backend->dmabuf_modifier
+        backend->dmabuf.width, backend->dmabuf.height, GL_RGB8_OES, backend->dmabuf.drm_format, backend->dmabuf.modifier
     );
 
     for (size_t i = 0; i < num_objects; i++) {
@@ -148,7 +145,6 @@ static void on_object(
     backend->dmabuf.fds[index] = fd;
     backend->dmabuf.offsets[index] = offset;
     backend->dmabuf.strides[index] = stride;
-    backend->dmabuf.modifiers[index] = backend->dmabuf_modifier;
 
     backend->processed_objects++;
     if (backend->processed_objects == backend->dmabuf.planes) {
@@ -323,7 +319,6 @@ void init_mirror_dmabuf(ctx_t * ctx) {
     backend->y = 0;
     backend->buffer_flags = 0;
     backend->frame_flags = 0;
-    backend->dmabuf_modifier = 0;
     backend->dmabuf.width = 0;
     backend->dmabuf.height = 0;
     backend->dmabuf.drm_format = 0;
@@ -331,7 +326,7 @@ void init_mirror_dmabuf(ctx_t * ctx) {
     backend->dmabuf.fds = NULL;
     backend->dmabuf.offsets = NULL;
     backend->dmabuf.strides = NULL;
-    backend->dmabuf.modifiers = NULL;
+    backend->dmabuf.modifier = 0;
 
     backend->state = STATE_READY;
     backend->processed_objects = 0;

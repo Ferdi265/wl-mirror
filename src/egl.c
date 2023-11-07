@@ -481,9 +481,9 @@ bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
         image_attribs[i++] = stride_attribs[j];
         image_attribs[i++] = dmabuf->strides[j];
         image_attribs[i++] = modifier_low_attribs[j];
-        image_attribs[i++] = (uint32_t)dmabuf->modifiers[j];
+        image_attribs[i++] = (uint32_t)dmabuf->modifier;
         image_attribs[i++] = modifier_high_attribs[j];
-        image_attribs[i++] = (uint32_t)(dmabuf->modifiers[j] >> 32);
+        image_attribs[i++] = (uint32_t)(dmabuf->modifier >> 32);
     }
 
     image_attribs[i++] = EGL_NONE;
