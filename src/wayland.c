@@ -592,6 +592,25 @@ static void on_loop_each(ctx_t * ctx) {
     wl_display_flush(ctx->wl.display);
 }
 
+// --- find_output ---
+bool find_wl_output(ctx_t * ctx, char * output_name, struct wl_output ** output) {
+    bool found = false;
+    output_list_node_t * cur = ctx->wl.outputs;
+    while (cur != NULL) {
+        if (cur->name != NULL && strcmp(cur->name, output_name) == 0) {
+            output_name = cur->name;
+            break;
+        }
+        cur = cur->next;
+    }
+    if (cur != NULL) {
+        found = true;
+        *output = cur->output;
+    }
+    return found;
+}
+
+
 // --- init_wl ---
 
 void init_wl(ctx_t * ctx) {
