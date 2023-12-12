@@ -11,11 +11,13 @@ void init_opt(ctx_t * ctx) {
     ctx->opt.invert_colors = false;
     ctx->opt.freeze = false;
     ctx->opt.has_region = false;
+    ctx->opt.fullscreen = false;
     ctx->opt.scaling = SCALE_LINEAR;
     ctx->opt.backend = BACKEND_AUTO;
     ctx->opt.transform = (transform_t){ .rotation = ROT_NORMAL, .flip_x = false, .flip_y = false };
     ctx->opt.region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
     ctx->opt.output = NULL;
+    ctx->opt.fullscreen_output = NULL;
 }
 
 void cleanup_opt(ctx_t * ctx) {
@@ -341,6 +343,8 @@ void usage_opt(ctx_t * ctx) {
     printf("  -f,   --freeze                freeze the current image on the screen\n");
     printf("        --unfreeze              resume the screen capture after a freeze\n");
     printf("        --toggle-freeze         toggle freeze state of screen capture\n");
+    printf("  -F,   --fullscreen            open wl-mirror as fullscreen\n");
+    printf("        --fullscreen-output O   open wl-mirror as fullscreen on output O\n");
     printf("  -s l, --scaling linear        use linear scaling (default)\n");
     printf("  -s n, --scaling nearest       use nearest neighbor scaling\n");
     printf("  -s e, --scaling exact         only scale to exact multiples of the output size\n");
@@ -424,6 +428,18 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             ctx->opt.freeze = false;
         } else if (strcmp(argv[0], "--toggle-freeze") == 0) {
             ctx->opt.freeze ^= 1;
+        } else if (strcmp(argv[0], "-F") == 0 || strcmp(argv[0], "--fullscreen") == 0) {
+            ctx->opt.fullscreen = true;
+        } else if (strcmp(argv[0], "--fullscreen-output") == 0) {
+            if (argc < 2) {
+                log_error("options::parse(): option %s requires an argument\n", argv[0]);
+                if (is_cli_args) exit_fail(ctx);
+            } else {
+                ctx->opt.fullscreen = true;
+                ctx->opt.fullscreen_output = strdup(argv[1]);
+                argv++;
+                argc--;
+            }
         } else if (strcmp(argv[0], "-s") == 0 || strcmp(argv[0], "--scaling") == 0) {
             if (argc < 2) {
                 log_error("options::parse(): option %s requires an argument\n", argv[0]);
@@ -546,6 +562,11 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     } else if (!new_output && !new_region && is_cli_args) {
         // no output or region specified
         usage_opt(ctx);
+    }
+
+    if (ctx->opt.output != NULL && strcmp(ctx->opt.output, ctx->opt.fullscreen_output) == 0) {
+        log_error("options::parse(): fullscreen_output cannot be same as the output to be mirrored");
+        exit_fail(ctx);
     }
 
     if (argc > 1) {

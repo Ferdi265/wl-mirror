@@ -27,11 +27,13 @@ typedef struct ctx_opt {
     bool invert_colors;
     bool freeze;
     bool has_region;
+    bool fullscreen;
     scale_t scaling;
     backend_t backend;
     transform_t transform;
     region_t region;
     char * output;
+    char * fullscreen_output;
 } ctx_opt_t;
 
 void init_opt(struct ctx * ctx);
