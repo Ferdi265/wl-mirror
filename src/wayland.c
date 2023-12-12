@@ -748,6 +748,16 @@ void init_wl(ctx_t * ctx) {
     // - expecting xdg toplevel configure event
     wl_display_roundtrip(ctx->wl.display);
 
+    // set fullscreen on xdg_toplevel
+    if (ctx->opt.fullscreen) {
+        struct wl_output * output = NULL;
+        if (ctx->opt.fullscreen_output != NULL && !find_wl_output(ctx, ctx->opt.fullscreen_output, &output)) {
+            log_error("wayland::init(): output %s not found\n", ctx->opt.fullscreen_output);
+            exit_fail(ctx);
+        }
+
+        xdg_toplevel_set_fullscreen(ctx->wl.xdg_toplevel, output);
+    }
     // check if surface is configured
     // - expecting surface to be configured at this point
     if (!ctx->wl.configured) {
