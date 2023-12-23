@@ -22,6 +22,7 @@ void init_opt(ctx_t * ctx) {
 
 void cleanup_opt(ctx_t * ctx) {
     if (ctx->opt.output != NULL) free(ctx->opt.output);
+    if (ctx->opt.fullscreen_output != NULL) free(ctx ->opt.fullscreen_output);
 }
 
 bool parse_scaling_opt(scale_t * scaling, const char * scaling_arg) {
