@@ -23,25 +23,29 @@ by mirroring an output onto a client surface.
 usage: wl-mirror [options] <output>
 
 options:
-  -h,   --help             show this help
-  -V,   --version          print version
-  -v,   --verbose          enable debug logging
-        --no-verbose       disable debug logging (default)
-  -c,   --show-cursor      show the cursor on the mirrored screen (default)
-        --no-show-cursor   don't show the cursor on the mirrored screen
-  -i,   --invert-colors    invert colors in the mirrored screen
-        --no-invert-colors don't invert colors in the mirrored screen (default)
-  -f,   --freeze           freeze the current image on the screen
-        --unfreeze         resume the screen capture after a freeze
-        --toggle-freeze    toggle freeze state of screen capture
-  -s l, --scaling linear   use linear scaling (default)
-  -s n, --scaling nearest  use nearest neighbor scaling
-  -s e, --scaling exact    only scale to exact multiples of the output size
-  -b B  --backend B        use a specific backend for capturing the screen
-  -t T, --transform T      apply custom transform T
-  -r R, --region R         capture custom region R
-        --no-region        capture the entire output (default)
-  -S,   --stream           accept a stream of additional options on stdin
+  -h,   --help                  show this help
+  -V,   --version               print version
+  -v,   --verbose               enable debug logging
+        --no-verbose            disable debug logging (default)
+  -c,   --show-cursor           show the cursor on the mirrored screen (default)
+        --no-show-cursor        don't show the cursor on the mirrored screen
+  -i,   --invert-colors         invert colors in the mirrored screen
+        --no-invert-colors      don't invert colors in the mirrored screen (default)
+  -f,   --freeze                freeze the current image on the screen
+        --unfreeze              resume the screen capture after a freeze
+        --toggle-freeze         toggle freeze state of screen capture
+  -F,   --fullscreen            open wl-mirror as fullscreen
+        --no-fullscreen         open wl-mirror as a window (default)
+        --fullscreen-output O   open wl-mirror as fullscreen on output O
+        --no-fullscreen-output  open wl-mirror as fullscreen on the current output (default)
+  -s l, --scaling linear        use linear scaling (default)
+  -s n, --scaling nearest       use nearest neighbor scaling
+  -s e, --scaling exact         only scale to exact multiples of the output size
+  -b B  --backend B             use a specific backend for capturing the screen
+  -t T, --transform T           apply custom transform T
+  -r R, --region R              capture custom region R
+        --no-region             capture the entire output (default)
+  -S,   --stream                accept a stream of additional options on stdin
 
 backends:
   - auto        automatically try the backends in order and use the first that works (default)
