@@ -345,6 +345,7 @@ void usage_opt(ctx_t * ctx) {
     printf("        --unfreeze              resume the screen capture after a freeze\n");
     printf("        --toggle-freeze         toggle freeze state of screen capture\n");
     printf("  -F,   --fullscreen            open wl-mirror as fullscreen\n");
+    printf("        --no-fullscreen         open wl-mirror as a window (default)\n");
     printf("        --fullscreen-output O   open wl-mirror as fullscreen on output O\n");
     printf("        --no-fullscreen-output  open wl-mirror as fullscreen the the output the window is on\n");
     printf("  -s l, --scaling linear        use linear scaling (default)\n");
@@ -434,6 +435,8 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             ctx->opt.freeze ^= 1;
         } else if (strcmp(argv[0], "-F") == 0 || strcmp(argv[0], "--fullscreen") == 0) {
             ctx->opt.fullscreen = true;
+        } else if (strcmp(argv[0], "--no-fullscreen") == 0) {
+            ctx->opt.fullscreen = false;
         } else if (strcmp(argv[0], "--fullscreen-output") == 0) {
             if (argc < 2) {
                 log_error("options::parse(): option %s requires an argument\n", argv[0]);
@@ -588,6 +591,8 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
 
     if (!is_cli_args && ctx->opt.fullscreen && (!was_fullscreen || new_fullscreen_output)) {
         set_window_fullscreen(ctx);
+    } else if (!is_cli_args && !ctx->opt.fullscreen && was_fullscreen) {
+        unset_window_fullscreen(ctx);
     }
 
     output_list_node_t * target_output = NULL;
