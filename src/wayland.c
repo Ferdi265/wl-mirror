@@ -786,6 +786,10 @@ void set_window_fullscreen(ctx_t * ctx) {
     xdg_toplevel_set_fullscreen(ctx->wl.xdg_toplevel, output);
 }
 
+void unset_window_fullscreen(ctx_t * ctx) {
+    xdg_toplevel_unset_fullscreen(ctx->wl.xdg_toplevel);
+}
+
 // --- cleanup_wl ---
 
 void cleanup_wl(ctx_t *ctx) {
