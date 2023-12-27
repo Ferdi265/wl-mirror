@@ -397,9 +397,11 @@ void version_opt(ctx_t * ctx) {
 void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     bool is_cli_args = !ctx->opt.stream;
     bool was_frozen = ctx->opt.freeze;
+    bool was_fullscreen = ctx->opt.fullscreen;
     bool new_backend = false;
     bool new_region = false;
     bool new_output = false;
+    bool new_fullscreen_output = false;
     char * region_output = NULL;
     char * arg_output = NULL;
 
@@ -438,6 +440,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             } else {
                 ctx->opt.fullscreen = true;
                 ctx->opt.fullscreen_output = strdup(argv[1]);
+                new_fullscreen_output = true;
                 argv++;
                 argc--;
             }
@@ -573,6 +576,10 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
     if (argc > 1) {
         log_error("options::parse(): unexpected trailing arguments after output name\n");
         if (is_cli_args) exit_fail(ctx);
+    }
+
+    if (!is_cli_args && ctx->opt.fullscreen && (!was_fullscreen || new_fullscreen_output)) {
+        set_window_fullscreen(ctx);
     }
 
     output_list_node_t * target_output = NULL;
