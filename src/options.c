@@ -442,6 +442,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
                 log_error("options::parse(): option %s requires an argument\n", argv[0]);
                 if (is_cli_args) exit_fail(ctx);
             } else {
+                free(ctx->opt.fullscreen_output);
                 ctx->opt.fullscreen = true;
                 ctx->opt.fullscreen_output = strdup(argv[1]);
                 new_fullscreen_output = true;
