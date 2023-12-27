@@ -573,7 +573,10 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
         usage_opt(ctx);
     }
 
-    if (ctx->opt.output != NULL && strcmp(ctx->opt.output, ctx->opt.fullscreen_output) == 0) {
+    if (
+        ctx->opt.output != NULL && ctx->opt.fullscreen_output != NULL &&
+        strcmp(ctx->opt.output, ctx->opt.fullscreen_output) == 0
+    ) {
         log_error("options::parse(): fullscreen_output cannot be same as the output to be mirrored");
         exit_fail(ctx);
     }
