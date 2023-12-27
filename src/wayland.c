@@ -550,6 +550,21 @@ static void on_xdg_toplevel_configure(
     if (width == 0) width = 100;
     if (height == 0) height = 100;
 
+    // check fullscreen state
+    bool is_fullscreen = false;
+    uint32_t * state;
+    wl_array_for_each(state, states) {
+        if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) {
+            is_fullscreen = true;
+        }
+    }
+
+    // reset fullscreen option if the window is not fullscreen
+    // but only if have already had the chance to fullscreen on the current output
+    if (is_fullscreen != ctx->opt.fullscreen && ctx->wl.current_output != NULL) {
+        ctx->opt.fullscreen = is_fullscreen;
+    }
+
     // update size only if changed
     if (ctx->wl.width != (uint32_t)width || ctx->wl.height != (uint32_t)height) {
         log_debug(ctx, "wayland::on_xdg_toplevel_configure(): window resized to %dx%d\n", width, height);
