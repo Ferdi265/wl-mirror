@@ -33,6 +33,15 @@ wl-mirror - a simple Wayland output mirror client
 *    --toggle-freeze*
 	Freeze, unfreeze, or toggle freezing of the current image on the screen.
 
+*-F, --fullscreen*
+*    --no-fullscreen*
+	Open as a fullscreen window, or make the current window fullscreen in stream
+	mode.
+
+*    --fullscreen-output O*
+*    --no-fullscreen-output*
+	Set a different output to fullscreen on (default is the current output).
+
 *-s l, --scaling linear*
 	Use linear scaling (enabled by default).
 
