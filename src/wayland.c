@@ -465,7 +465,13 @@ static void on_surface_enter(
     }
 
     // update current output
+    bool first_output = ctx->wl.current_output == NULL;
     ctx->wl.current_output = node;
+
+    // set window fullscreen now if no specific output requested
+    if (first_output && ctx->opt.fullscreen) {
+        set_window_fullscreen(ctx);
+    }
 
     // update scale only if changed
     if (node->scale != ctx->wl.scale) {
@@ -749,7 +755,7 @@ void init_wl(ctx_t * ctx) {
     wl_display_roundtrip(ctx->wl.display);
 
     // set fullscreen on xdg_toplevel
-    if (ctx->opt.fullscreen) {
+    if (ctx->opt.fullscreen && ctx->opt.fullscreen_output != NULL) {
         set_window_fullscreen(ctx);
     }
     // check if surface is configured
