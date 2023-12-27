@@ -347,7 +347,7 @@ void usage_opt(ctx_t * ctx) {
     printf("  -F,   --fullscreen            open wl-mirror as fullscreen\n");
     printf("        --no-fullscreen         open wl-mirror as a window (default)\n");
     printf("        --fullscreen-output O   open wl-mirror as fullscreen on output O\n");
-    printf("        --no-fullscreen-output  open wl-mirror as fullscreen the the output the window is on\n");
+    printf("        --no-fullscreen-output  open wl-mirror as fullscreen on the current output (default)\n");
     printf("  -s l, --scaling linear        use linear scaling (default)\n");
     printf("  -s n, --scaling nearest       use nearest neighbor scaling\n");
     printf("  -s e, --scaling exact         only scale to exact multiples of the output size\n");
