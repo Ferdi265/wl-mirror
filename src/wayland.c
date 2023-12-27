@@ -593,6 +593,7 @@ static void on_loop_each(ctx_t * ctx) {
 }
 
 // --- find_output ---
+
 bool find_wl_output(ctx_t * ctx, char * output_name, struct wl_output ** output) {
     bool found = false;
     output_list_node_t * cur = ctx->wl.outputs;
@@ -609,7 +610,6 @@ bool find_wl_output(ctx_t * ctx, char * output_name, struct wl_output ** output)
     }
     return found;
 }
-
 
 // --- init_wl ---
 
@@ -750,13 +750,7 @@ void init_wl(ctx_t * ctx) {
 
     // set fullscreen on xdg_toplevel
     if (ctx->opt.fullscreen) {
-        struct wl_output * output = NULL;
-        if (ctx->opt.fullscreen_output != NULL && !find_wl_output(ctx, ctx->opt.fullscreen_output, &output)) {
-            log_error("wayland::init(): output %s not found\n", ctx->opt.fullscreen_output);
-            exit_fail(ctx);
-        }
-
-        xdg_toplevel_set_fullscreen(ctx->wl.xdg_toplevel, output);
+        set_window_fullscreen(ctx);
     }
     // check if surface is configured
     // - expecting surface to be configured at this point
@@ -770,6 +764,20 @@ void init_wl(ctx_t * ctx) {
 
 void set_window_title(ctx_t * ctx, const char * title) {
     xdg_toplevel_set_title(ctx->wl.xdg_toplevel, title);
+}
+
+// --- set_window_fullscreen ---
+
+void set_window_fullscreen(ctx_t * ctx) {
+    struct wl_output * output = NULL;
+    if (ctx->opt.fullscreen_output == NULL) {
+        output = ctx->wl.current_output->output;
+    } else if (!find_wl_output(ctx, ctx->opt.fullscreen_output, &output)) {
+        log_error("wayland::init(): output %s not found\n", ctx->opt.fullscreen_output);
+        exit_fail(ctx);
+    }
+
+    xdg_toplevel_set_fullscreen(ctx->wl.xdg_toplevel, output);
 }
 
 // --- cleanup_wl ---

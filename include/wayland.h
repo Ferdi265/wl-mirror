@@ -79,6 +79,7 @@ typedef struct ctx_wl {
 
 void init_wl(struct ctx * ctx);
 void set_window_title(struct ctx * ctx, const char * title);
+void set_window_fullscreen(struct ctx * ctx);
 void cleanup_wl(struct ctx * ctx);
 
 #endif
