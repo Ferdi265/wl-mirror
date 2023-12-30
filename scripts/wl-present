@@ -6,15 +6,19 @@ usage() {
     echo "start wl-mirror and control the mirrored output and region in a convenient way"
     echo
     echo "commands:"
-    echo "  help                show this help"
-    echo "  mirror [output]     start wl-mirror on output [output] (default asks via slurp)"
-    echo "  set-output [output] set the recorded output (default asks via slurp)"
-    echo "  set-region [region] set the recorded region (default asks via slurp)"
-    echo "  set-scaling [scale] set the scaling mode (default asks via rofi)"
-    echo "  freeze              freeze the screen"
-    echo "  unfreeze            resume the screen capture after freeze"
-    echo "  toggle-freeze       toggle freeze state of screen capture"
-    echo "  custom [options]    send custom options to wl-mirror (default asks via rofi)"
+    echo "  help                        show this help"
+    echo "  mirror [output]             start wl-mirror on output [output] (default asks via slurp)"
+    echo "  set-output [output]         set the recorded output (default asks via slurp)"
+    echo "  set-region [region]         set the recorded region (default asks via slurp)"
+    echo "  set-scaling [scale]         set the scaling mode (default asks via rofi)"
+    echo "  freeze                      freeze the screen"
+    echo "  unfreeze                    resume the screen capture after freeze"
+    echo "  toggle-freeze               toggle freeze state of screen capture"
+    echo "  fullscreen                  fullscreen the wl-mirror window"
+    echo "  no-fullscreen               unfullscreen the wl-mirror window"
+    echo "  fullscreen-output [output]  set the output to fullscreen to (default asks via slurp)"
+    echo "  no-fullscreen-output        set the output to fullscreen to to the current output"
+    echo "  custom [options]            send custom options to wl-mirror (default asks via rofi)"
     echo
     echo "dependencies:"
     echo "  wl-mirror, pipectl, slurp, and rofi or dmenu"
@@ -60,6 +64,10 @@ set-scaling() {
     mirror-cmd "-s $1"
 }
 
+set-fullscreen-output() {
+    mirror-cmd "--fullscreen-output $1"
+}
+
 ask-output() {
     slurp-output
     [[ $? -ne 0 ]] && exit 1
@@ -86,9 +94,14 @@ ask-custom() {
 --freeze
 --unfreeze
 --toggle-freeze
+--fullscreen
+--no-fullscreen
+--fullscreen-output
+--no-fullscreen-output
 --scaling linear
 --scaling nearest
 --scaling exact
+--backend
 --transform
 --region
 --no-region
@@ -109,6 +122,10 @@ case "$1" in
     freeze) mirror-cmd --freeze;;
     unfreeze) mirror-cmd --unfreeze;;
     toggle-freeze) mirror-cmd --toggle-freeze;;
+    fullscreen) mirror-cmd --fullscreen;;
+    no-fullscreen) mirror-cmd --no-fullscreen;;
+    fullscreen-output) set-fullscreen-output "${2:-$(ask-output)}";;
+    no-fullscreen-output) mirror-cmd --no-fullscreen-output;;
     custom) mirror-cmd "${2:-$(ask-custom)}";;
     *) usage;;
 esac
