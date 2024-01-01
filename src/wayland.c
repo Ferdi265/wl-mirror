@@ -701,7 +701,6 @@ void init_wl(ctx_t * ctx) {
     ctx->wl.current_output = NULL;
     ctx->wl.width = 0;
     ctx->wl.height = 0;
-    ctx->wl.buffer_scale = 1;
     ctx->wl.scale = 1.0;
 
     ctx->wl.event_handler.fd = -1;
@@ -860,27 +859,13 @@ void unset_window_fullscreen(ctx_t * ctx) {
     xdg_toplevel_unset_fullscreen(ctx->wl.xdg_toplevel);
 }
 
-// --- update_buffer_scale
+// --- update_window_scale
 
 void update_window_scale(ctx_t * ctx, double scale, bool is_fractional) {
-    int32_t buffer_scale = scale;
     bool resize = false;
 
     // don't update scale from other sources if fractional scaling supported
     if (ctx->wl.fractional_scale != NULL && !is_fractional) return;
-
-    // buffer scale is always 1 if fractional scaling supported
-    if (ctx->wl.fractional_scale != NULL) {
-        buffer_scale = 1;
-    }
-
-    if (ctx->wl.buffer_scale != buffer_scale) {
-        ctx->wl.buffer_scale = buffer_scale;
-        resize = true;
-
-        log_debug(ctx, "wayland::update_window_scale(): setting buffer scale to %d\n", buffer_scale);
-        wl_surface_set_buffer_scale(ctx->wl.surface, buffer_scale);
-    }
 
     if (ctx->wl.scale != scale) {
         log_debug(ctx, "wayland::update_window_scale(): setting window scale to %.2f\n", scale);
