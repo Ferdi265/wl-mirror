@@ -94,13 +94,7 @@ static void on_output_scale(
         // update buffer scale only if this is the current output
         if (ctx->wl.current_output != NULL && ctx->wl.current_output->output == output) {
             log_debug(ctx, "wayland::on_output_scale(): updating window scale\n");
-            ctx->wl.scale = scale;
-            wl_surface_set_buffer_scale(ctx->wl.surface, scale);
-
-            // resize egl window to reflect new scale
-            if (ctx->egl.initialized) {
-                resize_window(ctx);
-            }
+            update_window_scale(ctx, scale, false);
         }
     }
 }
@@ -237,6 +231,26 @@ static void on_registry_add(
         ctx->wl.seat = (struct wl_seat *)wl_registry_bind(
             registry, id, &wl_seat_interface, 1
         );
+    } else if (strcmp(interface, wp_viewporter_interface.name) == 0) {
+        if (ctx->wl.viewporter != NULL) {
+            log_error("wayland::on_registry_add(): duplicate wp_viewporter\n");
+            exit_fail(ctx);
+        }
+
+        // bind wp_viewporter object
+        ctx->wl.viewporter = (struct wp_viewporter *)wl_registry_bind(
+            registry, id, &wp_viewporter_interface, 1
+        );
+    } else if (strcmp(interface, wp_fractional_scale_manager_v1_interface.name) == 0) {
+        if (ctx->wl.fractional_scale_manager != NULL) {
+            log_error("wayland::on_registry_add(): duplicate wp_fractional_scale_manager\n");
+            exit_fail(ctx);
+        }
+
+        // bind wp_fractional_scale_manager_v1 object
+        ctx->wl.fractional_scale_manager = (struct wp_fractional_scale_manager_v1 *)wl_registry_bind(
+            registry, id, &wp_fractional_scale_manager_v1_interface, 1
+        );
     } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
         if (ctx->wl.wm_base != NULL) {
             log_error("wayland::on_registry_add(): duplicate wm_base\n");
@@ -370,6 +384,12 @@ static void on_registry_remove(
     } else if (id == ctx->wl.seat_id) {
         log_error("wayland::on_registry_remove(): seat disappeared\n");
         exit_fail(ctx);
+    } else if (id == ctx->wl.viewporter_id) {
+        log_error("wayland::on_registry_remove(): viewporter disappeared\n");
+        exit_fail(ctx);
+    } else if (id == ctx->wl.fractional_scale_manager_id) {
+        log_error("wayland::on_registry_remove(): fractional_scale_manager disappeared\n");
+        exit_fail(ctx);
     } else if (id == ctx->wl.wm_base_id) {
         log_error("wayland::on_registry_remove(): wm_base disappeared\n");
         exit_fail(ctx);
@@ -473,17 +493,8 @@ static void on_surface_enter(
         set_window_fullscreen(ctx);
     }
 
-    // update scale only if changed
-    if (node->scale != ctx->wl.scale) {
-        log_debug(ctx, "wayland::on_surface_enter(): updating window scale\n");
-        ctx->wl.scale = node->scale;
-        wl_surface_set_buffer_scale(ctx->wl.surface, node->scale);
-
-        // resize egl window to reflect new scale
-        if (ctx->egl.initialized) {
-            resize_window(ctx);
-        }
-    }
+    log_debug(ctx, "wayland::on_surface_enter(): updating window scale\n");
+    update_window_scale(ctx, node->scale, false);
 
     (void)surface;
 }
@@ -571,6 +582,9 @@ static void on_xdg_toplevel_configure(
         ctx->wl.width = width;
         ctx->wl.height = height;
 
+        // resize viewport
+        wp_viewport_set_destination(ctx->wl.viewport, width, height);
+
         // resize window to reflect new surface size
         if (ctx->egl.initialized) {
             resize_window(ctx);
@@ -613,6 +627,23 @@ static void on_loop_each(ctx_t * ctx) {
     wl_display_flush(ctx->wl.display);
 }
 
+// --- fractional scale event handlers ---
+
+static void on_fractional_scale_preferred_scale(void * data, struct wp_fractional_scale_v1 * fractional_scale, uint32_t scale_times_120) {
+    ctx_t * ctx = (ctx_t *)data;
+    double scale = scale_times_120 / 120.0;
+    log_debug(ctx, "wayland::on_fractional_scale_preferred_scale(): new scale is %.2f\n", scale);
+
+    // fractionally scaled surfaces have buffer scale of 1
+    update_window_scale(ctx, scale, true);
+
+    (void)fractional_scale;
+}
+
+static const struct wp_fractional_scale_v1_listener fractional_scale_listener = {
+    .preferred_scale = on_fractional_scale_preferred_scale
+};
+
 // --- find_output ---
 
 bool find_wl_output(ctx_t * ctx, char * output_name, struct wl_output ** output) {
@@ -643,6 +674,10 @@ void init_wl(ctx_t * ctx) {
     ctx->wl.compositor_id = 0;
     ctx->wl.seat = NULL;
     ctx->wl.seat_id = 0;
+    ctx->wl.viewporter = NULL;
+    ctx->wl.viewporter_id = 0;
+    ctx->wl.fractional_scale_manager = NULL;
+    ctx->wl.fractional_scale_manager_id = 0;
     ctx->wl.wm_base = NULL;
     ctx->wl.wm_base_id = 0;
     ctx->wl.output_manager = NULL;
@@ -658,13 +693,16 @@ void init_wl(ctx_t * ctx) {
     ctx->wl.outputs = NULL;
 
     ctx->wl.surface = NULL;
+    ctx->wl.viewport = NULL;
+    ctx->wl.fractional_scale = NULL;
     ctx->wl.xdg_surface = NULL;
     ctx->wl.xdg_toplevel = NULL;
 
     ctx->wl.current_output = NULL;
     ctx->wl.width = 0;
     ctx->wl.height = 0;
-    ctx->wl.scale = 1;
+    ctx->wl.buffer_scale = 1;
+    ctx->wl.scale = 1.0;
 
     ctx->wl.event_handler.fd = -1;
     ctx->wl.event_handler.events = EPOLLIN;
@@ -710,6 +748,9 @@ void init_wl(ctx_t * ctx) {
     if (ctx->wl.compositor == NULL) {
         log_error("wayland::init(): compositor missing\n");
         exit_fail(ctx);
+    } else if (ctx->wl.viewporter == NULL) {
+        log_error("wayland::init(): viewporter missing\n");
+        exit_fail(ctx);
     } else if (ctx->wl.wm_base == NULL) {
         log_error("wayland::init(): wm_base missing\n");
         exit_fail(ctx);
@@ -733,6 +774,20 @@ void init_wl(ctx_t * ctx) {
     // - for enter event
     // - for leave event
     wl_surface_add_listener(ctx->wl.surface, &surface_listener, (void *)ctx);
+
+    // create viewport
+    ctx->wl.viewport = wp_viewporter_get_viewport(ctx->wl.viewporter, ctx->wl.surface);
+    if (ctx->wl.viewport == NULL) {
+        log_error("wayland::init(): failed to create viewport\n");
+        exit_fail(ctx);
+    }
+
+    // create fractional scale if supported
+    if (ctx->wl.fractional_scale_manager != NULL) {
+        ctx->wl.fractional_scale = wp_fractional_scale_manager_v1_get_fractional_scale(ctx->wl.fractional_scale_manager, ctx->wl.surface);
+
+        wp_fractional_scale_v1_add_listener(ctx->wl.fractional_scale, &fractional_scale_listener, (void *)ctx);
+    }
 
     // create xdg surface
     ctx->wl.xdg_surface = xdg_wm_base_get_xdg_surface(ctx->wl.wm_base, ctx->wl.surface);
@@ -805,6 +860,40 @@ void unset_window_fullscreen(ctx_t * ctx) {
     xdg_toplevel_unset_fullscreen(ctx->wl.xdg_toplevel);
 }
 
+// --- update_buffer_scale
+
+void update_window_scale(ctx_t * ctx, double scale, bool is_fractional) {
+    int32_t buffer_scale = scale;
+    bool resize = false;
+
+    // don't update scale from other sources if fractional scaling supported
+    if (ctx->wl.fractional_scale != NULL && !is_fractional) return;
+
+    // buffer scale is always 1 if fractional scaling supported
+    if (ctx->wl.fractional_scale != NULL) {
+        buffer_scale = 1;
+    }
+
+    if (ctx->wl.buffer_scale != buffer_scale) {
+        ctx->wl.buffer_scale = buffer_scale;
+        resize = true;
+
+        log_debug(ctx, "wayland::update_window_scale(): setting buffer scale to %d\n", buffer_scale);
+        wl_surface_set_buffer_scale(ctx->wl.surface, buffer_scale);
+    }
+
+    if (ctx->wl.scale != scale) {
+        log_debug(ctx, "wayland::update_window_scale(): setting window scale to %.2f\n", scale);
+        ctx->wl.scale = scale;
+        resize = true;
+    }
+
+    // resize egl window to reflect new scale
+    if (resize && ctx->egl.initialized) {
+        resize_window(ctx);
+    }
+}
+
 // --- cleanup_wl ---
 
 void cleanup_wl(ctx_t *ctx) {
@@ -835,9 +924,13 @@ void cleanup_wl(ctx_t *ctx) {
     if (ctx->wl.shm != NULL) wl_shm_destroy(ctx->wl.shm);
     if (ctx->wl.xdg_toplevel != NULL) xdg_toplevel_destroy(ctx->wl.xdg_toplevel);
     if (ctx->wl.xdg_surface != NULL) xdg_surface_destroy(ctx->wl.xdg_surface);
+    if (ctx->wl.fractional_scale != NULL) wp_fractional_scale_v1_destroy(ctx->wl.fractional_scale);
+    if (ctx->wl.viewport != NULL) wp_viewport_destroy(ctx->wl.viewport);
     if (ctx->wl.surface != NULL) wl_surface_destroy(ctx->wl.surface);
     if (ctx->wl.output_manager != NULL) zxdg_output_manager_v1_destroy(ctx->wl.output_manager);
     if (ctx->wl.wm_base != NULL) xdg_wm_base_destroy(ctx->wl.wm_base);
+    if (ctx->wl.fractional_scale_manager != NULL) wp_fractional_scale_manager_v1_destroy(ctx->wl.fractional_scale_manager);
+    if (ctx->wl.viewporter != NULL) wp_viewporter_destroy(ctx->wl.viewporter);
     if (ctx->wl.seat != NULL) wl_seat_destroy(ctx->wl.seat);
     if (ctx->wl.compositor != NULL) wl_compositor_destroy(ctx->wl.compositor);
     if (ctx->wl.registry != NULL) wl_registry_destroy(ctx->wl.registry);

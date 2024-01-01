@@ -14,6 +14,8 @@ set(WL_PROTOCOL_DIR "/usr/share/wayland-protocols/" CACHE STRING "wayland-protoc
 set(WLR_PROTOCOL_DIR "/usr/share/wlr-protocols/" CACHE STRING "wlr-protocols directory")
 set(PROTOCOLS
     "stable/xdg-shell/xdg-shell.xml"
+    "stable/viewporter/viewporter.xml"
+    "staging/fractional-scale/fractional-scale-v1.xml"
     "unstable/xdg-output/xdg-output-unstable-v1.xml"
     "unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
     "unstable/wlr-export-dmabuf-unstable-v1.xml"

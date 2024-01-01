@@ -276,8 +276,8 @@ void draw_texture(ctx_t *ctx) {
 void resize_viewport(ctx_t * ctx) {
     log_debug(ctx, "egl::resize_viewport(): resizing viewport\n");
 
-    uint32_t win_width = ctx->wl.scale * ctx->wl.width;
-    uint32_t win_height = ctx->wl.scale * ctx->wl.height;
+    uint32_t win_width = round(ctx->wl.width * ctx->wl.scale);
+    uint32_t win_height = round(ctx->wl.height * ctx->wl.scale);
     uint32_t tex_width = ctx->egl.width;
     uint32_t tex_height = ctx->egl.height;
     uint32_t view_width = win_width;
@@ -358,10 +358,13 @@ void resize_viewport(ctx_t * ctx) {
 // --- resize_window ---
 
 void resize_window(ctx_t * ctx) {
-    log_debug(ctx, "egl::resize_window(): resizing EGL window\n");
+    uint32_t width = round(ctx->wl.width * ctx->wl.scale);
+    uint32_t height = round(ctx->wl.height * ctx->wl.scale);
+    log_debug(ctx, "egl::resize_window(): resizing EGL window to %dx%d\n", width, height);
 
     // resize window, then trigger viewport recalculation
-    wl_egl_window_resize(ctx->egl.window, ctx->wl.scale * ctx->wl.width, ctx->wl.scale * ctx->wl.height, 0, 0);
+    wl_egl_window_resize(ctx->egl.window, width, height, 0, 0);
+    wp_viewport_set_source(ctx->wl.viewport, 0, 0, wl_fixed_from_int(width), wl_fixed_from_int(height));
     resize_viewport(ctx);
 
     // redraw frame

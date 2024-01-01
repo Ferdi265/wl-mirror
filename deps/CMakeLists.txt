@@ -13,6 +13,7 @@ function(do_pkg_search_module name)
 endfunction()
 
 # required dependencies
+find_library(MATH_LIBRARY m REQUIRED)
 pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET "wayland-client")
 pkg_check_modules(WaylandEGL REQUIRED IMPORTED_TARGET "wayland-egl")
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET "egl")
@@ -32,6 +33,7 @@ set(SCDOC "${SCDOC}" PARENT_SCOPE)
 
 # link dependencies
 target_link_libraries(deps INTERFACE
+    ${MATH_LIBRARY}
     PkgConfig::WaylandClient PkgConfig::WaylandEGL PkgConfig::EGL PkgConfig::GLESv2
 )
 target_link_libraries(proto_deps INTERFACE
