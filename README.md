@@ -7,7 +7,7 @@ by mirroring an output onto a client surface.
 
 - Mirror an output onto a resizable window
 - Mirror an output onto another output by fullscreening the window
-- Reacts to changes in output scale
+- Reacts to changes in output scale (including fractional scaling)
 - Preserves aspect ratio
 - Corrects for flipped or rotated outputs
 - Supports custom flips or rotations
