@@ -613,6 +613,21 @@ static void on_libdecor_frame_configure(
         }
     }
 
+    // check fullscreen state
+    bool is_fullscreen = false;
+    enum libdecor_window_state window_state;
+    if (libdecor_configuration_get_window_state(configuration, &window_state)) {
+        if (window_state & LIBDECOR_WINDOW_STATE_FULLSCREEN) {
+            is_fullscreen = true;
+        }
+    }
+
+    // reset fullscreen option if the window is not fullscreen
+    // but only if have already had the chance to fullscreen on the current output
+    if (is_fullscreen != ctx->opt.fullscreen && ctx->wl.current_output != NULL) {
+        ctx->opt.fullscreen = is_fullscreen;
+    }
+
     struct libdecor_state * state = libdecor_state_new(width, height);
     libdecor_frame_commit(frame, state, configuration);
     libdecor_state_free(state);
