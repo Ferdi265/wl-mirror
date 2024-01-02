@@ -638,6 +638,9 @@ static void on_libdecor_frame_configure(
         ctx->wl.width = width;
         ctx->wl.height = height;
 
+        // resize viewport
+        wp_viewport_set_destination(ctx->wl.viewport, width, height);
+
         // resize window to reflect new surface size
         if (ctx->egl.initialized) {
             resize_window(ctx);
