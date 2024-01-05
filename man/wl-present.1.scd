@@ -36,6 +36,14 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 *toggle-freeze*
 	Set the freeze state of a running *wl-present* session.
 
+*fullscreen*
+*no-fullscreen*
+	Set the fullscreen state of a running *wl-present* session.
+
+*fullscreen-output* [OUTPUT]
+*no-fullscreen-output*
+	Set the fullscreen target output of a running *wl-present* session.
+
 *custom* [OPTIONS]
 	Send custom options to a running *wl-present* session. If no options are given, *rofi*(1) or *dmenu*(1) are used to select an option.
 
