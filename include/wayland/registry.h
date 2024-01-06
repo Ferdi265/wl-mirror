@@ -5,14 +5,14 @@
 #include <stddef.h>
 #include <wayland-client-core.h>
 
-struct ctx;
+typedef struct ctx ctx_t;
 
 typedef struct {
     const struct wl_interface * interface;
     size_t version;
     bool required;
-    void (* on_add)(struct ctx * ctx, struct wl_proxy * proxy);
-    void (* on_remove)(struct ctx * ctx, struct wl_proxy * proxy);
+    void (* on_add)(ctx_t *, struct wl_proxy * proxy);
+    void (* on_remove)(ctx_t *, struct wl_proxy * proxy);
 } wayland_registry_bind_multiple_t;
 
 #define WAYLAND_REGISTRY_BIND_MULTIPLE(proxy_interface, min_version, is_required, on_add_fn, on_remove_fn) \
@@ -49,19 +49,18 @@ typedef struct {
         .interface = NULL \
     }
 
-
 typedef struct {
     struct wl_list link;
     struct wl_proxy * proxy;
     const struct wl_interface * interface;
     uint32_t id;
-    void (* on_remove)(struct ctx * ctx, struct wl_proxy * proxy);
+    void (* on_remove)(ctx_t *, struct wl_proxy * proxy);
 } wayland_registry_bound_global_t;
 
 extern const wayland_registry_bind_multiple_t wayland_registry_bind_multiple[];
 extern const wayland_registry_bind_singleton_t wayland_registry_bind_singleton[];
 
-typedef struct ctx_wl_registry {
+typedef struct {
     // registry handle
     struct wl_registry * handle;
 
@@ -74,9 +73,11 @@ typedef struct ctx_wl_registry {
     bool initial_sync_complete;
 } ctx_wl_registry_t;
 
-void wayland_registry_zero(struct ctx * ctx);
-void wayland_registry_init(struct ctx * ctx);
-void wayland_registry_cleanup(struct ctx * ctx);
+void wayland_registry_zero(ctx_t *);
+void wayland_registry_init(ctx_t *);
+void wayland_registry_cleanup(ctx_t *);
+
+bool wayland_registry_is_initial_sync_complete(ctx_t *);
 bool wayland_registry_is_own_proxy(struct wl_proxy * proxy);
 
 #endif

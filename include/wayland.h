@@ -5,18 +5,21 @@
 #include "wayland/registry.h"
 #include "wayland/protocols.h"
 #include "wayland/output.h"
+#include "wayland/window.h"
+#include "wayland/events.h"
 
-struct ctx;
+typedef struct ctx ctx_t;
 
-typedef struct ctx_wl {
+typedef struct {
     ctx_wl_core_t core;
     ctx_wl_registry_t registry;
     ctx_wl_protocols_t protocols;
     ctx_wl_output_t output;
+    ctx_wl_window_t window;
 } ctx_wl_t;
 
-void wayland_zero(struct ctx * ctx);
-void wayland_init(struct ctx * ctx);
-void wayland_cleanup(struct ctx * ctx);
+void wayland_zero(ctx_t *);
+void wayland_init(ctx_t *);
+void wayland_cleanup(ctx_t *);
 
 #endif

@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <string.h>
 #include "context.h"
 #include "event.h"
 
@@ -34,7 +35,7 @@ void event_init(ctx_t * ctx) {
     // initialize epoll fd
     ctx->event.pollfd = epoll_create(1);
     if (ctx->event.pollfd == -1) {
-        log_error("event::init(): failed to create epoll instance\n");
+        log_error("event::init(): failed to create epoll instance: %s\n", strerror(errno));
         exit_fail(ctx);
         return;
     }
@@ -96,7 +97,7 @@ void event_add_fd(ctx_t * ctx, event_handler_t * handler) {
     event.data.ptr = handler;
 
     if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_ADD, handler->fd, &event) == -1) {
-        log_error("event::add_fd(): failed to add fd to epoll instance\n");
+        log_error("event::add_fd(): failed to add fd to epoll instance: %s\n", strerror(errno));
         exit_fail(ctx);
     }
 
@@ -109,14 +110,14 @@ void event_change_fd(ctx_t * ctx, event_handler_t * handler) {
     event.data.ptr = handler;
 
     if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_MOD, handler->fd, &event) == -1) {
-        log_error("event::change_fd(): failed to modify fd in epoll instance\n");
+        log_error("event::change_fd(): failed to modify fd in epoll instance: %s\n", strerror(errno));
         exit_fail(ctx);
     }
 }
 
 void event_remove_fd(ctx_t * ctx, event_handler_t * handler) {
     if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_DEL, handler->fd, NULL) == -1) {
-        log_error("event::remove_fd(): failed to remove fd from epoll instance\n");
+        log_error("event::remove_fd(): failed to remove fd from epoll instance: %s\n", strerror(errno));
     }
 
     wl_list_remove(&handler->link);

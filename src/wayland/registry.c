@@ -26,6 +26,7 @@ static struct wl_proxy * try_bind(
         return NULL;
     }
 
+    log_debug(ctx, "wayland::registry::try_bind(): binding %s (version = %d)\n", interface->name, min_version);
     struct wl_proxy * proxy = wl_registry_bind(ctx->wl.registry.handle, id, interface, min_version);
     wl_proxy_set_tag(proxy, &proxy_tag);
 
@@ -155,7 +156,8 @@ static void on_sync_callback_done(
         exit_fail(ctx);
     }
 
-    (void)callback;
+    wayland_events_emit_registry_initial_sync(ctx);
+
     (void)callback_data;
 }
 
@@ -174,6 +176,12 @@ void wayland_registry_zero(ctx_t * ctx) {
     ctx->wl.registry.sync_callback = NULL;
     ctx->wl.registry.initial_sync_had_errors = false;
     ctx->wl.registry.initial_sync_complete = false;
+
+    // clear all bound singleton proxies
+    const wayland_registry_bind_singleton_t * spec = wayland_registry_bind_singleton;
+    for (; spec->interface != NULL; spec++) {
+        *(struct wl_proxy **)((char *)ctx + spec->proxy_offset) = NULL;
+    }
 }
 
 void wayland_registry_init(ctx_t * ctx) {
@@ -208,6 +216,10 @@ void wayland_registry_cleanup(ctx_t * ctx) {
     if (ctx->wl.registry.handle != NULL) wl_registry_destroy(ctx->wl.registry.handle);
 
     wayland_registry_zero(ctx);
+}
+
+bool wayland_registry_is_initial_sync_complete(ctx_t * ctx) {
+    return ctx->wl.registry.initial_sync_complete;
 }
 
 bool wayland_registry_is_own_proxy(struct wl_proxy * proxy) {

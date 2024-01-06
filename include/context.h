@@ -21,7 +21,7 @@ typedef struct ctx {
     //ctx_mirror_t mirror;
 } ctx_t;
 
-noreturn void exit_fail(ctx_t * ctx);
-void cleanup(ctx_t * ctx);
+noreturn void exit_fail(ctx_t *);
+void cleanup(ctx_t *);
 
 #endif

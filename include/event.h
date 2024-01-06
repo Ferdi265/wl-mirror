@@ -9,7 +9,7 @@
 
 struct ctx;
 
-typedef struct event_handler {
+typedef struct {
     struct wl_list link;
 
     int fd;
