@@ -58,6 +58,6 @@ wayland_output_entry_t * wayland_output_find_by_name(ctx_t *, const char * name)
 
 void wayland_output_on_add(ctx_t *, struct wl_output * output);
 void wayland_output_on_remove(ctx_t *, struct wl_output * output);
-void wayland_output_on_initial_sync(ctx_t *);
+void wayland_output_on_registry_initial_sync(ctx_t *);
 
 #endif

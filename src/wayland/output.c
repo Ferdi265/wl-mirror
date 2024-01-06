@@ -296,7 +296,7 @@ void wayland_output_on_remove(ctx_t * ctx, struct wl_output * output) {
     }
 }
 
-void wayland_output_on_initial_sync(ctx_t * ctx) {
+void wayland_output_on_registry_initial_sync(ctx_t * ctx) {
     wayland_output_entry_t *cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         if (cur->xdg_output == NULL) {

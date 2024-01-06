@@ -75,6 +75,7 @@ void event_loop(ctx_t * ctx) {
     timeout_handler = min_timeout(ctx);
     timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
 
+    log_debug(ctx, "event::loop(): waiting for events\n");
     while ((num_events = epoll_wait(ctx->event.pollfd, events, MAX_EVENTS, timeout_ms)) != -1 && !wayland_core_is_closing(ctx)) {
         for (int i = 0; i < num_events; i++) {
             event_handler_t * handler = (event_handler_t *)events[i].data.ptr;
@@ -88,6 +89,7 @@ void event_loop(ctx_t * ctx) {
         call_each_handler(ctx);
         timeout_handler = min_timeout(ctx);
         timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
+        log_debug(ctx, "event::loop(): waiting for events\n");
     }
 }
 

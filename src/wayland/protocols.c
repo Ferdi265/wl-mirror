@@ -12,5 +12,7 @@ const wayland_registry_bind_singleton_t wayland_registry_bind_singleton[] = {
     WAYLAND_REGISTRY_BIND_SINGLETON(zxdg_output_manager_v1_interface,           3, true,    ctx_t, wl.protocols.xdg_output_manager),
     WAYLAND_REGISTRY_BIND_SINGLETON(wl_shm_interface,                           1, false,   ctx_t, wl.protocols.shm),
     WAYLAND_REGISTRY_BIND_SINGLETON(wp_fractional_scale_manager_v1_interface,   1, false,   ctx_t, wl.protocols.fractional_scale_manager),
+    WAYLAND_REGISTRY_BIND_SINGLETON(zwlr_export_dmabuf_manager_v1_interface,    1, false,   ctx_t, wl.protocols.export_dmabuf_manager),
+    WAYLAND_REGISTRY_BIND_SINGLETON(zwlr_screencopy_manager_v1_interface,       3, false,   ctx_t, wl.protocols.screencopy_manager),
     WAYLAND_REGISTRY_BIND_SINGLETON_END
 };
