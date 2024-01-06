@@ -3,6 +3,8 @@
 #include "context.h"
 #include "wayland.h"
 
+// --- private utility functions ---
+
 static const char * proxy_tag = "wl-mirror";
 
 static struct wl_proxy * try_bind(
@@ -71,6 +73,8 @@ static void try_bind_singleton(ctx_t * ctx, uint32_t id, uint32_t version, const
     *proxy_ptr = proxy;
 }
 
+// --- registry event handlers ---
+
 static void on_registry_add(
     void * data, struct wl_registry * registry,
     uint32_t id, const char * interface, uint32_t version
@@ -127,6 +131,8 @@ static const struct wl_registry_listener registry_listener = {
     .global_remove = on_registry_remove
 };
 
+// --- initial sync event handler ---
+
 static void on_sync_callback_done(
     void * data, struct wl_callback * callback,
     uint32_t callback_data
@@ -164,6 +170,8 @@ static void on_sync_callback_done(
 static const struct wl_callback_listener sync_callback_listener = {
     .done = on_sync_callback_done
 };
+
+// --- initialization and cleanup ---
 
 void wayland_registry_zero(ctx_t * ctx) {
     // registry handle
@@ -217,6 +225,8 @@ void wayland_registry_cleanup(ctx_t * ctx) {
 
     wayland_registry_zero(ctx);
 }
+
+// --- public functions ---
 
 bool wayland_registry_is_initial_sync_complete(ctx_t * ctx) {
     return ctx->wl.registry.initial_sync_complete;

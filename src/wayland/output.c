@@ -2,6 +2,8 @@
 #include <string.h>
 #include "context.h"
 
+// --- private utility functions ---
+
 static void check_outputs_complete(ctx_t * ctx) {
     if (!wayland_registry_is_initial_sync_complete(ctx)) return;
     if (ctx->wl.output.incomplete_outputs > 0) return;
@@ -27,6 +29,34 @@ static wayland_output_entry_t * find_output(ctx_t * ctx, struct wl_output * outp
 
     return cur;
 }
+
+static wayland_output_entry_t * find_xdg_output(ctx_t * ctx, struct zxdg_output_v1 * xdg_output) {
+    bool found = false;
+    wayland_output_entry_t * cur;
+    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
+        if (cur->xdg_output == xdg_output) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        log_error("wayland::output::find_xdg_output(): could not find output entry for xdg_output %p\n", xdg_output);
+        exit_fail(ctx);
+    }
+
+    return cur;
+}
+
+static const struct zxdg_output_v1_listener xdg_output_listener;
+static void bind_xdg_output(ctx_t * ctx, wayland_output_entry_t * cur) {
+    cur->xdg_output = zxdg_output_manager_v1_get_xdg_output(ctx->wl.protocols.xdg_output_manager, cur->output);
+    zxdg_output_v1_add_listener(cur->xdg_output, &xdg_output_listener, (void *)ctx);
+
+    (void)ctx;
+}
+
+// --- output event handlers ---
 
 static void on_output_name(
     void * data, struct wl_output * output,
@@ -130,7 +160,7 @@ static void on_output_done(
     }
 }
 
-const struct wl_output_listener output_listener = {
+static const struct wl_output_listener output_listener = {
     .name = on_output_name,
     .description = on_output_description,
     .mode = on_output_mode,
@@ -139,23 +169,7 @@ const struct wl_output_listener output_listener = {
     .done = on_output_done
 };
 
-static wayland_output_entry_t * find_xdg_output(ctx_t * ctx, struct zxdg_output_v1 * xdg_output) {
-    bool found = false;
-    wayland_output_entry_t * cur;
-    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
-        if (cur->xdg_output == xdg_output) {
-            found = true;
-            break;
-        }
-    }
-
-    if (!found) {
-        log_error("wayland::output::find_xdg_output(): could not find output entry for xdg_output %p\n", xdg_output);
-        exit_fail(ctx);
-    }
-
-    return cur;
-}
+// --- xdg_output event handlers ---
 
 static void on_xdg_output_name(
     void * data, struct zxdg_output_v1 * xdg_output,
@@ -225,7 +239,7 @@ static void on_xdg_output_done(
     (void)xdg_output;
 }
 
-const struct zxdg_output_v1_listener xdg_output_listener = {
+static const struct zxdg_output_v1_listener xdg_output_listener = {
     .name = on_xdg_output_name,
     .description = on_xdg_output_description,
     .logical_position = on_xdg_output_logical_position,
@@ -233,12 +247,7 @@ const struct zxdg_output_v1_listener xdg_output_listener = {
     .done = on_xdg_output_done
 };
 
-static void bind_xdg_output(ctx_t * ctx, wayland_output_entry_t * cur) {
-    cur->xdg_output = zxdg_output_manager_v1_get_xdg_output(ctx->wl.protocols.xdg_output_manager, cur->output);
-    zxdg_output_v1_add_listener(cur->xdg_output, &xdg_output_listener, (void *)ctx);
-
-    (void)ctx;
-}
+// --- initialization and cleanup
 
 void wayland_output_zero(ctx_t * ctx) {
     wl_list_init(&ctx->wl.output.output_list);
@@ -259,6 +268,8 @@ void wayland_output_cleanup(ctx_t * ctx) {
         free(cur);
     }
 }
+
+// --- internal event handlers ---
 
 void wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
     wl_output_add_listener(output, &output_listener, (void *)ctx);

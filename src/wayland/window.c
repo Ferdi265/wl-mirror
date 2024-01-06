@@ -1,5 +1,7 @@
 #include "context.h"
 
+// --- xdg_wm_base event handlers ---
+
 static void on_xdg_wm_base_ping(
     void * data, struct xdg_wm_base * xdg_wm_base,
     uint32_t serial
@@ -14,21 +16,31 @@ static const struct xdg_wm_base_listener xdg_wm_base_listener = {
     .ping = on_xdg_wm_base_ping
 };
 
+// --- surface event handlers ---
+
 static const struct wl_surface_listener surface_listener = {
     // TODO
 };
+
+// --- fractional_scale event handlers ---
 
 static const struct wp_fractional_scale_v1_listener fractional_scale_listener = {
     // TODO
 };
 
+// --- xdg_surface event handlers ---
+
 static const struct xdg_surface_listener xdg_surface_listener = {
     // TODO
 };
 
+// --- xdg_toplevel event handlers ---
+
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {
     // TODO
 };
+
+// --- initialization and cleanup ---
 
 void wayland_window_zero(ctx_t * ctx) {
     ctx->wl.window.surface = NULL;
@@ -51,6 +63,8 @@ void wayland_window_cleanup(ctx_t * ctx) {
 
     wayland_window_zero(ctx);
 }
+
+// --- internal event handlers ---
 
 void wayland_window_on_registry_initial_sync(ctx_t * ctx) {
     log_debug(ctx, "wayland::window::on_registry_initial_sync(): creating window\n");

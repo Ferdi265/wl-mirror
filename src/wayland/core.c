@@ -1,6 +1,8 @@
 #include "context.h"
 #include "wayland.h"
 
+// --- event loop handlers ---
+
 static void on_loop_event(ctx_t * ctx) {
     if (wl_display_dispatch(ctx->wl.core.display) == -1) {
         ctx->wl.core.closing = true;
@@ -10,6 +12,8 @@ static void on_loop_event(ctx_t * ctx) {
 static void on_loop_each(ctx_t * ctx) {
     wl_display_flush(ctx->wl.core.display);
 }
+
+// --- initialization and cleanup ---
 
 void wayland_core_zero(ctx_t * ctx) {
     // wayland display
@@ -45,6 +49,8 @@ void wayland_core_cleanup(ctx_t * ctx) {
 
     wayland_core_zero(ctx);
 }
+
+// --- public functions ---
 
 bool wayland_core_is_closing(ctx_t * ctx) {
     return ctx->wl.core.closing;
