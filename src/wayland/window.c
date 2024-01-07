@@ -119,8 +119,35 @@ static void on_libdecor_frame_configure(
     ctx_t * ctx = (ctx_t *)data;
     log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): configuring\n");
 
-    // TODO
-    (void)configuration;
+    int width = 0;
+    int height = 0;
+    if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
+        if (ctx->wl.window.width == 0 || ctx->wl.window.height == 0) {
+            log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): falling back to default size\n");
+            width = DEFAULT_WIDTH;
+            height = DEFAULT_HEIGHT;
+        } else {
+            log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): falling back to previous size\n");
+            width = ctx->wl.window.width;
+            height = ctx->wl.window.height;
+        }
+    }
+
+    // check fullscreen state
+    bool is_fullscreen = false;
+    enum libdecor_window_state window_state;
+    if (libdecor_configuration_get_window_state(configuration, &window_state)) {
+        if (window_state & LIBDECOR_WINDOW_STATE_FULLSCREEN) {
+            is_fullscreen = true;
+        }
+    }
+
+    struct libdecor_state * state = libdecor_state_new(width, height);
+    libdecor_frame_commit(frame, state, configuration);
+    libdecor_state_free(state);
+
+    // TODO: check if things changed, emit events
+    (void)is_fullscreen;
 }
 
 static void on_libdecor_frame_commit(
@@ -218,9 +245,7 @@ void wayland_window_on_output_initial_sync(ctx_t * ctx) {
     libdecor_frame_set_title(ctx->wl.window.libdecor_frame, "Wayland Output Mirror");
 
     // map libdecor frame
+    log_debug(ctx, "wayland::window::on_output_initial_sync(): mapping frame\n");
     libdecor_frame_map(ctx->wl.window.libdecor_frame);
-
-    // commit surface
-    log_debug(ctx, "wayland::window::on_output_initial_sync(): committing surface\n");
     wl_surface_commit(ctx->wl.window.surface);
 }

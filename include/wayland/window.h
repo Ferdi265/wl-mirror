@@ -6,6 +6,9 @@
 
 typedef struct ctx ctx_t;
 
+#define DEFAULT_WIDTH 100
+#define DEFAULT_HEIGHT 100
+
 typedef struct {
     struct wl_surface * surface;
     struct wp_viewport * viewport;
@@ -13,6 +16,9 @@ typedef struct {
     struct libdecor_frame * libdecor_frame;
 
     wayland_output_entry_t * current_output;
+
+    uint32_t width;
+    uint32_t height;
 } ctx_wl_window_t;
 
 void wayland_window_zero(ctx_t *);
