@@ -28,7 +28,6 @@ static struct wl_proxy * try_bind(
         return NULL;
     }
 
-    log_debug(ctx, "wayland::registry::try_bind(): binding %s (version = %d)\n", interface->name, min_version);
     struct wl_proxy * proxy = wl_registry_bind(ctx->wl.registry.handle, id, interface, min_version);
     wl_proxy_set_tag(proxy, &proxy_tag);
 
@@ -148,10 +147,11 @@ static void on_sync_callback_done(
     // check if all required singletons bound
     const wayland_registry_bind_singleton_t * spec = wayland_registry_bind_singleton;
     for (; spec->interface != NULL; spec++) {
-        if (!spec->required) continue;
-
         struct wl_proxy ** proxy_ptr = (struct wl_proxy **)((char *)ctx + spec->proxy_offset);
-        if (*proxy_ptr == NULL) {
+
+        if (*proxy_ptr != NULL)
+            log_debug(ctx, "wayland::registry::on_sync_callback_done(): bound %s (version = %d)\n", spec->interface->name, wl_proxy_get_version(*proxy_ptr));
+        if (*proxy_ptr == NULL && spec->required) {
             log_error("wayland::registry::on_sync_callback_done(): required singleton interface %s missing\n", spec->interface->name);
             ctx->wl.registry.initial_sync_had_errors = true;
         }
