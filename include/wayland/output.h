@@ -8,6 +8,17 @@
 
 typedef struct ctx ctx_t;
 
+#define PRINT_WL_OUTPUT_TRANSFORM(transform) ( \
+        transform == WL_OUTPUT_TRANSFORM_NORMAL ? "NORMAL" : \
+        transform == WL_OUTPUT_TRANSFORM_90 ? "90" : \
+        transform == WL_OUTPUT_TRANSFORM_180 ? "180" : \
+        transform == WL_OUTPUT_TRANSFORM_270 ? "270" : \
+        transform == WL_OUTPUT_TRANSFORM_FLIPPED_90 ? "FLIPPED_90" : \
+        transform == WL_OUTPUT_TRANSFORM_FLIPPED_180 ? "FLIPPED_180" : \
+        transform == WL_OUTPUT_TRANSFORM_FLIPPED_270 ? "FLIPPED_270" : \
+        "???" \
+    )
+
 typedef enum {
     WAYLAND_OUTPUT_NAME_CHANGED         = 1 << 0,
     WAYLAND_OUTPUT_POSITION_CHANGED     = 1 << 1,

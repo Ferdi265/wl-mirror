@@ -128,7 +128,7 @@ static void on_registry_remove(
 
 static const struct wl_registry_listener registry_listener = {
     .global = on_registry_add,
-    .global_remove = on_registry_remove
+    .global_remove = on_registry_remove,
 };
 
 // --- initial sync event handler ---
@@ -168,7 +168,7 @@ static void on_sync_callback_done(
 }
 
 static const struct wl_callback_listener sync_callback_listener = {
-    .done = on_sync_callback_done
+    .done = on_sync_callback_done,
 };
 
 // --- initialization and cleanup ---

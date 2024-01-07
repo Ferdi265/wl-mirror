@@ -4,12 +4,30 @@
 
 // --- private utility functions ---
 
+static void print_output(ctx_t * ctx, wayland_output_entry_t * output) {
+    log_debug(ctx, "wayland::output::print_output(): output %s\n", output->name);
+    log_debug(ctx, "wayland::output::print_output(): - size      = %dx%d\n", output->width, output->height);
+    log_debug(ctx, "wayland::output::print_output(): - position  = %dx%d\n", output->x, output->y);
+    log_debug(ctx, "wayland::output::print_output(): - scale     = %d\n", output->scale);
+    log_debug(ctx, "wayland::output::print_output(): - transform = %s\n", PRINT_WL_OUTPUT_TRANSFORM(output->transform));
+}
+
 static void check_outputs_complete(ctx_t * ctx) {
     if (!wayland_registry_is_initial_sync_complete(ctx)) return;
     if (ctx->wl.output.incomplete_outputs > 0) return;
 
     log_debug(ctx, "wayland::output::check_outputs_complete(): output information complete\n");
+    wayland_output_entry_t *cur;
+    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
+        print_output(ctx, cur);
+    }
+
     wayland_events_emit_output_initial_sync(ctx);
+
+    // mark outputs unchanged after initial sync
+    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
+        cur->changed = WAYLAND_OUTPUT_UNCHANGED;
+    }
 }
 
 static wayland_output_entry_t * find_output(ctx_t * ctx, struct wl_output * output) {
@@ -52,8 +70,6 @@ static const struct zxdg_output_v1_listener xdg_output_listener;
 static void bind_xdg_output(ctx_t * ctx, wayland_output_entry_t * cur) {
     cur->xdg_output = zxdg_output_manager_v1_get_xdg_output(ctx->wl.protocols.xdg_output_manager, cur->output);
     zxdg_output_v1_add_listener(cur->xdg_output, &xdg_output_listener, (void *)ctx);
-
-    (void)ctx;
 }
 
 // --- output event handlers ---
@@ -155,6 +171,9 @@ static void on_output_done(
 
     // only emit change info for complete outputs
     if (!cur->incomplete && cur->changed) {
+        log_debug(ctx, "wayland::output::on_output_done(): output %s changed\n", cur->name);
+        print_output(ctx, cur);
+
         wayland_events_emit_output_changed(ctx, cur);
         cur->changed = WAYLAND_OUTPUT_UNCHANGED;
     }
@@ -166,7 +185,7 @@ static const struct wl_output_listener output_listener = {
     .mode = on_output_mode,
     .geometry = on_output_geometry,
     .scale = on_output_scale,
-    .done = on_output_done
+    .done = on_output_done,
 };
 
 // --- xdg_output event handlers ---
@@ -244,7 +263,7 @@ static const struct zxdg_output_v1_listener xdg_output_listener = {
     .description = on_xdg_output_description,
     .logical_position = on_xdg_output_logical_position,
     .logical_size = on_xdg_output_logical_size,
-    .done = on_xdg_output_done
+    .done = on_xdg_output_done,
 };
 
 // --- initialization and cleanup
@@ -269,6 +288,26 @@ void wayland_output_cleanup(ctx_t * ctx) {
     }
 }
 
+// --- public functions ---
+
+wayland_output_entry_t * wayland_output_find(ctx_t * ctx, struct wl_output * output) {
+    wayland_output_entry_t *cur;
+    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
+        if (cur->output == output) return cur;
+    }
+
+    return NULL;
+}
+
+wayland_output_entry_t * wayland_output_find_by_name(ctx_t * ctx, const char * name) {
+    wayland_output_entry_t *cur;
+    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
+        if (strcmp(cur->name, name) == 0) return cur;
+    }
+
+    return NULL;
+}
+
 // --- internal event handlers ---
 
 void wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
@@ -284,7 +323,7 @@ void wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
     cur->height = 0;
     cur->scale = 0;
     cur->transform = WL_OUTPUT_TRANSFORM_NORMAL;
-    cur->changed = WAYLAND_OUTPUT_CHANGED;
+    cur->changed = WAYLAND_OUTPUT_UNCHANGED;
     cur->incomplete = WAYLAND_OUTPUT_INCOMPLETE;
     wl_list_insert(&ctx->wl.output.output_list, &cur->link);
 
