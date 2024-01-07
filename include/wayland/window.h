@@ -1,6 +1,7 @@
 #ifndef WL_MIRROR_WAYLAND_WINDOW_H_
 #define WL_MIRROR_WAYLAND_WINDOW_H_
 
+#include <libdecor.h>
 #include "wayland/output.h"
 
 typedef struct ctx ctx_t;
@@ -9,8 +10,7 @@ typedef struct {
     struct wl_surface * surface;
     struct wp_viewport * viewport;
     struct wp_fractional_scale_v1 * fractional_scale;
-    struct xdg_surface * xdg_surface;
-    struct xdg_toplevel * xdg_toplevel;
+    struct libdecor_frame * libdecor_frame;
 
     wayland_output_entry_t * current_output;
 } ctx_wl_window_t;

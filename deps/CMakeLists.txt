@@ -16,6 +16,7 @@ endfunction()
 find_library(MATH_LIBRARY m REQUIRED)
 pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET "wayland-client")
 pkg_check_modules(WaylandEGL REQUIRED IMPORTED_TARGET "wayland-egl")
+pkg_check_modules(LibDecor REQUIRED IMPORTED_TARGET "libdecor-0")
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET "egl")
 pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET "glesv2")
 pkg_check_modules(WaylandScanner REQUIRED "wayland-scanner")
@@ -34,7 +35,7 @@ set(SCDOC "${SCDOC}" PARENT_SCOPE)
 # link dependencies
 target_link_libraries(deps INTERFACE
     ${MATH_LIBRARY}
-    PkgConfig::WaylandClient PkgConfig::WaylandEGL PkgConfig::EGL PkgConfig::GLESv2
+    PkgConfig::WaylandClient PkgConfig::WaylandEGL PkgConfig::LibDecor PkgConfig::EGL PkgConfig::GLESv2
 )
 target_link_libraries(proto_deps INTERFACE
     PkgConfig::WaylandClient

@@ -108,88 +108,53 @@ static const struct wp_fractional_scale_v1_listener fractional_scale_listener = 
     .preferred_scale = on_fractional_scale_preferred_scale,
 };
 
-// --- xdg_surface event handlers ---
+// --- libdecor_frame event handlers ---
 
-static void on_xdg_surface_configure(
-    void * data, struct xdg_surface * xdg_surface,
-    uint32_t serial
+static void on_libdecor_frame_configure(
+    struct libdecor_frame * frame,
+    struct libdecor_configuration * configuration, void * data
 ) {
-    if (xdg_surface == NULL) return;
+    if (frame == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    log_debug(ctx, "wayland::window::on_xdg_surface_configure(): serial = %d\n", serial);
+    log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): configuring\n");
 
     // TODO
-    (void)ctx;
-    (void)serial;
+    (void)configuration;
 }
 
-static const struct xdg_surface_listener xdg_surface_listener = {
-    .configure = on_xdg_surface_configure,
-};
-
-// --- xdg_toplevel event handlers ---
-
-static void on_xdg_toplevel_configure(
-    void * data, struct xdg_toplevel * xdg_toplevel,
-    int32_t width, int32_t height, struct wl_array * states
+static void on_libdecor_frame_commit(
+    struct libdecor_frame * frame, void * data
 ) {
-    if (xdg_toplevel == NULL) return;
-
-    ctx_t * ctx = (ctx_t *)data;
-    log_debug(ctx, "wayland::window::on_xdg_toplevel_configure(): width = %d, height = %d\n", width, height);
-
-    // TODO
-    (void)ctx;
-    (void)width;
-    (void)height;
-    (void)states;
+    (void)frame;
+    (void)data;
 }
 
-static void on_xdg_toplevel_configure_bounds(
-    void * data, struct xdg_toplevel * xdg_toplevel,
-    int32_t width, int32_t height
+static void on_libdecor_frame_close(
+    struct libdecor_frame * frame, void * data
 ) {
-    if (xdg_toplevel == NULL) return;
+    if (frame == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    log_debug(ctx, "wayland::window::on_xdg_toplevel_configure_bounds(): width = %d, height = %d\n", width, height);
-
-    // TODO
-    (void)ctx;
-    (void)width;
-    (void)height;
-}
-
-static void on_xdg_toplevel_wm_capabilities(
-    void * data, struct xdg_toplevel * xdg_toplevel,
-    struct wl_array * capabilities
-) {
-    if (xdg_toplevel == NULL) return;
-
-    ctx_t * ctx = (ctx_t *)data;
-
-    // TODO
-    (void)ctx;
-    (void)capabilities;
-}
-
-static void on_xdg_toplevel_close(
-    void * data, struct xdg_toplevel * xdg_toplevel
-) {
-    if (xdg_toplevel == NULL) return;
-
-    ctx_t * ctx = (ctx_t *)data;
-    log_debug(ctx, "wayland::window::on_xdg_toplevel_close(): close requested\n");
+    log_debug(ctx, "wayland::window::on_libdecor_frame_close(): close requested\n");
 
     ctx->wl.core.closing = true;
 }
 
-static const struct xdg_toplevel_listener xdg_toplevel_listener = {
-    .configure = on_xdg_toplevel_configure,
-    .configure_bounds = on_xdg_toplevel_configure_bounds,
-    .wm_capabilities = on_xdg_toplevel_wm_capabilities,
-    .close = on_xdg_toplevel_close,
+static void on_libdecor_frame_dismiss_popup(
+    struct libdecor_frame * frame,
+    const char * seat_name, void * data
+) {
+    (void)frame;
+    (void)seat_name;
+    (void)data;
+}
+
+static struct libdecor_frame_interface libdecor_frame_listener = {
+    .configure = on_libdecor_frame_configure,
+    .commit = on_libdecor_frame_commit,
+    .close = on_libdecor_frame_close,
+    .dismiss_popup = on_libdecor_frame_dismiss_popup
 };
 
 // --- initialization and cleanup ---
@@ -198,8 +163,7 @@ void wayland_window_zero(ctx_t * ctx) {
     ctx->wl.window.surface = NULL;
     ctx->wl.window.viewport = NULL;
     ctx->wl.window.fractional_scale = NULL;
-    ctx->wl.window.xdg_surface = NULL;
-    ctx->wl.window.xdg_toplevel = NULL;
+    ctx->wl.window.libdecor_frame = NULL;
 
     ctx->wl.window.current_output = NULL;
 }
@@ -209,8 +173,7 @@ void wayland_window_init(ctx_t * ctx) {
 }
 
 void wayland_window_cleanup(ctx_t * ctx) {
-    if (ctx->wl.window.xdg_toplevel != NULL) xdg_toplevel_destroy(ctx->wl.window.xdg_toplevel);
-    if (ctx->wl.window.xdg_surface != NULL) xdg_surface_destroy(ctx->wl.window.xdg_surface);
+    if (ctx->wl.window.libdecor_frame != NULL) libdecor_frame_unref(ctx->wl.window.libdecor_frame);
     if (ctx->wl.window.fractional_scale != NULL) wp_fractional_scale_v1_destroy(ctx->wl.window.fractional_scale);
     if (ctx->wl.window.viewport != NULL) wp_viewport_destroy(ctx->wl.window.viewport);
     if (ctx->wl.window.surface != NULL) wl_surface_destroy(ctx->wl.window.surface);
@@ -242,22 +205,20 @@ void wayland_window_on_registry_initial_sync(ctx_t * ctx) {
     }
 
     // create xdg surface
-    ctx->wl.window.xdg_surface = xdg_wm_base_get_xdg_surface(ctx->wl.protocols.xdg_wm_base, ctx->wl.window.surface);
-    xdg_surface_add_listener(ctx->wl.window.xdg_surface, &xdg_surface_listener, (void *)ctx);
+    ctx->wl.window.libdecor_frame = libdecor_decorate(ctx->wl.core.libdecor_context, ctx->wl.window.surface, &libdecor_frame_listener, (void *)ctx);
 
-    // create xdg toplevel
-    ctx->wl.window.xdg_toplevel = xdg_surface_get_toplevel(ctx->wl.window.xdg_surface);
-    xdg_toplevel_add_listener(ctx->wl.window.xdg_toplevel, &xdg_toplevel_listener, (void *)ctx);
-
-    // set xdg toplevel properties
-    xdg_toplevel_set_app_id(ctx->wl.window.xdg_toplevel, "at.yrlf.wl_mirror");
-    xdg_toplevel_set_title(ctx->wl.window.xdg_toplevel, "Wayland Output Mirror");
-
-    // don't commit surface yet, wait for outputs
+    // don't map frame or commit surface yet, wait for outputs
 }
 
 void wayland_window_on_output_initial_sync(ctx_t * ctx) {
     // TODO: set fullscreen here if already requested
+
+    // set libdecor app properties
+    libdecor_frame_set_app_id(ctx->wl.window.libdecor_frame, "at.yrlf.wl_mirror");
+    libdecor_frame_set_title(ctx->wl.window.libdecor_frame, "Wayland Output Mirror");
+
+    // map libdecor frame
+    libdecor_frame_map(ctx->wl.window.libdecor_frame);
 
     // commit surface
     log_debug(ctx, "wayland::window::on_output_initial_sync(): committing surface\n");

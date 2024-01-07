@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <wayland-client-core.h>
+#include <libdecor.h>
 #include "event.h"
 
 typedef struct ctx ctx_t;
@@ -11,6 +12,11 @@ typedef struct ctx ctx_t;
 typedef struct {
     // wayland display
     struct wl_display * display;
+
+    // libdecor context
+    struct libdecor * libdecor_context;
+
+    // program state
     bool closing;
 
     // event loop handler
