@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
-#include "context.h"
+#include <wlm/context.h>
 
 // --- private utility functions ---
 
-static void print_output(ctx_t * ctx, wayland_output_entry_t * output) {
+static void print_output(ctx_t * ctx, wlm_wayland_output_entry_t * output) {
     log_debug(ctx, "wayland::output::print_output(): output %s\n", output->name);
     log_debug(ctx, "wayland::output::print_output(): - size      = %dx%d\n", output->width, output->height);
     log_debug(ctx, "wayland::output::print_output(): - position  = %dx%d\n", output->x, output->y);
@@ -13,16 +13,16 @@ static void print_output(ctx_t * ctx, wayland_output_entry_t * output) {
 }
 
 static void check_outputs_complete(ctx_t * ctx) {
-    if (!wayland_registry_is_initial_sync_complete(ctx)) return;
+    if (!wlm_wayland_registry_is_initial_sync_complete(ctx)) return;
     if (ctx->wl.output.incomplete_outputs > 0) return;
 
     log_debug(ctx, "wayland::output::check_outputs_complete(): output information complete\n");
-    wayland_output_entry_t *cur;
+    wlm_wayland_output_entry_t *cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         print_output(ctx, cur);
     }
 
-    wayland_events_emit_output_initial_sync(ctx);
+    wlm_event_emit_output_initial_sync(ctx);
 
     // mark outputs unchanged after initial sync
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
@@ -30,9 +30,9 @@ static void check_outputs_complete(ctx_t * ctx) {
     }
 }
 
-static wayland_output_entry_t * find_output(ctx_t * ctx, struct wl_output * output) {
+static wlm_wayland_output_entry_t * find_output(ctx_t * ctx, struct wl_output * output) {
     bool found = false;
-    wayland_output_entry_t * cur;
+    wlm_wayland_output_entry_t * cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         if (cur->output == output) {
             found = true;
@@ -42,15 +42,15 @@ static wayland_output_entry_t * find_output(ctx_t * ctx, struct wl_output * outp
 
     if (!found) {
         log_error("wayland::output::find_output(): could not find output entry for output %p\n", output);
-        exit_fail(ctx);
+        wlm_exit_fail(ctx);
     }
 
     return cur;
 }
 
-static wayland_output_entry_t * find_xdg_output(ctx_t * ctx, struct zxdg_output_v1 * xdg_output) {
+static wlm_wayland_output_entry_t * find_xdg_output(ctx_t * ctx, struct zxdg_output_v1 * xdg_output) {
     bool found = false;
-    wayland_output_entry_t * cur;
+    wlm_wayland_output_entry_t * cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         if (cur->xdg_output == xdg_output) {
             found = true;
@@ -60,14 +60,14 @@ static wayland_output_entry_t * find_xdg_output(ctx_t * ctx, struct zxdg_output_
 
     if (!found) {
         log_error("wayland::output::find_xdg_output(): could not find output entry for xdg_output %p\n", xdg_output);
-        exit_fail(ctx);
+        wlm_exit_fail(ctx);
     }
 
     return cur;
 }
 
 static const struct zxdg_output_v1_listener xdg_output_listener;
-static void bind_xdg_output(ctx_t * ctx, wayland_output_entry_t * cur) {
+static void bind_xdg_output(ctx_t * ctx, wlm_wayland_output_entry_t * cur) {
     cur->xdg_output = zxdg_output_manager_v1_get_xdg_output(ctx->wl.protocols.xdg_output_manager, cur->output);
     zxdg_output_v1_add_listener(cur->xdg_output, &xdg_output_listener, (void *)ctx);
 }
@@ -81,7 +81,7 @@ static void on_output_name(
     if (output == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wayland_output_entry_t * cur = find_output(ctx, output);
+    wlm_wayland_output_entry_t * cur = find_output(ctx, output);
 
     if (cur->name == NULL || strcmp(cur->name, name) != 0) {
         if (cur->name != NULL) free(cur->name);
@@ -121,7 +121,7 @@ static void on_output_geometry(
     if (output == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wayland_output_entry_t * cur = find_output(ctx, output);
+    wlm_wayland_output_entry_t * cur = find_output(ctx, output);
 
     enum wl_output_transform transform = (enum wl_output_transform)transform_int;
     if (cur->transform != transform) {
@@ -146,7 +146,7 @@ static void on_output_scale(
     if (output == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wayland_output_entry_t * cur = find_output(ctx, output);
+    wlm_wayland_output_entry_t * cur = find_output(ctx, output);
 
     if (cur->scale != scale) {
         cur->scale = scale;
@@ -160,7 +160,7 @@ static void on_output_done(
     if (output == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wayland_output_entry_t * cur = find_output(ctx, output);
+    wlm_wayland_output_entry_t * cur = find_output(ctx, output);
 
     if (cur->incomplete == WAYLAND_OUTPUT_XDG_COMPLETE) {
         cur->incomplete = WAYLAND_OUTPUT_COMPLETE;
@@ -174,7 +174,7 @@ static void on_output_done(
         log_debug(ctx, "wayland::output::on_output_done(): output %s changed\n", cur->name);
         print_output(ctx, cur);
 
-        wayland_events_emit_output_changed(ctx, cur);
+        wlm_event_emit_output_changed(ctx, cur);
         cur->changed = WAYLAND_OUTPUT_UNCHANGED;
     }
 }
@@ -217,7 +217,7 @@ static void on_xdg_output_logical_position(
     if (xdg_output == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wayland_output_entry_t * cur = find_xdg_output(ctx, xdg_output);
+    wlm_wayland_output_entry_t * cur = find_xdg_output(ctx, xdg_output);
 
     if (cur->x != x || cur->y != y) {
         cur->x = x;
@@ -237,7 +237,7 @@ static void on_xdg_output_logical_size(
     if (xdg_output == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wayland_output_entry_t * cur = find_xdg_output(ctx, xdg_output);
+    wlm_wayland_output_entry_t * cur = find_xdg_output(ctx, xdg_output);
 
     if (cur->width != width || cur->height != height) {
         cur->width = width;
@@ -268,18 +268,18 @@ static const struct zxdg_output_v1_listener xdg_output_listener = {
 
 // --- initialization and cleanup
 
-void wayland_output_zero(ctx_t * ctx) {
+void wlm_wayland_output_zero(ctx_t * ctx) {
     wl_list_init(&ctx->wl.output.output_list);
 
     ctx->wl.output.incomplete_outputs = 0;
 }
 
-void wayland_output_init(ctx_t * ctx) {
+void wlm_wayland_output_init(ctx_t * ctx) {
     (void)ctx;
 }
 
-void wayland_output_cleanup(ctx_t * ctx) {
-    wayland_output_entry_t *cur, *next;
+void wlm_wayland_output_cleanup(ctx_t * ctx) {
+    wlm_wayland_output_entry_t *cur, *next;
     wl_list_for_each_safe(cur, next, &ctx->wl.output.output_list, link) {
         wl_list_remove(&cur->link);
         if (cur->xdg_output != NULL) zxdg_output_v1_destroy(cur->xdg_output);
@@ -290,8 +290,8 @@ void wayland_output_cleanup(ctx_t * ctx) {
 
 // --- public functions ---
 
-wayland_output_entry_t * wayland_output_find(ctx_t * ctx, struct wl_output * output) {
-    wayland_output_entry_t *cur;
+wlm_wayland_output_entry_t * wlm_wayland_output_find(ctx_t * ctx, struct wl_output * output) {
+    wlm_wayland_output_entry_t *cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         if (cur->output == output) return cur;
     }
@@ -299,8 +299,8 @@ wayland_output_entry_t * wayland_output_find(ctx_t * ctx, struct wl_output * out
     return NULL;
 }
 
-wayland_output_entry_t * wayland_output_find_by_name(ctx_t * ctx, const char * name) {
-    wayland_output_entry_t *cur;
+wlm_wayland_output_entry_t * wlm_wayland_output_find_by_name(ctx_t * ctx, const char * name) {
+    wlm_wayland_output_entry_t *cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         if (strcmp(cur->name, name) == 0) return cur;
     }
@@ -310,10 +310,10 @@ wayland_output_entry_t * wayland_output_find_by_name(ctx_t * ctx, const char * n
 
 // --- internal event handlers ---
 
-void wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
+void wlm_wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
     wl_output_add_listener(output, &output_listener, (void *)ctx);
 
-    wayland_output_entry_t * cur = malloc(sizeof *cur);
+    wlm_wayland_output_entry_t * cur = malloc(sizeof *cur);
     cur->output = output;
     cur->xdg_output = NULL;
     cur->name = NULL;
@@ -334,8 +334,8 @@ void wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
     }
 }
 
-void wayland_output_on_remove(ctx_t * ctx, struct wl_output * output) {
-    wayland_output_entry_t *cur, *next;
+void wlm_wayland_output_on_remove(ctx_t * ctx, struct wl_output * output) {
+    wlm_wayland_output_entry_t *cur, *next;
     wl_list_for_each_safe(cur, next, &ctx->wl.output.output_list, link) {
         if (cur->output != output) continue;
 
@@ -346,8 +346,8 @@ void wayland_output_on_remove(ctx_t * ctx, struct wl_output * output) {
     }
 }
 
-void wayland_output_on_registry_initial_sync(ctx_t * ctx) {
-    wayland_output_entry_t *cur;
+void wlm_wayland_output_on_registry_initial_sync(ctx_t * ctx) {
+    wlm_wayland_output_entry_t *cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         if (cur->xdg_output == NULL) {
             bind_xdg_output(ctx, cur);

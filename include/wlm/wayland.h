@@ -6,7 +6,6 @@
 #include "wayland/protocols.h"
 #include "wayland/output.h"
 #include "wayland/window.h"
-#include "wayland/events.h"
 
 typedef struct ctx ctx_t;
 
@@ -18,8 +17,8 @@ typedef struct {
     ctx_wl_window_t window;
 } ctx_wl_t;
 
-void wayland_zero(ctx_t *);
-void wayland_init(ctx_t *);
-void wayland_cleanup(ctx_t *);
+void wlm_wayland_zero(ctx_t *);
+void wlm_wayland_init(ctx_t *);
+void wlm_wayland_cleanup(ctx_t *);
 
 #endif

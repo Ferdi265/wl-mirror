@@ -1,5 +1,4 @@
-#include "context.h"
-#include "wayland.h"
+#include <wlm/context.h>
 
 // --- event loop handlers ---
 
@@ -25,7 +24,7 @@ static void on_libdecor_error(
     ctx_t * ctx = libdecor_error_context;
 
     log_error("wayland::core::on_libdecor_error(): error %d, %s\n", error, message);
-    exit_fail(ctx);
+    wlm_exit_fail(ctx);
 }
 
 static struct libdecor_interface libdecor_listener = {
@@ -34,7 +33,7 @@ static struct libdecor_interface libdecor_listener = {
 
 // --- initialization and cleanup ---
 
-void wayland_core_zero(ctx_t * ctx) {
+void wlm_wayland_core_zero(ctx_t * ctx) {
     // wayland display
     ctx->wl.core.display = NULL;
 
@@ -45,18 +44,18 @@ void wayland_core_zero(ctx_t * ctx) {
     ctx->wl.core.closing = false;
 
     // event loop handler
-    event_handler_zero(ctx, &ctx->wl.core.event_handler);
+    wlm_event_loop_handler_zero(ctx, &ctx->wl.core.event_handler);
     ctx->wl.core.event_handler.events = EPOLLIN;
     ctx->wl.core.event_handler.on_event = on_loop_event;
     ctx->wl.core.event_handler.on_each = on_loop_each;
 }
 
-void wayland_core_init(ctx_t * ctx) {
+void wlm_wayland_core_init(ctx_t * ctx) {
     // connect to wayland display
     ctx->wl.core.display = wl_display_connect(NULL);
     if (ctx->wl.core.display == NULL) {
         log_error("wayland::core::init(): failed to connect to wayland display\n");
-        exit_fail(ctx);
+        wlm_exit_fail(ctx);
     }
 
     // initialize libdecor
@@ -65,12 +64,12 @@ void wayland_core_init(ctx_t * ctx) {
 
     // add fd to event loop
     ctx->wl.core.event_handler.fd = wl_display_get_fd(ctx->wl.core.display);
-    event_add_fd(ctx, &ctx->wl.core.event_handler);
+    wlm_event_loop_add_fd(ctx, &ctx->wl.core.event_handler);
 }
 
-void wayland_core_cleanup(ctx_t * ctx) {
+void wlm_wayland_core_cleanup(ctx_t * ctx) {
     // remove fd from event loop
-    if (ctx->wl.core.event_handler.fd != -1) event_remove_fd(ctx, &ctx->wl.core.event_handler);
+    if (ctx->wl.core.event_handler.fd != -1) wlm_event_loop_remove_fd(ctx, &ctx->wl.core.event_handler);
 
     // destroy libdecor context
     if (ctx->wl.core.libdecor_context != NULL) libdecor_unref(ctx->wl.core.libdecor_context);
@@ -78,11 +77,11 @@ void wayland_core_cleanup(ctx_t * ctx) {
     // disconnect from wayland display
     if (ctx->wl.core.display != NULL) wl_display_disconnect(ctx->wl.core.display);
 
-    wayland_core_zero(ctx);
+    wlm_wayland_core_zero(ctx);
 }
 
 // --- public functions ---
 
-bool wayland_core_is_closing(ctx_t * ctx) {
+bool wlm_wayland_core_is_closing(ctx_t * ctx) {
     return ctx->wl.core.closing;
 }

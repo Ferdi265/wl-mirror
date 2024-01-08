@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <wayland-client-core.h>
 #include <libdecor.h>
-#include "event.h"
+#include <wlm/event/loop.h>
 
 typedef struct ctx ctx_t;
 
@@ -20,13 +20,13 @@ typedef struct {
     bool closing;
 
     // event loop handler
-    event_handler_t event_handler;
+    wlm_event_loop_handler_t event_handler;
 } ctx_wl_core_t;
 
-void wayland_core_zero(ctx_t *);
-void wayland_core_init(ctx_t *);
-void wayland_core_cleanup(ctx_t *);
+void wlm_wayland_core_zero(ctx_t *);
+void wlm_wayland_core_init(ctx_t *);
+void wlm_wayland_core_cleanup(ctx_t *);
 
-bool wayland_core_is_closing(ctx_t *);
+bool wlm_wayland_core_is_closing(ctx_t *);
 
 #endif

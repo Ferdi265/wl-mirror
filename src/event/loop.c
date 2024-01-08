@@ -2,19 +2,19 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include "context.h"
-#include "event.h"
+#include <wlm/context.h>
+#include <wlm/util.h>
 
 static void call_each_handler(ctx_t * ctx) {
-    event_handler_t * cur;
+    wlm_event_loop_handler_t * cur;
     wl_list_for_each(cur, &ctx->event.handlers, link) {
         if (cur->on_each != NULL) cur->on_each(ctx);
     }
 }
 
-static event_handler_t * min_timeout(ctx_t * ctx) {
-    event_handler_t * min = NULL;
-    event_handler_t * cur;
+static wlm_event_loop_handler_t * min_timeout(ctx_t * ctx) {
+    wlm_event_loop_handler_t * min = NULL;
+    wlm_event_loop_handler_t * cur;
     wl_list_for_each(cur, &ctx->event.handlers, link) {
         if (cur->timeout_ms == -1) continue;
         if (min == NULL || cur->timeout_ms < min->timeout_ms) min = cur;
@@ -23,7 +23,7 @@ static event_handler_t * min_timeout(ctx_t * ctx) {
     return min;
 }
 
-void event_zero(ctx_t * ctx) {
+void wlm_event_loop_zero(ctx_t * ctx) {
     // epoll fd
     ctx->event.pollfd = -1;
 
@@ -31,26 +31,26 @@ void event_zero(ctx_t * ctx) {
     wl_list_init(&ctx->event.handlers);
 }
 
-void event_init(ctx_t * ctx) {
+void wlm_event_loop_init(ctx_t * ctx) {
     // initialize epoll fd
     ctx->event.pollfd = epoll_create(1);
     if (ctx->event.pollfd == -1) {
         log_error("event::init(): failed to create epoll instance: %s\n", strerror(errno));
-        exit_fail(ctx);
+        wlm_exit_fail(ctx);
         return;
     }
 }
 
-void event_cleanup(ctx_t * ctx) {
+void wlm_event_loop_cleanup(ctx_t * ctx) {
     // epoll fd
     if (ctx->event.pollfd != -1) close(ctx->event.pollfd);
 
     // event handlers are owned by their respective subsystems
 
-    event_zero(ctx);
+    wlm_event_loop_zero(ctx);
 }
 
-void event_handler_zero(struct ctx * ctx, event_handler_t * handler) {
+void wlm_event_loop_handler_zero(struct ctx * ctx, wlm_event_loop_handler_t * handler) {
     wl_list_init(&handler->link);
 
     handler->fd = -1;
@@ -63,12 +63,11 @@ void event_handler_zero(struct ctx * ctx, event_handler_t * handler) {
     (void)ctx;
 }
 
-#define MAX_EVENTS 10
-void event_loop(ctx_t * ctx) {
-    struct epoll_event events[MAX_EVENTS];
+void wlm_event_loop_run(ctx_t * ctx) {
+    struct epoll_event events[EVENT_LOOP_MAX_EVENTS];
     int num_events;
 
-    event_handler_t * timeout_handler;
+    wlm_event_loop_handler_t * timeout_handler;
     int timeout_ms;
 
     call_each_handler(ctx);
@@ -76,9 +75,9 @@ void event_loop(ctx_t * ctx) {
     timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
 
     log_debug(ctx, "event::loop(): waiting for events\n");
-    while ((num_events = epoll_wait(ctx->event.pollfd, events, MAX_EVENTS, timeout_ms)) != -1 && !wayland_core_is_closing(ctx)) {
+    while ((num_events = epoll_wait(ctx->event.pollfd, events, ARRAY_LENGTH(events), timeout_ms)) != -1 && !wlm_wayland_core_is_closing(ctx)) {
         for (int i = 0; i < num_events; i++) {
-            event_handler_t * handler = (event_handler_t *)events[i].data.ptr;
+            wlm_event_loop_handler_t * handler = (wlm_event_loop_handler_t *)events[i].data.ptr;
             handler->on_event(ctx);
         }
 
@@ -93,31 +92,31 @@ void event_loop(ctx_t * ctx) {
     }
 }
 
-void event_add_fd(ctx_t * ctx, event_handler_t * handler) {
+void wlm_event_loop_add_fd(ctx_t * ctx, wlm_event_loop_handler_t * handler) {
     struct epoll_event event;
     event.events = handler->events;
     event.data.ptr = handler;
 
     if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_ADD, handler->fd, &event) == -1) {
         log_error("event::add_fd(): failed to add fd to epoll instance: %s\n", strerror(errno));
-        exit_fail(ctx);
+        wlm_exit_fail(ctx);
     }
 
     wl_list_insert(&ctx->event.handlers, &handler->link);
 }
 
-void event_change_fd(ctx_t * ctx, event_handler_t * handler) {
+void wlm_event_loop_change_fd(ctx_t * ctx, wlm_event_loop_handler_t * handler) {
     struct epoll_event event;
     event.events = handler->events;
     event.data.ptr = handler;
 
     if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_MOD, handler->fd, &event) == -1) {
         log_error("event::change_fd(): failed to modify fd in epoll instance: %s\n", strerror(errno));
-        exit_fail(ctx);
+        wlm_exit_fail(ctx);
     }
 }
 
-void event_remove_fd(ctx_t * ctx, event_handler_t * handler) {
+void wlm_event_loop_remove_fd(ctx_t * ctx, wlm_event_loop_handler_t * handler) {
     if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_DEL, handler->fd, NULL) == -1) {
         log_error("event::remove_fd(): failed to remove fd from epoll instance: %s\n", strerror(errno));
     }

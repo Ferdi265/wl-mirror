@@ -1,4 +1,4 @@
-#include "context.h"
+#include <wlm/context.h>
 
 // --- xdg_wm_base event handlers ---
 
@@ -23,10 +23,10 @@ static void on_surface_enter(
     struct wl_output * output
 ) {
     if (surface == NULL) return;
-    if (!wayland_registry_is_own_proxy((struct wl_proxy *)output)) return;
+    if (!wlm_wayland_registry_is_own_proxy((struct wl_proxy *)output)) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wayland_output_entry_t * entry = wayland_output_find(ctx, output);
+    wlm_wayland_output_entry_t * entry = wlm_wayland_output_find(ctx, output);
 
     log_debug(ctx, "wayland::window::on_surface_enter(): entering output %s\n", entry->name);
 
@@ -41,10 +41,10 @@ static void on_surface_leave(
     struct wl_output * output
 ) {
     if (surface == NULL) return;
-    if (!wayland_registry_is_own_proxy((struct wl_proxy *)output)) return;
+    if (!wlm_wayland_registry_is_own_proxy((struct wl_proxy *)output)) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wayland_output_entry_t * entry = wayland_output_find(ctx, output);
+    wlm_wayland_output_entry_t * entry = wlm_wayland_output_find(ctx, output);
 
     log_debug(ctx, "wayland::window::on_surface_leave(): leaving output %s\n", entry->name);
 
@@ -186,7 +186,7 @@ static struct libdecor_frame_interface libdecor_frame_listener = {
 
 // --- initialization and cleanup ---
 
-void wayland_window_zero(ctx_t * ctx) {
+void wlm_wayland_window_zero(ctx_t * ctx) {
     ctx->wl.window.surface = NULL;
     ctx->wl.window.viewport = NULL;
     ctx->wl.window.fractional_scale = NULL;
@@ -195,22 +195,22 @@ void wayland_window_zero(ctx_t * ctx) {
     ctx->wl.window.current_output = NULL;
 }
 
-void wayland_window_init(ctx_t * ctx) {
+void wlm_wayland_window_init(ctx_t * ctx) {
     (void)ctx;
 }
 
-void wayland_window_cleanup(ctx_t * ctx) {
+void wlm_wayland_window_cleanup(ctx_t * ctx) {
     if (ctx->wl.window.libdecor_frame != NULL) libdecor_frame_unref(ctx->wl.window.libdecor_frame);
     if (ctx->wl.window.fractional_scale != NULL) wp_fractional_scale_v1_destroy(ctx->wl.window.fractional_scale);
     if (ctx->wl.window.viewport != NULL) wp_viewport_destroy(ctx->wl.window.viewport);
     if (ctx->wl.window.surface != NULL) wl_surface_destroy(ctx->wl.window.surface);
 
-    wayland_window_zero(ctx);
+    wlm_wayland_window_zero(ctx);
 }
 
 // --- internal event handlers ---
 
-void wayland_window_on_registry_initial_sync(ctx_t * ctx) {
+void wlm_wayland_window_on_registry_initial_sync(ctx_t * ctx) {
     log_debug(ctx, "wayland::window::on_registry_initial_sync(): creating window\n");
 
     // listen for ping events
@@ -237,7 +237,7 @@ void wayland_window_on_registry_initial_sync(ctx_t * ctx) {
     // don't map frame or commit surface yet, wait for outputs
 }
 
-void wayland_window_on_output_initial_sync(ctx_t * ctx) {
+void wlm_wayland_window_on_output_initial_sync(ctx_t * ctx) {
     // TODO: set fullscreen here if already requested
 
     // set libdecor app properties

@@ -29,13 +29,13 @@ typedef enum {
 
     WAYLAND_OUTPUT_UNCHANGED            = 0,
     WAYLAND_OUTPUT_CHANGED              = -1U
-} wayland_output_entry_changed_t;
+} wlm_wayland_output_entry_changed_t;
 
 typedef enum {
     WAYLAND_OUTPUT_INCOMPLETE           = 2,
     WAYLAND_OUTPUT_XDG_COMPLETE         = 1,
     WAYLAND_OUTPUT_COMPLETE             = 0
-} wayland_output_completeness_t;
+} wlm_wayland_output_completeness_t;
 
 typedef struct {
     struct wl_list link;
@@ -50,9 +50,9 @@ typedef struct {
     int32_t scale;
     enum wl_output_transform transform;
 
-    wayland_output_entry_changed_t changed;
-    wayland_output_completeness_t incomplete;
-} wayland_output_entry_t;
+    wlm_wayland_output_entry_changed_t changed;
+    wlm_wayland_output_completeness_t incomplete;
+} wlm_wayland_output_entry_t;
 
 typedef struct {
     struct wl_list output_list;
@@ -60,15 +60,15 @@ typedef struct {
     size_t incomplete_outputs;
 } ctx_wl_output_t;
 
-void wayland_output_zero(ctx_t *);
-void wayland_output_init(ctx_t *);
-void wayland_output_cleanup(ctx_t *);
+void wlm_wayland_output_zero(ctx_t *);
+void wlm_wayland_output_init(ctx_t *);
+void wlm_wayland_output_cleanup(ctx_t *);
 
-wayland_output_entry_t * wayland_output_find(ctx_t *, struct wl_output * output);
-wayland_output_entry_t * wayland_output_find_by_name(ctx_t *, const char * name);
+wlm_wayland_output_entry_t * wlm_wayland_output_find(ctx_t *, struct wl_output * output);
+wlm_wayland_output_entry_t * wlm_wayland_output_find_by_name(ctx_t *, const char * name);
 
-void wayland_output_on_add(ctx_t *, struct wl_output * output);
-void wayland_output_on_remove(ctx_t *, struct wl_output * output);
-void wayland_output_on_registry_initial_sync(ctx_t *);
+void wlm_wayland_output_on_add(ctx_t *, struct wl_output * output);
+void wlm_wayland_output_on_remove(ctx_t *, struct wl_output * output);
+void wlm_wayland_output_on_registry_initial_sync(ctx_t *);
 
 #endif
