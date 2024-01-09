@@ -5,13 +5,6 @@
 #include <wlm/context.h>
 #include <wlm/util.h>
 
-static void call_each_handler(ctx_t * ctx) {
-    wlm_event_loop_handler_t * cur;
-    wl_list_for_each(cur, &ctx->event.handlers, link) {
-        if (cur->on_each != NULL) cur->on_each(ctx);
-    }
-}
-
 static wlm_event_loop_handler_t * min_timeout(ctx_t * ctx) {
     wlm_event_loop_handler_t * min = NULL;
     wlm_event_loop_handler_t * cur;
@@ -58,7 +51,6 @@ void wlm_event_loop_handler_zero(struct ctx * ctx, wlm_event_loop_handler_t * ha
     handler->timeout_ms = -1;
 
     handler->on_event = NULL;
-    handler->on_each = NULL;
 
     (void)ctx;
 }
@@ -70,7 +62,7 @@ void wlm_event_loop_run(ctx_t * ctx) {
     wlm_event_loop_handler_t * timeout_handler;
     int timeout_ms;
 
-    call_each_handler(ctx);
+    wlm_event_emit_before_poll(ctx);
     timeout_handler = min_timeout(ctx);
     timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
 
@@ -85,7 +77,7 @@ void wlm_event_loop_run(ctx_t * ctx) {
             timeout_handler->on_event(ctx);
         }
 
-        call_each_handler(ctx);
+        wlm_event_emit_before_poll(ctx);
         timeout_handler = min_timeout(ctx);
         timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
         log_debug(ctx, "event::loop(): waiting for events\n");

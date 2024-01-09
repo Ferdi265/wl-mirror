@@ -29,4 +29,6 @@ void wlm_wayland_core_cleanup(ctx_t *);
 
 bool wlm_wayland_core_is_closing(ctx_t *);
 
+void wlm_wayland_core_on_before_poll(ctx_t *);
+
 #endif

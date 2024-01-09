@@ -8,10 +8,6 @@ static void on_loop_event(ctx_t * ctx) {
     }
 }
 
-static void on_loop_each(ctx_t * ctx) {
-    wl_display_flush(ctx->wl.core.display);
-}
-
 // --- libdecor event handlers ---
 
 static ctx_t * libdecor_error_context;
@@ -47,7 +43,6 @@ void wlm_wayland_core_zero(ctx_t * ctx) {
     wlm_event_loop_handler_zero(ctx, &ctx->wl.core.event_handler);
     ctx->wl.core.event_handler.events = EPOLLIN;
     ctx->wl.core.event_handler.on_event = on_loop_event;
-    ctx->wl.core.event_handler.on_each = on_loop_each;
 }
 
 void wlm_wayland_core_init(ctx_t * ctx) {
@@ -84,4 +79,10 @@ void wlm_wayland_core_cleanup(ctx_t * ctx) {
 
 bool wlm_wayland_core_is_closing(ctx_t * ctx) {
     return ctx->wl.core.closing;
+}
+
+// --- internal event handlers ---
+
+void wlm_wayland_core_on_before_poll(ctx_t * ctx) {
+    wl_display_flush(ctx->wl.core.display);
 }

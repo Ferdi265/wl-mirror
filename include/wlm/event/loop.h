@@ -17,7 +17,6 @@ typedef struct {
     int timeout_ms;
 
     void (*on_event)(struct ctx * ctx);
-    void (*on_each)(struct ctx * ctx);
 } wlm_event_loop_handler_t;
 
 typedef struct ctx_event {
