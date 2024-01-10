@@ -8,13 +8,13 @@ static const char * proxy_tag = "wl-mirror";
 
 static struct wl_proxy * try_bind(
     ctx_t * ctx, uint32_t id, uint32_t version,
-    const struct wl_interface * interface, uint32_t min_version, bool required,
+    const wlm_wayland_registry_bind_spec_t * spec,
     void (* on_remove)(struct ctx *, struct wl_proxy *)
 ) {
-    if (version < min_version) {
-        if (required) {
-            log_error("wayland::registry::try_bind(): interface %s only available in version %d, but %d required\n",
-                interface->name, version, min_version
+    if (version < spec->version_min) {
+        if (spec->required) {
+            log_error("wayland::registry::try_bind(): interface %s only available in version %d, but %zd required\n",
+                spec->interface->name, version, spec->version_min
             );
 
             if (ctx->wl.registry.initial_sync_complete) {
@@ -25,14 +25,16 @@ static struct wl_proxy * try_bind(
         }
 
         return NULL;
+    } else if (version > spec->version_max) {
+        version = spec->version_max;
     }
 
-    struct wl_proxy * proxy = wl_registry_bind(ctx->wl.registry.handle, id, interface, min_version);
+    struct wl_proxy * proxy = wl_registry_bind(ctx->wl.registry.handle, id, spec->interface, version);
     wl_proxy_set_tag(proxy, &proxy_tag);
 
     wlm_wayland_registry_bound_global_t * bound_global = malloc(sizeof *bound_global);
     bound_global->proxy = proxy;
-    bound_global->interface = interface;
+    bound_global->interface = spec->interface;
     bound_global->id = id;
     bound_global->on_remove = on_remove;
     wl_list_insert(&ctx->wl.registry.bound_globals, &bound_global->link);
@@ -40,19 +42,19 @@ static struct wl_proxy * try_bind(
     return proxy;
 }
 
-static void try_bind_multiple(ctx_t * ctx, uint32_t id, uint32_t version, const wlm_wayland_registry_bind_multiple_t * spec) {
-    struct wl_proxy * proxy = try_bind(ctx, id, version, spec->interface, spec->version, spec->required, spec->on_remove);
+static void try_bind_multiple(ctx_t * ctx, uint32_t id, uint32_t version, const wlm_wayland_registry_bind_multiple_t * bind) {
+    struct wl_proxy * proxy = try_bind(ctx, id, version, &bind->spec, bind->on_remove);
     if (proxy == NULL) {
         return;
     }
 
-    spec->on_add(ctx, proxy);
+    bind->on_add(ctx, proxy);
 }
 
-static void try_bind_singleton(ctx_t * ctx, uint32_t id, uint32_t version, const wlm_wayland_registry_bind_singleton_t * spec) {
-    struct wl_proxy ** proxy_ptr = (struct wl_proxy **)((char *)ctx + spec->proxy_offset);
+static void try_bind_singleton(ctx_t * ctx, uint32_t id, uint32_t version, const wlm_wayland_registry_bind_singleton_t * bind) {
+    struct wl_proxy ** proxy_ptr = (struct wl_proxy **)((char *)ctx + bind->proxy_offset);
     if (*proxy_ptr != NULL) {
-        log_error("wayland::registry::try_bind_singleton(): duplicate singleton %s\n", spec->interface->name);
+        log_error("wayland::registry::try_bind_singleton(): duplicate singleton %s\n", bind->spec.interface->name);
 
         if (ctx->wl.registry.initial_sync_complete) {
             wlm_exit_fail(ctx);
@@ -63,7 +65,7 @@ static void try_bind_singleton(ctx_t * ctx, uint32_t id, uint32_t version, const
         return;
     }
 
-    struct wl_proxy * proxy = try_bind(ctx, id, version, spec->interface, spec->version, spec->required, NULL);
+    struct wl_proxy * proxy = try_bind(ctx, id, version, &bind->spec, NULL);
     if (proxy == NULL) {
         return;
     }
@@ -82,19 +84,19 @@ static void on_registry_add(
     ctx_t * ctx = (ctx_t *)data;
     log_debug(ctx, "wayland::registry::on_registry_add(): %s (version = %d, id = %d)\n", interface, version, id);
 
-    const wlm_wayland_registry_bind_multiple_t * bind_multiple_spec = wlm_wayland_registry_bind_multiple;
-    for (; bind_multiple_spec->interface != NULL; bind_multiple_spec++) {
-        if (strcmp(interface, bind_multiple_spec->interface->name) != 0) continue;
+    const wlm_wayland_registry_bind_multiple_t * bind_multiple = wlm_wayland_registry_bind_multiple;
+    for (; bind_multiple->spec.interface != NULL; bind_multiple++) {
+        if (strcmp(interface, bind_multiple->spec.interface->name) != 0) continue;
 
-        try_bind_multiple(ctx, id, version, bind_multiple_spec);
+        try_bind_multiple(ctx, id, version, bind_multiple);
         return;
     }
 
-    const wlm_wayland_registry_bind_singleton_t * bind_singleton_spec = wlm_wayland_registry_bind_singleton;
-    for (; bind_singleton_spec->interface != NULL; bind_singleton_spec++) {
-        if (strcmp(interface, bind_singleton_spec->interface->name) != 0) continue;
+    const wlm_wayland_registry_bind_singleton_t * bind_singleton = wlm_wayland_registry_bind_singleton;
+    for (; bind_singleton->spec.interface != NULL; bind_singleton++) {
+        if (strcmp(interface, bind_singleton->spec.interface->name) != 0) continue;
 
-        try_bind_singleton(ctx, id, version, bind_singleton_spec);
+        try_bind_singleton(ctx, id, version, bind_singleton);
         return;
     }
 }
@@ -144,14 +146,14 @@ static void on_sync_callback_done(
     ctx->wl.registry.sync_callback = NULL;
 
     // check if all required singletons bound
-    const wlm_wayland_registry_bind_singleton_t * spec = wlm_wayland_registry_bind_singleton;
-    for (; spec->interface != NULL; spec++) {
-        struct wl_proxy ** proxy_ptr = (struct wl_proxy **)((char *)ctx + spec->proxy_offset);
+    const wlm_wayland_registry_bind_singleton_t * bind_singleton = wlm_wayland_registry_bind_singleton;
+    for (; bind_singleton->spec.interface != NULL; bind_singleton++) {
+        struct wl_proxy ** proxy_ptr = (struct wl_proxy **)((char *)ctx + bind_singleton->proxy_offset);
 
         if (*proxy_ptr != NULL)
-            log_debug(ctx, "wayland::registry::on_sync_callback_done(): bound %s (version = %d)\n", spec->interface->name, wl_proxy_get_version(*proxy_ptr));
-        if (*proxy_ptr == NULL && spec->required) {
-            log_error("wayland::registry::on_sync_callback_done(): required singleton interface %s missing\n", spec->interface->name);
+            log_debug(ctx, "wayland::registry::on_sync_callback_done(): bound %s (version = %d)\n", bind_singleton->spec.interface->name, wl_proxy_get_version(*proxy_ptr));
+        if (*proxy_ptr == NULL && bind_singleton->spec.required) {
+            log_error("wayland::registry::on_sync_callback_done(): required singleton interface %s missing\n", bind_singleton->spec.interface->name);
             ctx->wl.registry.initial_sync_had_errors = true;
         }
     }
@@ -185,9 +187,9 @@ void wlm_wayland_registry_zero(ctx_t * ctx) {
     ctx->wl.registry.initial_sync_complete = false;
 
     // clear all bound singleton proxies
-    const wlm_wayland_registry_bind_singleton_t * spec = wlm_wayland_registry_bind_singleton;
-    for (; spec->interface != NULL; spec++) {
-        *(struct wl_proxy **)((char *)ctx + spec->proxy_offset) = NULL;
+    const wlm_wayland_registry_bind_singleton_t * bind_singleton = wlm_wayland_registry_bind_singleton;
+    for (; bind_singleton->spec.interface != NULL; bind_singleton++) {
+        *(struct wl_proxy **)((char *)ctx + bind_singleton->proxy_offset) = NULL;
     }
 }
 
