@@ -80,19 +80,18 @@ static void on_surface_enter(
 
     ctx_t * ctx = (ctx_t *)data;
     wlm_wayland_output_entry_t * entry = wlm_wayland_output_find(ctx, output);
+    if (ctx->wl.window.current_output == entry) return;
 
-    if (ctx->wl.window.current_output != entry) {
-        log_debug(ctx, "wayland::window::on_surface_enter(): entering output %s\n", entry->name);
+    log_debug(ctx, "wayland::window::on_surface_enter(): entering output %s\n", entry->name);
 
-        ctx->wl.window.current_output = entry;
-        ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_OUTPUT_CHANGED;
+    ctx->wl.window.current_output = entry;
+    ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_OUTPUT_CHANGED;
 
-        if (use_output_scale(ctx) && ctx->wl.window.scale != entry->scale) {
-            log_debug(ctx, "wayland::window::on_surface_enter(): using output scale = %d\n", entry->scale);
+    if (use_output_scale(ctx) && ctx->wl.window.scale != entry->scale) {
+        log_debug(ctx, "wayland::window::on_surface_enter(): using output scale = %d\n", entry->scale);
 
-            ctx->wl.window.scale = entry->scale;
-            ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
-        }
+        ctx->wl.window.scale = entry->scale;
+        ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
     }
 }
 
@@ -105,6 +104,7 @@ static void on_surface_leave(
 
     ctx_t * ctx = (ctx_t *)data;
     wlm_wayland_output_entry_t * entry = wlm_wayland_output_find(ctx, output);
+    if (ctx->wl.window.current_output != entry) return;
 
     log_debug(ctx, "wayland::window::on_surface_leave(): leaving output %s\n", entry->name);
 
