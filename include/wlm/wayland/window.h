@@ -20,6 +20,11 @@ typedef enum {
     WLM_WAYLAND_WINDOW_CHANGED              = -1U
 } wlm_wayland_window_changed_t;
 
+typedef enum {
+    WLM_WAYLAND_WINDOW_INCOMPLETE           = 1,
+    WLM_WAYLAND_WINDOW_COMPLETE             = 0
+} wlm_wayland_window_completeness_t;
+
 typedef struct {
     struct wl_surface * surface;
     struct wp_viewport * viewport;
@@ -35,6 +40,7 @@ typedef struct {
     double scale;
 
     wlm_wayland_window_changed_t changed;
+    wlm_wayland_window_completeness_t incomplete;
 } ctx_wl_window_t;
 
 void wlm_wayland_window_zero(ctx_t *);

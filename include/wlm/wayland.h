@@ -1,11 +1,11 @@
 #ifndef WL_MIRROR_WAYLAND_H_
 #define WL_MIRROR_WAYLAND_H_
 
-#include "wayland/core.h"
-#include "wayland/registry.h"
-#include "wayland/protocols.h"
-#include "wayland/output.h"
-#include "wayland/window.h"
+#include <wlm/wayland/core.h>
+#include <wlm/wayland/registry.h>
+#include <wlm/wayland/protocols.h>
+#include <wlm/wayland/output.h>
+#include <wlm/wayland/window.h>
 
 typedef struct ctx ctx_t;
 

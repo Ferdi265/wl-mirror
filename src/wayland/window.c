@@ -40,12 +40,17 @@ static void apply_surface_changes(ctx_t * ctx) {
     // TODO: react to preferred transform
 
     // trigger buffer resize and render
-    wlm_event_emit_window_changed(ctx);
+    if (ctx->wl.window.incomplete) {
+        wlm_event_emit_window_initial_configure(ctx);
+    } else {
+        wlm_event_emit_window_changed(ctx);
+    }
 
     // TODO: who performs wl_surface_commit()?
     wl_surface_commit(ctx->wl.window.surface);
 
     ctx->wl.window.changed = WLM_WAYLAND_WINDOW_UNCHANGED;
+    ctx->wl.window.incomplete = WLM_WAYLAND_WINDOW_COMPLETE;
 }
 
 // --- xdg_wm_base event handlers ---
@@ -229,6 +234,7 @@ static void on_libdecor_frame_configure(
 static void on_libdecor_frame_commit(
     struct libdecor_frame * frame, void * data
 ) {
+    // ignore: don't need to know when frame committed
     (void)frame;
     (void)data;
 }
@@ -277,6 +283,7 @@ void wlm_wayland_window_zero(ctx_t * ctx) {
     ctx->wl.window.scale = 1.0;
 
     ctx->wl.window.changed = WLM_WAYLAND_WINDOW_UNCHANGED;
+    ctx->wl.window.incomplete = WLM_WAYLAND_WINDOW_INCOMPLETE;
 }
 
 void wlm_wayland_window_init(ctx_t * ctx) {
@@ -348,6 +355,8 @@ void wlm_wayland_window_on_output_changed(ctx_t * ctx, wlm_wayland_output_entry_
 }
 
 void wlm_wayland_window_on_before_poll(ctx_t * ctx) {
+    if (ctx->wl.window.incomplete) return;
+
     // check if things changed, emit events
     apply_surface_changes(ctx);
 }

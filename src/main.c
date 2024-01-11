@@ -6,6 +6,7 @@
 void wlm_zero(ctx_t * ctx) {
     wlm_event_loop_zero(ctx);
     wlm_wayland_zero(ctx);
+    wlm_egl_zero(ctx);
 }
 
 void wlm_init(ctx_t * ctx, int argc, char ** argv) {
@@ -22,8 +23,8 @@ void wlm_init(ctx_t * ctx, int argc, char ** argv) {
     log_debug(&ctx, "main::init(): initializing wayland\n");
     wlm_wayland_init(ctx);
 
-    //log_debug(&ctx, "main::init(): initializing EGL\n");
-    //init_egl(&ctx);
+    log_debug(&ctx, "main::init(): initializing EGL\n");
+    wlm_egl_init(ctx);
 
     //log_debug(&ctx, "main::init(): initializing mirror\n");
     //init_mirror(&ctx);

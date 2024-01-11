@@ -7,7 +7,7 @@
 
 #include <wayland-util.h>
 
-struct ctx;
+typedef struct ctx ctx_t;
 
 typedef struct {
     struct wl_list link;
@@ -16,7 +16,7 @@ typedef struct {
     int events;
     int timeout_ms;
 
-    void (*on_event)(struct ctx * ctx);
+    void (*on_event)(ctx_t *);
 } wlm_event_loop_handler_t;
 
 typedef struct ctx_event {
@@ -29,15 +29,15 @@ typedef struct ctx_event {
 
 #define EVENT_LOOP_MAX_EVENTS 10
 
-void wlm_event_loop_zero(struct ctx * ctx);
-void wlm_event_loop_init(struct ctx * ctx);
-void wlm_event_loop_cleanup(struct ctx * ctx);
+void wlm_event_loop_zero(ctx_t *);
+void wlm_event_loop_init(ctx_t *);
+void wlm_event_loop_cleanup(ctx_t *);
 
-void wlm_event_loop_handler_zero(struct ctx * ctx, wlm_event_loop_handler_t * handler);
-void wlm_event_loop_run(struct ctx * ctx);
+void wlm_event_loop_handler_zero(ctx_t *, wlm_event_loop_handler_t * handler);
+void wlm_event_loop_run(ctx_t *);
 
-void wlm_event_loop_add_fd(struct ctx * ctx, wlm_event_loop_handler_t * handler);
-void wlm_event_loop_change_fd(struct ctx * ctx, wlm_event_loop_handler_t * handler);
-void wlm_event_loop_remove_fd(struct ctx * ctx, wlm_event_loop_handler_t * handler);
+void wlm_event_loop_add_fd(ctx_t *, wlm_event_loop_handler_t * handler);
+void wlm_event_loop_change_fd(ctx_t *, wlm_event_loop_handler_t * handler);
+void wlm_event_loop_remove_fd(ctx_t *, wlm_event_loop_handler_t * handler);
 
 #endif

@@ -27,6 +27,4 @@ void wlm_wayland_cleanup(ctx_t * ctx) {
     // cleanup core components last so everything that needs it is cleaned up
     wlm_wayland_registry_cleanup(ctx);
     wlm_wayland_core_cleanup(ctx);
-
-    wlm_wayland_zero(ctx);
 }

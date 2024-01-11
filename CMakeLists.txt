@@ -44,7 +44,7 @@ endif()
 # main target
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS src/*.c)
 list(REMOVE_ITEM sources
-    ${CMAKE_SOURCE_DIR}/src/egl.c
+    ${CMAKE_SOURCE_DIR}/src/egl_old.c
     ${CMAKE_SOURCE_DIR}/src/mirror.c
     ${CMAKE_SOURCE_DIR}/src/mirror-dmabuf.c
     ${CMAKE_SOURCE_DIR}/src/mirror-screencopy.c

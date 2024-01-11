@@ -10,7 +10,7 @@
 #include <wlm/event/loop.h>
 //#include "stream.h"
 #include <wlm/wayland.h>
-//#include "egl.h"
+#include <wlm/egl.h>
 //#include "mirror.h"
 
 typedef struct ctx {
@@ -18,7 +18,7 @@ typedef struct ctx {
     ctx_event_loop_t event;
     //ctx_stream_t stream;
     ctx_wl_t wl;
-    //ctx_egl_t egl;
+    ctx_egl_t egl;
     //ctx_mirror_t mirror;
 } ctx_t;
 
