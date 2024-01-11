@@ -7,8 +7,8 @@
 void cleanup(ctx_t * ctx) {
     log_debug(ctx, "main::cleanup(): deallocating resources\n");
 
-    //wayland_cleanup(ctx);
-    //event_cleanup(ctx);
+    wayland_cleanup(ctx);
+    event_cleanup(ctx);
 }
 
 noreturn void exit_fail(ctx_t * ctx) {
@@ -19,8 +19,8 @@ noreturn void exit_fail(ctx_t * ctx) {
 int main(int argc, char ** argv) {
     ctx_t ctx;
 
-    //event_zero(&ctx);
-    //wayland_zero(&ctx);
+    event_zero(&ctx);
+    wayland_zero(&ctx);
 
     if (argc > 0) {
         // skip program name
@@ -34,10 +34,10 @@ int main(int argc, char ** argv) {
     //init_stream(&ctx);
 
     log_debug(&ctx, "main::main(): initializing event system\n");
-    //event_init(&ctx);
+    event_init(&ctx);
 
     log_debug(&ctx, "main::main(): initializing wayland\n");
-    //wayland_init(&ctx);
+    wayland_init(&ctx);
 
     //log_debug(&ctx, "main::main(): initializing EGL\n");
     //init_egl(&ctx);
