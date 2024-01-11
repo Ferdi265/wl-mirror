@@ -7,13 +7,8 @@
 void cleanup(ctx_t * ctx) {
     log_debug(ctx, "main::cleanup(): deallocating resources\n");
 
-    if (ctx->mirror.initialized) cleanup_mirror(ctx);
-    if (ctx->egl.initialized) cleanup_egl(ctx);
-    if (ctx->wl.initialized) cleanup_wl(ctx);
-    if (ctx->stream.initialized) cleanup_stream(ctx);
-    if (ctx->event.initialized) cleanup_event(ctx);
-
-    cleanup_opt(ctx);
+    //wayland_cleanup(ctx);
+    //event_cleanup(ctx);
 }
 
 noreturn void exit_fail(ctx_t * ctx) {
@@ -24,14 +19,8 @@ noreturn void exit_fail(ctx_t * ctx) {
 int main(int argc, char ** argv) {
     ctx_t ctx;
 
-    ctx.event.initialized = false;
-    ctx.stream.initialized = false;
-    ctx.wl.initialized = false;
-    ctx.egl.initialized = false;
-    ctx.mirror.initialized = false;
-
-    init_opt(&ctx);
-    init_event(&ctx);
+    //event_zero(&ctx);
+    //wayland_zero(&ctx);
 
     if (argc > 0) {
         // skip program name
@@ -39,22 +28,25 @@ int main(int argc, char ** argv) {
         argc--;
     }
 
-    parse_opt(&ctx, argc, argv);
+    //parse_opt(&ctx, argc, argv);
 
-    log_debug(&ctx, "main::main(): initializing stream\n");
-    init_stream(&ctx);
+    //log_debug(&ctx, "main::main(): initializing stream\n");
+    //init_stream(&ctx);
+
+    log_debug(&ctx, "main::main(): initializing event system\n");
+    //event_init(&ctx);
 
     log_debug(&ctx, "main::main(): initializing wayland\n");
-    init_wl(&ctx);
+    //wayland_init(&ctx);
 
-    log_debug(&ctx, "main::main(): initializing EGL\n");
-    init_egl(&ctx);
+    //log_debug(&ctx, "main::main(): initializing EGL\n");
+    //init_egl(&ctx);
 
-    log_debug(&ctx, "main::main(): initializing mirror\n");
-    init_mirror(&ctx);
+    //log_debug(&ctx, "main::main(): initializing mirror\n");
+    //init_mirror(&ctx);
 
-    log_debug(&ctx, "main::main(): initializing mirror backend\n");
-    init_mirror_backend(&ctx);
+    //log_debug(&ctx, "main::main(): initializing mirror backend\n");
+    //init_mirror_backend(&ctx);
 
     log_debug(&ctx, "main::main(): entering event loop\n");
     event_loop(&ctx);
