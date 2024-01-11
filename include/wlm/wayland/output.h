@@ -1,5 +1,5 @@
-#ifndef WL_MIRROR_WAYLAND_OUTPUT_H_
-#define WL_MIRROR_WAYLAND_OUTPUT_H_
+#ifndef WL_MIRROR_WLM_WAYLAND_OUTPUT_H_
+#define WL_MIRROR_WLM_WAYLAND_OUTPUT_H_
 
 #include <stdbool.h>
 #include <wayland-client-core.h>
@@ -8,7 +8,7 @@
 
 typedef struct ctx ctx_t;
 
-#define PRINT_WL_OUTPUT_TRANSFORM(transform) ( \
+#define WLM_PRINT_OUTPUT_TRANSFORM(transform) ( \
         transform == WL_OUTPUT_TRANSFORM_NORMAL ? "NORMAL" : \
         transform == WL_OUTPUT_TRANSFORM_90 ? "90" : \
         transform == WL_OUTPUT_TRANSFORM_180 ? "180" : \
@@ -20,21 +20,21 @@ typedef struct ctx ctx_t;
     )
 
 typedef enum {
-    WAYLAND_OUTPUT_NAME_CHANGED         = 1 << 0,
-    WAYLAND_OUTPUT_POSITION_CHANGED     = 1 << 1,
-    WAYLAND_OUTPUT_SIZE_CHANGED         = 1 << 2,
-    WAYLAND_OUTPUT_SCALE_CHANGED        = 1 << 3,
-    WAYLAND_OUTPUT_TRANSFORM_CHANGED    = 1 << 4,
-    WAYLAND_OUTPUT_XDG_CHANGED          = 1 << 5,
+    WLM_WAYLAND_OUTPUT_NAME_CHANGED         = 1 << 0,
+    WLM_WAYLAND_OUTPUT_POSITION_CHANGED     = 1 << 1,
+    WLM_WAYLAND_OUTPUT_SIZE_CHANGED         = 1 << 2,
+    WLM_WAYLAND_OUTPUT_SCALE_CHANGED        = 1 << 3,
+    WLM_WAYLAND_OUTPUT_TRANSFORM_CHANGED    = 1 << 4,
+    WLM_WAYLAND_OUTPUT_XDG_CHANGED          = 1 << 5,
 
-    WAYLAND_OUTPUT_UNCHANGED            = 0,
-    WAYLAND_OUTPUT_CHANGED              = -1U
+    WLM_WAYLAND_OUTPUT_UNCHANGED            = 0,
+    WLM_WAYLAND_OUTPUT_CHANGED              = -1U
 } wlm_wayland_output_entry_changed_t;
 
 typedef enum {
-    WAYLAND_OUTPUT_INCOMPLETE           = 2,
-    WAYLAND_OUTPUT_XDG_COMPLETE         = 1,
-    WAYLAND_OUTPUT_COMPLETE             = 0
+    WLM_WAYLAND_OUTPUT_INCOMPLETE           = 2,
+    WLM_WAYLAND_OUTPUT_XDG_COMPLETE         = 1,
+    WLM_WAYLAND_OUTPUT_COMPLETE             = 0
 } wlm_wayland_output_completeness_t;
 
 typedef struct {

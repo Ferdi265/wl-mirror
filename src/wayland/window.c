@@ -74,7 +74,7 @@ static void on_surface_preferred_buffer_transform(
     enum wl_output_transform transform = (enum wl_output_transform)transform_int;
 
     log_debug(ctx, "wayland::window::on_surface_preferred_buffer_transform(): preferred transform = %s\n",
-        PRINT_WL_OUTPUT_TRANSFORM(transform)
+        WLM_PRINT_OUTPUT_TRANSFORM(transform)
     );
 
     // TODO: react to transform

@@ -9,7 +9,7 @@ static void print_output(ctx_t * ctx, wlm_wayland_output_entry_t * output) {
     log_debug(ctx, "wayland::output::print_output(): - size      = %dx%d\n", output->width, output->height);
     log_debug(ctx, "wayland::output::print_output(): - position  = %dx%d\n", output->x, output->y);
     log_debug(ctx, "wayland::output::print_output(): - scale     = %d\n", output->scale);
-    log_debug(ctx, "wayland::output::print_output(): - transform = %s\n", PRINT_WL_OUTPUT_TRANSFORM(output->transform));
+    log_debug(ctx, "wayland::output::print_output(): - transform = %s\n", WLM_PRINT_OUTPUT_TRANSFORM(output->transform));
 }
 
 static void check_outputs_complete(ctx_t * ctx) {
@@ -26,7 +26,7 @@ static void check_outputs_complete(ctx_t * ctx) {
 
     // mark outputs unchanged after initial sync
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
-        cur->changed = WAYLAND_OUTPUT_UNCHANGED;
+        cur->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
     }
 }
 
@@ -86,7 +86,7 @@ static void on_output_name(
     if (cur->name == NULL || strcmp(cur->name, name) != 0) {
         if (cur->name != NULL) free(cur->name);
         cur->name = strdup(name);
-        cur->changed |= WAYLAND_OUTPUT_NAME_CHANGED;
+        cur->changed |= WLM_WAYLAND_OUTPUT_NAME_CHANGED;
     }
 }
 
@@ -126,7 +126,7 @@ static void on_output_geometry(
     enum wl_output_transform transform = (enum wl_output_transform)transform_int;
     if (cur->transform != transform) {
         cur->transform = transform;
-        cur->changed |= WAYLAND_OUTPUT_TRANSFORM_CHANGED;
+        cur->changed |= WLM_WAYLAND_OUTPUT_TRANSFORM_CHANGED;
     }
 
     // ignore: geometry information is often stubbed out, use xdg_output information
@@ -150,7 +150,7 @@ static void on_output_scale(
 
     if (cur->scale != scale) {
         cur->scale = scale;
-        cur->changed |= WAYLAND_OUTPUT_SCALE_CHANGED;
+        cur->changed |= WLM_WAYLAND_OUTPUT_SCALE_CHANGED;
     }
 }
 
@@ -162,20 +162,17 @@ static void on_output_done(
     ctx_t * ctx = (ctx_t *)data;
     wlm_wayland_output_entry_t * cur = find_output(ctx, output);
 
-    if (cur->incomplete == WAYLAND_OUTPUT_XDG_COMPLETE) {
-        cur->incomplete = WAYLAND_OUTPUT_COMPLETE;
+    if (cur->incomplete == WLM_WAYLAND_OUTPUT_XDG_COMPLETE) {
+        cur->incomplete = WLM_WAYLAND_OUTPUT_COMPLETE;
         ctx->wl.output.incomplete_outputs--;
 
         check_outputs_complete(ctx);
-    }
-
-    // only emit change info for complete outputs
-    if (!cur->incomplete && cur->changed) {
+    } else if (!cur->incomplete && cur->changed) {
         log_debug(ctx, "wayland::output::on_output_done(): output %s changed\n", cur->name);
         print_output(ctx, cur);
 
         wlm_event_emit_output_changed(ctx, cur);
-        cur->changed = WAYLAND_OUTPUT_UNCHANGED;
+        cur->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
     }
 }
 
@@ -222,11 +219,11 @@ static void on_xdg_output_logical_position(
     if (cur->x != x || cur->y != y) {
         cur->x = x;
         cur->y = y;
-        cur->changed |= WAYLAND_OUTPUT_POSITION_CHANGED;
+        cur->changed |= WLM_WAYLAND_OUTPUT_POSITION_CHANGED;
     }
 
     if (cur->incomplete) {
-        cur->incomplete = WAYLAND_OUTPUT_XDG_COMPLETE;
+        cur->incomplete = WLM_WAYLAND_OUTPUT_XDG_COMPLETE;
     }
 }
 
@@ -242,11 +239,11 @@ static void on_xdg_output_logical_size(
     if (cur->width != width || cur->height != height) {
         cur->width = width;
         cur->height = height;
-        cur->changed |= WAYLAND_OUTPUT_POSITION_CHANGED;
+        cur->changed |= WLM_WAYLAND_OUTPUT_POSITION_CHANGED;
     }
 
     if (cur->incomplete) {
-        cur->incomplete = WAYLAND_OUTPUT_XDG_COMPLETE;
+        cur->incomplete = WLM_WAYLAND_OUTPUT_XDG_COMPLETE;
     }
 }
 
@@ -323,8 +320,8 @@ void wlm_wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
     cur->height = 0;
     cur->scale = 0;
     cur->transform = WL_OUTPUT_TRANSFORM_NORMAL;
-    cur->changed = WAYLAND_OUTPUT_UNCHANGED;
-    cur->incomplete = WAYLAND_OUTPUT_INCOMPLETE;
+    cur->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
+    cur->incomplete = WLM_WAYLAND_OUTPUT_INCOMPLETE;
     wl_list_insert(&ctx->wl.output.output_list, &cur->link);
 
     ctx->wl.output.incomplete_outputs++;
