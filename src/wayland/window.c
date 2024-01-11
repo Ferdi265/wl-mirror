@@ -188,14 +188,29 @@ static void on_libdecor_frame_configure(
     ctx_t * ctx = (ctx_t *)data;
     log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): configuring\n");
 
+    // get minimum window size
+    int min_width = 0;
+    int min_height = 0;
+    libdecor_frame_get_min_content_size(frame, &min_width, &min_height);
+
+    // set minimum window size
+    int new_min_width = min_width;
+    int new_min_height = min_height;
+    if (new_min_width < DEFAULT_WIDTH) new_min_width = DEFAULT_WIDTH;
+    if (new_min_height < DEFAULT_HEIGHT) new_min_height = DEFAULT_HEIGHT;
+    if (new_min_width != min_width || new_min_height != min_height) {
+        log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): setting minimum size = %dx%d\n", new_min_width, new_min_height);
+        libdecor_frame_set_min_content_size(frame, new_min_width, new_min_height);
+    }
+
     // get window size
     int width = 0;
     int height = 0;
     if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
         if (ctx->wl.window.width == 0 || ctx->wl.window.height == 0) {
             log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): falling back to default size\n");
-            width = DEFAULT_WIDTH;
-            height = DEFAULT_HEIGHT;
+            width = new_min_width;
+            height = new_min_height;
         } else {
             log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): falling back to previous size\n");
             width = ctx->wl.window.width;
