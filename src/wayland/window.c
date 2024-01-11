@@ -1,4 +1,52 @@
+#include <math.h>
 #include <wlm/context.h>
+
+// --- private helper functions ---
+
+static bool use_output_scale(ctx_t * ctx) {
+    return ctx->wl.protocols.fractional_scale_manager == NULL && wl_surface_get_version(ctx->wl.window.surface) < 6;
+}
+
+static bool use_surface_preferred_scale(ctx_t * ctx) {
+    return ctx->wl.protocols.fractional_scale_manager == NULL && wl_surface_get_version(ctx->wl.window.surface) >= 6;
+}
+
+static bool use_fractional_preferred_scale(ctx_t * ctx) {
+    return ctx->wl.protocols.fractional_scale_manager != NULL;
+}
+
+static void apply_surface_changes(ctx_t * ctx) {
+    if (!ctx->wl.window.changed) return;
+
+    if (ctx->wl.window.changed & WLM_WAYLAND_WINDOW_SIZE_CHANGED) {
+        log_debug(ctx, "wayland::window::apply_surface_changes(): new viewport destination size = %dx%d\n",
+            ctx->wl.window.width, ctx->wl.window.height
+        );
+        wp_viewport_set_destination(ctx->wl.window.viewport, ctx->wl.window.width, ctx->wl.window.height);
+    }
+
+    if ((ctx->wl.window.changed & WLM_WAYLAND_WINDOW_SIZE_CHANGED) || (ctx->wl.window.changed & WLM_WAYLAND_WINDOW_SCALE_CHANGED)) {
+        uint32_t buffer_width = round(ctx->wl.window.width * ctx->wl.window.scale);
+        uint32_t buffer_height = round(ctx->wl.window.height * ctx->wl.window.scale);
+        if (ctx->wl.window.buffer_width != buffer_width || ctx->wl.window.buffer_height != buffer_height) {
+            log_debug(ctx, "wayland::window::apply_surface_changes(): new buffer size = %dx%d\n", buffer_width, buffer_height);
+
+            ctx->wl.window.buffer_width = buffer_width;
+            ctx->wl.window.buffer_height = buffer_height;
+            ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_BUFFER_SIZE_CHANGED;
+        }
+    }
+
+    // TODO: react to preferred transform
+
+    // trigger buffer resize and render
+    wlm_event_emit_window_changed(ctx);
+
+    // TODO: who performs wl_surface_commit()?
+    wl_surface_commit(ctx->wl.window.surface);
+
+    ctx->wl.window.changed = WLM_WAYLAND_WINDOW_UNCHANGED;
+}
 
 // --- xdg_wm_base event handlers ---
 
@@ -28,11 +76,18 @@ static void on_surface_enter(
     ctx_t * ctx = (ctx_t *)data;
     wlm_wayland_output_entry_t * entry = wlm_wayland_output_find(ctx, output);
 
-    log_debug(ctx, "wayland::window::on_surface_enter(): entering output %s\n", entry->name);
-
     if (ctx->wl.window.current_output != entry) {
+        log_debug(ctx, "wayland::window::on_surface_enter(): entering output %s\n", entry->name);
+
         ctx->wl.window.current_output = entry;
-        // TODO: react to change? emit something?
+        ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_OUTPUT_CHANGED;
+
+        if (use_output_scale(ctx) && ctx->wl.window.scale != entry->scale) {
+            log_debug(ctx, "wayland::window::on_surface_enter(): using output scale = %d\n", entry->scale);
+
+            ctx->wl.window.scale = entry->scale;
+            ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
+        }
     }
 }
 
@@ -59,9 +114,12 @@ static void on_surface_preferred_buffer_scale(
 
     ctx_t * ctx = (ctx_t *)data;
 
-    log_debug(ctx, "wayland::window::on_surface_preferred_buffer_scale(): preferred integer scale = %d\n", scale);
+    if (use_surface_preferred_scale(ctx) && ctx->wl.window.scale != scale) {
+        log_debug(ctx, "wayland::window::on_surface_preferred_buffer_scale(): using preferred integer scale = %d\n", scale);
 
-    // TODO: react to scale
+        ctx->wl.window.scale = scale;
+        ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
+    }
 }
 
 static void on_surface_preferred_buffer_transform(
@@ -73,12 +131,15 @@ static void on_surface_preferred_buffer_transform(
     ctx_t * ctx = (ctx_t *)data;
     enum wl_output_transform transform = (enum wl_output_transform)transform_int;
 
-    log_debug(ctx, "wayland::window::on_surface_preferred_buffer_transform(): preferred transform = %s\n",
-        WLM_PRINT_OUTPUT_TRANSFORM(transform)
-    );
 
-    // TODO: react to transform
-    (void)transform;
+    if (ctx->wl.window.transform != transform) {
+        log_debug(ctx, "wayland::window::on_surface_preferred_buffer_transform(): using preferred transform = %s\n",
+            WLM_PRINT_OUTPUT_TRANSFORM(transform)
+        );
+
+        ctx->wl.window.transform = transform;
+        ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_TRANSFORM_CHANGED;
+    }
 }
 
 static const struct wl_surface_listener surface_listener = {
@@ -99,9 +160,12 @@ static void on_fractional_scale_preferred_scale(
     ctx_t * ctx = (ctx_t *)data;
     double scale = scale_times_120 / 120.;
 
-    log_debug(ctx, "wayland::window::on_fractional_scale_preferred_scale(): preferred fractional scale = %.3f\n", scale);
+    if (use_fractional_preferred_scale(ctx) && ctx->wl.window.scale != scale) {
+        log_debug(ctx, "wayland::window::on_fractional_scale_preferred_scale(): using preferred fractional scale = %.3f\n", scale);
 
-    // TODO: react to scale
+        ctx->wl.window.scale = scale;
+        ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
+    }
 }
 
 static const struct wp_fractional_scale_v1_listener fractional_scale_listener = {
@@ -119,6 +183,7 @@ static void on_libdecor_frame_configure(
     ctx_t * ctx = (ctx_t *)data;
     log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): configuring\n");
 
+    // get window size
     int width = 0;
     int height = 0;
     if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
@@ -133,7 +198,14 @@ static void on_libdecor_frame_configure(
         }
     }
 
-    // check fullscreen state
+    // update window size
+    if (ctx->wl.window.width != (uint32_t)width || ctx->wl.window.height != (uint32_t)height) {
+        ctx->wl.window.width = width;
+        ctx->wl.window.height = height;
+        ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SIZE_CHANGED;
+    }
+
+    // get fullscreen state
     bool is_fullscreen = false;
     enum libdecor_window_state window_state;
     if (libdecor_configuration_get_window_state(configuration, &window_state)) {
@@ -142,12 +214,16 @@ static void on_libdecor_frame_configure(
         }
     }
 
+    // TODO: update actual fullscreen state
+
+    // commit window configuration
     struct libdecor_state * state = libdecor_state_new(width, height);
     libdecor_frame_commit(frame, state, configuration);
     libdecor_state_free(state);
-
-    // TODO: check if things changed, emit events
     (void)is_fullscreen;
+
+    // check if things changed, emit events
+    apply_surface_changes(ctx);
 }
 
 static void on_libdecor_frame_commit(
@@ -193,6 +269,14 @@ void wlm_wayland_window_zero(ctx_t * ctx) {
     ctx->wl.window.libdecor_frame = NULL;
 
     ctx->wl.window.current_output = NULL;
+    ctx->wl.window.transform = WL_OUTPUT_TRANSFORM_NORMAL;
+    ctx->wl.window.width = 0;
+    ctx->wl.window.height = 0;
+    ctx->wl.window.buffer_width = 0;
+    ctx->wl.window.buffer_height = 0;
+    ctx->wl.window.scale = 1.0;
+
+    ctx->wl.window.changed = WLM_WAYLAND_WINDOW_UNCHANGED;
 }
 
 void wlm_wayland_window_init(ctx_t * ctx) {
@@ -247,5 +331,23 @@ void wlm_wayland_window_on_output_initial_sync(ctx_t * ctx) {
     // map libdecor frame
     log_debug(ctx, "wayland::window::on_output_initial_sync(): mapping frame\n");
     libdecor_frame_map(ctx->wl.window.libdecor_frame);
-    wl_surface_commit(ctx->wl.window.surface);
+
+    // check if things changed, emit events
+    apply_surface_changes(ctx);
+}
+
+void wlm_wayland_window_on_output_changed(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
+    if (ctx->wl.window.current_output != entry) return;
+
+    if (use_output_scale(ctx) && ctx->wl.window.scale != entry->scale) {
+        log_debug(ctx, "wayland::window::on_output_changed(): using new output scale = %d\n", entry->scale);
+
+        ctx->wl.window.scale = entry->scale;
+        ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
+    }
+}
+
+void wlm_wayland_window_on_before_poll(ctx_t * ctx) {
+    // check if things changed, emit events
+    apply_surface_changes(ctx);
 }
