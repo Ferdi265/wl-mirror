@@ -66,8 +66,7 @@ void wlm_event_loop_run(ctx_t * ctx) {
     timeout_handler = min_timeout(ctx);
     timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
 
-    log_debug(ctx, "event::loop(): waiting for events\n");
-    while ((num_events = epoll_wait(ctx->event.pollfd, events, ARRAY_LENGTH(events), timeout_ms)) != -1 && !wlm_wayland_core_is_closing(ctx)) {
+    while (!wlm_wayland_core_is_closing(ctx) && (num_events = epoll_wait(ctx->event.pollfd, events, ARRAY_LENGTH(events), timeout_ms)) != -1) {
         for (int i = 0; i < num_events; i++) {
             wlm_event_loop_handler_t * handler = (wlm_event_loop_handler_t *)events[i].data.ptr;
             handler->on_event(ctx);
@@ -80,7 +79,6 @@ void wlm_event_loop_run(ctx_t * ctx) {
         wlm_event_emit_before_poll(ctx);
         timeout_handler = min_timeout(ctx);
         timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
-        log_debug(ctx, "event::loop(): waiting for events\n");
     }
 }
 

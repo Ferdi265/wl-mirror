@@ -66,6 +66,17 @@ static wlm_wayland_output_entry_t * find_xdg_output(ctx_t * ctx, struct zxdg_out
     return cur;
 }
 
+static void remove_output(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
+    if (!entry->incomplete) {
+        wlm_event_emit_output_removed(ctx, entry);
+    }
+
+    wl_list_remove(&entry->link);
+    if (entry->xdg_output != NULL) zxdg_output_v1_destroy(entry->xdg_output);
+    if (entry->name != NULL) free(entry->name);
+    free(entry);
+}
+
 static const struct zxdg_output_v1_listener xdg_output_listener;
 static void bind_xdg_output(ctx_t * ctx, wlm_wayland_output_entry_t * cur) {
     cur->xdg_output = zxdg_output_manager_v1_get_xdg_output(ctx->wl.protocols.xdg_output_manager, cur->output);
@@ -278,22 +289,14 @@ void wlm_wayland_output_init(ctx_t * ctx) {
 void wlm_wayland_output_cleanup(ctx_t * ctx) {
     wlm_wayland_output_entry_t *cur, *next;
     wl_list_for_each_safe(cur, next, &ctx->wl.output.output_list, link) {
-        wl_list_remove(&cur->link);
-        if (cur->xdg_output != NULL) zxdg_output_v1_destroy(cur->xdg_output);
-        if (cur->name != NULL) free(cur->name);
-        free(cur);
+        remove_output(ctx, cur);
     }
 }
 
 // --- public functions ---
 
 wlm_wayland_output_entry_t * wlm_wayland_output_find(ctx_t * ctx, struct wl_output * output) {
-    wlm_wayland_output_entry_t *cur;
-    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
-        if (cur->output == output) return cur;
-    }
-
-    return NULL;
+    return find_output(ctx, output);
 }
 
 wlm_wayland_output_entry_t * wlm_wayland_output_find_by_name(ctx_t * ctx, const char * name) {
@@ -332,15 +335,8 @@ void wlm_wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
 }
 
 void wlm_wayland_output_on_remove(ctx_t * ctx, struct wl_output * output) {
-    wlm_wayland_output_entry_t *cur, *next;
-    wl_list_for_each_safe(cur, next, &ctx->wl.output.output_list, link) {
-        if (cur->output != output) continue;
-
-        wl_list_remove(&cur->link);
-        if (cur->xdg_output != NULL) zxdg_output_v1_destroy(cur->xdg_output);
-        if (cur->name != NULL) free(cur->name);
-        free(cur);
-    }
+    wlm_wayland_output_entry_t * entry = find_output(ctx, output);
+    remove_output(ctx, entry);
 }
 
 void wlm_wayland_output_on_registry_initial_sync(ctx_t * ctx) {

@@ -354,6 +354,13 @@ void wlm_wayland_window_on_output_changed(ctx_t * ctx, wlm_wayland_output_entry_
     }
 }
 
+void wlm_wayland_window_on_output_removed(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
+    if (ctx->wl.window.current_output != entry) return;
+
+    // set current output to null because it would dangle otherwise
+    ctx->wl.window.current_output = NULL;
+}
+
 void wlm_wayland_window_on_before_poll(ctx_t * ctx) {
     if (ctx->wl.window.incomplete) return;
 
