@@ -60,15 +60,15 @@ typedef struct {
     size_t incomplete_outputs;
 } ctx_wl_output_t;
 
+void wlm_wayland_output_on_add(ctx_t *, struct wl_output * output);
+void wlm_wayland_output_on_remove(ctx_t *, struct wl_output * output);
+void wlm_wayland_output_on_registry_initial_sync(ctx_t *);
+
 void wlm_wayland_output_zero(ctx_t *);
 void wlm_wayland_output_init(ctx_t *);
 void wlm_wayland_output_cleanup(ctx_t *);
 
 wlm_wayland_output_entry_t * wlm_wayland_output_find(ctx_t *, struct wl_output * output);
 wlm_wayland_output_entry_t * wlm_wayland_output_find_by_name(ctx_t *, const char * name);
-
-void wlm_wayland_output_on_add(ctx_t *, struct wl_output * output);
-void wlm_wayland_output_on_remove(ctx_t *, struct wl_output * output);
-void wlm_wayland_output_on_registry_initial_sync(ctx_t *);
 
 #endif

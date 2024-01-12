@@ -27,6 +27,12 @@ static struct libdecor_interface libdecor_listener = {
     .error = on_libdecor_error
 };
 
+// --- internal event handlers ---
+
+void wlm_wayland_core_on_before_poll(ctx_t * ctx) {
+    wl_display_flush(ctx->wl.core.display);
+}
+
 // --- initialization and cleanup ---
 
 void wlm_wayland_core_zero(ctx_t * ctx) {
@@ -79,10 +85,4 @@ void wlm_wayland_core_cleanup(ctx_t * ctx) {
 
 bool wlm_wayland_core_is_closing(ctx_t * ctx) {
     return ctx->wl.core.closing;
-}
-
-// --- internal event handlers ---
-
-void wlm_wayland_core_on_before_poll(ctx_t * ctx) {
-    wl_display_flush(ctx->wl.core.display);
 }

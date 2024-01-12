@@ -281,39 +281,6 @@ static struct libdecor_frame_interface libdecor_frame_listener = {
     .dismiss_popup = on_libdecor_frame_dismiss_popup
 };
 
-// --- initialization and cleanup ---
-
-void wlm_wayland_window_zero(ctx_t * ctx) {
-    ctx->wl.window.surface = NULL;
-    ctx->wl.window.viewport = NULL;
-    ctx->wl.window.fractional_scale = NULL;
-    ctx->wl.window.libdecor_frame = NULL;
-
-    ctx->wl.window.current_output = NULL;
-    ctx->wl.window.transform = WL_OUTPUT_TRANSFORM_NORMAL;
-    ctx->wl.window.width = 0;
-    ctx->wl.window.height = 0;
-    ctx->wl.window.buffer_width = 0;
-    ctx->wl.window.buffer_height = 0;
-    ctx->wl.window.scale = 1.0;
-
-    ctx->wl.window.changed = WLM_WAYLAND_WINDOW_UNCHANGED;
-    ctx->wl.window.incomplete = WLM_WAYLAND_WINDOW_INCOMPLETE;
-}
-
-void wlm_wayland_window_init(ctx_t * ctx) {
-    (void)ctx;
-}
-
-void wlm_wayland_window_cleanup(ctx_t * ctx) {
-    if (ctx->wl.window.libdecor_frame != NULL) libdecor_frame_unref(ctx->wl.window.libdecor_frame);
-    if (ctx->wl.window.fractional_scale != NULL) wp_fractional_scale_v1_destroy(ctx->wl.window.fractional_scale);
-    if (ctx->wl.window.viewport != NULL) wp_viewport_destroy(ctx->wl.window.viewport);
-    if (ctx->wl.window.surface != NULL) wl_surface_destroy(ctx->wl.window.surface);
-
-    wlm_wayland_window_zero(ctx);
-}
-
 // --- internal event handlers ---
 
 void wlm_wayland_window_on_registry_initial_sync(ctx_t * ctx) {
@@ -344,6 +311,8 @@ void wlm_wayland_window_on_registry_initial_sync(ctx_t * ctx) {
 }
 
 void wlm_wayland_window_on_output_initial_sync(ctx_t * ctx) {
+    // TODO: verify initial sync complete?
+    //       if not, trigger this "soon"?
     // TODO: set fullscreen here if already requested
 
     // set libdecor app properties
@@ -381,4 +350,37 @@ void wlm_wayland_window_on_before_poll(ctx_t * ctx) {
 
     // check if things changed, emit events
     apply_surface_changes(ctx);
+}
+
+// --- initialization and cleanup ---
+
+void wlm_wayland_window_zero(ctx_t * ctx) {
+    ctx->wl.window.surface = NULL;
+    ctx->wl.window.viewport = NULL;
+    ctx->wl.window.fractional_scale = NULL;
+    ctx->wl.window.libdecor_frame = NULL;
+
+    ctx->wl.window.current_output = NULL;
+    ctx->wl.window.transform = WL_OUTPUT_TRANSFORM_NORMAL;
+    ctx->wl.window.width = 0;
+    ctx->wl.window.height = 0;
+    ctx->wl.window.buffer_width = 0;
+    ctx->wl.window.buffer_height = 0;
+    ctx->wl.window.scale = 1.0;
+
+    ctx->wl.window.changed = WLM_WAYLAND_WINDOW_UNCHANGED;
+    ctx->wl.window.incomplete = WLM_WAYLAND_WINDOW_INCOMPLETE;
+}
+
+void wlm_wayland_window_init(ctx_t * ctx) {
+    (void)ctx;
+}
+
+void wlm_wayland_window_cleanup(ctx_t * ctx) {
+    if (ctx->wl.window.libdecor_frame != NULL) libdecor_frame_unref(ctx->wl.window.libdecor_frame);
+    if (ctx->wl.window.fractional_scale != NULL) wp_fractional_scale_v1_destroy(ctx->wl.window.fractional_scale);
+    if (ctx->wl.window.viewport != NULL) wp_viewport_destroy(ctx->wl.window.viewport);
+    if (ctx->wl.window.surface != NULL) wl_surface_destroy(ctx->wl.window.surface);
+
+    wlm_wayland_window_zero(ctx);
 }

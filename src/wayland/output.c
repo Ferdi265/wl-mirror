@@ -274,40 +274,6 @@ static const struct zxdg_output_v1_listener xdg_output_listener = {
     .done = on_xdg_output_done,
 };
 
-// --- initialization and cleanup
-
-void wlm_wayland_output_zero(ctx_t * ctx) {
-    wl_list_init(&ctx->wl.output.output_list);
-
-    ctx->wl.output.incomplete_outputs = 0;
-}
-
-void wlm_wayland_output_init(ctx_t * ctx) {
-    (void)ctx;
-}
-
-void wlm_wayland_output_cleanup(ctx_t * ctx) {
-    wlm_wayland_output_entry_t *cur, *next;
-    wl_list_for_each_safe(cur, next, &ctx->wl.output.output_list, link) {
-        remove_output(ctx, cur);
-    }
-}
-
-// --- public functions ---
-
-wlm_wayland_output_entry_t * wlm_wayland_output_find(ctx_t * ctx, struct wl_output * output) {
-    return find_output(ctx, output);
-}
-
-wlm_wayland_output_entry_t * wlm_wayland_output_find_by_name(ctx_t * ctx, const char * name) {
-    wlm_wayland_output_entry_t *cur;
-    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
-        if (strcmp(cur->name, name) == 0) return cur;
-    }
-
-    return NULL;
-}
-
 // --- internal event handlers ---
 
 void wlm_wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
@@ -348,4 +314,38 @@ void wlm_wayland_output_on_registry_initial_sync(ctx_t * ctx) {
     }
 
     check_outputs_complete(ctx);
+}
+
+// --- initialization and cleanup
+
+void wlm_wayland_output_zero(ctx_t * ctx) {
+    wl_list_init(&ctx->wl.output.output_list);
+
+    ctx->wl.output.incomplete_outputs = 0;
+}
+
+void wlm_wayland_output_init(ctx_t * ctx) {
+    (void)ctx;
+}
+
+void wlm_wayland_output_cleanup(ctx_t * ctx) {
+    wlm_wayland_output_entry_t *cur, *next;
+    wl_list_for_each_safe(cur, next, &ctx->wl.output.output_list, link) {
+        remove_output(ctx, cur);
+    }
+}
+
+// --- public functions ---
+
+wlm_wayland_output_entry_t * wlm_wayland_output_find(ctx_t * ctx, struct wl_output * output) {
+    return find_output(ctx, output);
+}
+
+wlm_wayland_output_entry_t * wlm_wayland_output_find_by_name(ctx_t * ctx, const char * name) {
+    wlm_wayland_output_entry_t *cur;
+    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
+        if (strcmp(cur->name, name) == 0) return cur;
+    }
+
+    return NULL;
 }

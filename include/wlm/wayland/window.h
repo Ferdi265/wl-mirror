@@ -43,14 +43,14 @@ typedef struct {
     wlm_wayland_window_completeness_t incomplete;
 } ctx_wl_window_t;
 
-void wlm_wayland_window_zero(ctx_t *);
-void wlm_wayland_window_init(ctx_t *);
-void wlm_wayland_window_cleanup(ctx_t *);
-
 void wlm_wayland_window_on_registry_initial_sync(ctx_t *);
 void wlm_wayland_window_on_output_initial_sync(ctx_t *);
 void wlm_wayland_window_on_output_changed(ctx_t *, wlm_wayland_output_entry_t * entry);
 void wlm_wayland_window_on_output_removed(ctx_t *, wlm_wayland_output_entry_t * entry);
 void wlm_wayland_window_on_before_poll(ctx_t *);
+
+void wlm_wayland_window_zero(ctx_t *);
+void wlm_wayland_window_init(ctx_t *);
+void wlm_wayland_window_cleanup(ctx_t *);
 
 #endif
