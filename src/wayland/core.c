@@ -83,6 +83,10 @@ void wlm_wayland_core_cleanup(ctx_t * ctx) {
 
 // --- public functions ---
 
+void wlm_wayland_core_request_close(ctx_t * ctx) {
+    ctx->wl.core.closing = true;
+}
+
 bool wlm_wayland_core_is_closing(ctx_t * ctx) {
     return ctx->wl.core.closing;
 }

@@ -27,6 +27,7 @@ void wlm_wayland_core_zero(ctx_t *);
 void wlm_wayland_core_init(ctx_t *);
 void wlm_wayland_core_cleanup(ctx_t *);
 
+void wlm_wayland_core_request_close(ctx_t *);
 bool wlm_wayland_core_is_closing(ctx_t *);
 
 void wlm_wayland_core_on_before_poll(ctx_t *);

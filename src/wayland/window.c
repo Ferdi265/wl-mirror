@@ -262,7 +262,7 @@ static void on_libdecor_frame_close(
     ctx_t * ctx = (ctx_t *)data;
     log_debug(ctx, "wayland::window::on_libdecor_frame_close(): close requested\n");
 
-    ctx->wl.core.closing = true;
+    wlm_wayland_core_request_close(ctx);
 }
 
 static void on_libdecor_frame_dismiss_popup(
