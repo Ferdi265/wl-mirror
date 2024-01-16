@@ -23,8 +23,8 @@ void wlm_init(ctx_t * ctx, int argc, char ** argv) {
     log_debug(&ctx, "main::init(): initializing wayland\n");
     wlm_wayland_init(ctx);
 
-    log_debug(&ctx, "main::init(): initializing EGL\n");
-    wlm_egl_init(ctx);
+    // egl is initialized in event handlers
+    // when wayland is ready
 
     //log_debug(&ctx, "main::init(): initializing mirror\n");
     //init_mirror(&ctx);

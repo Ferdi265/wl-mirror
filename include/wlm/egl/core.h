@@ -21,7 +21,6 @@ void wlm_egl_core_zero(ctx_t *);
 void wlm_egl_core_init(ctx_t *);
 void wlm_egl_core_cleanup(ctx_t *);
 
-void wlm_egl_core_on_window_initial_configure(ctx_t *);
 void wlm_egl_core_on_window_changed(ctx_t *);
 
 #endif

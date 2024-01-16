@@ -49,7 +49,7 @@ static void apply_surface_changes(ctx_t * ctx) {
 
     // trigger buffer resize and render
     if (!window_complete(ctx)) {
-        wlm_event_emit_window_initial_configure(ctx);
+        wlm_event_emit_window_init_done(ctx);
     } else {
         wlm_event_emit_window_changed(ctx);
     }
@@ -303,38 +303,7 @@ static struct libdecor_frame_interface libdecor_frame_listener = {
 
 // --- internal event handlers ---
 
-void wlm_wayland_window_on_registry_initial_sync(ctx_t * ctx) {
-    log_debug(ctx, "wayland::window::on_registry_initial_sync(): creating window\n");
-
-    // listen for ping events
-    xdg_wm_base_add_listener(ctx->wl.protocols.xdg_wm_base, &xdg_wm_base_listener, (void *)ctx);
-
-    // create surface
-    ctx->wl.window.surface = wl_compositor_create_surface(ctx->wl.protocols.compositor);
-    wl_surface_add_listener(ctx->wl.window.surface, &surface_listener, (void *)ctx);
-
-    // create viewport
-    ctx->wl.window.viewport = wp_viewporter_get_viewport(ctx->wl.protocols.viewporter, ctx->wl.window.surface);
-
-    // create fractional scale if supported
-    if (ctx->wl.protocols.fractional_scale_manager != NULL) {
-        ctx->wl.window.fractional_scale = wp_fractional_scale_manager_v1_get_fractional_scale(
-            ctx->wl.protocols.fractional_scale_manager, ctx->wl.window.surface
-        );
-        wp_fractional_scale_v1_add_listener(ctx->wl.window.fractional_scale, &fractional_scale_listener, (void *)ctx);
-    }
-
-    // create xdg surface
-    ctx->wl.window.libdecor_frame = libdecor_decorate(ctx->wl.core.libdecor_context, ctx->wl.window.surface, &libdecor_frame_listener, (void *)ctx);
-
-    // don't map frame or commit surface yet, wait for outputs
-    ctx->wl.window.flags |= WLM_WAYLAND_WINDOW_TOPLEVEL_DONE;
-    if (window_configure_ready(ctx)) {
-        trigger_initial_configure(ctx);
-    }
-}
-
-void wlm_wayland_window_on_output_initial_sync(ctx_t * ctx) {
+void wlm_wayland_window_on_output_init_done(ctx_t * ctx) {
     // remember that output information is complete
     ctx->wl.window.flags |= WLM_WAYLAND_WINDOW_OUTPUTS_DONE;
     if (window_configure_ready(ctx)) {
@@ -388,7 +357,34 @@ void wlm_wayland_window_zero(ctx_t * ctx) {
 }
 
 void wlm_wayland_window_init(ctx_t * ctx) {
-    (void)ctx;
+    log_debug(ctx, "wayland::window::init(): creating window\n");
+
+    // listen for ping events
+    xdg_wm_base_add_listener(ctx->wl.protocols.xdg_wm_base, &xdg_wm_base_listener, (void *)ctx);
+
+    // create surface
+    ctx->wl.window.surface = wl_compositor_create_surface(ctx->wl.protocols.compositor);
+    wl_surface_add_listener(ctx->wl.window.surface, &surface_listener, (void *)ctx);
+
+    // create viewport
+    ctx->wl.window.viewport = wp_viewporter_get_viewport(ctx->wl.protocols.viewporter, ctx->wl.window.surface);
+
+    // create fractional scale if supported
+    if (ctx->wl.protocols.fractional_scale_manager != NULL) {
+        ctx->wl.window.fractional_scale = wp_fractional_scale_manager_v1_get_fractional_scale(
+            ctx->wl.protocols.fractional_scale_manager, ctx->wl.window.surface
+        );
+        wp_fractional_scale_v1_add_listener(ctx->wl.window.fractional_scale, &fractional_scale_listener, (void *)ctx);
+    }
+
+    // create xdg surface
+    ctx->wl.window.libdecor_frame = libdecor_decorate(ctx->wl.core.libdecor_context, ctx->wl.window.surface, &libdecor_frame_listener, (void *)ctx);
+
+    // don't map frame or commit surface yet, wait for outputs
+    ctx->wl.window.flags |= WLM_WAYLAND_WINDOW_TOPLEVEL_DONE;
+    if (window_configure_ready(ctx)) {
+        trigger_initial_configure(ctx);
+    }
 }
 
 void wlm_wayland_window_cleanup(ctx_t * ctx) {

@@ -30,7 +30,7 @@ static void check_all_outputs_complete(ctx_t * ctx) {
         print_output(ctx, cur);
     }
 
-    wlm_event_emit_output_initial_sync(ctx);
+    wlm_event_emit_output_init_done(ctx);
 
     // mark outputs unchanged after initial sync
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
@@ -352,17 +352,6 @@ void wlm_wayland_output_on_remove(ctx_t * ctx, struct wl_output * output) {
     remove_output(ctx, entry);
 }
 
-void wlm_wayland_output_on_registry_initial_sync(ctx_t * ctx) {
-    wlm_wayland_output_entry_t *cur;
-    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
-        if (cur->xdg_output == NULL) {
-            bind_xdg_output(ctx, cur);
-        }
-    }
-
-    check_all_outputs_complete(ctx);
-}
-
 // --- initialization and cleanup
 
 void wlm_wayland_output_zero(ctx_t * ctx) {
@@ -372,7 +361,14 @@ void wlm_wayland_output_zero(ctx_t * ctx) {
 }
 
 void wlm_wayland_output_init(ctx_t * ctx) {
-    (void)ctx;
+    wlm_wayland_output_entry_t *cur;
+    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
+        if (cur->xdg_output == NULL) {
+            bind_xdg_output(ctx, cur);
+        }
+    }
+
+    check_all_outputs_complete(ctx);
 }
 
 void wlm_wayland_output_cleanup(ctx_t * ctx) {

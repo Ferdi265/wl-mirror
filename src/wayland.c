@@ -10,13 +10,10 @@ void wlm_wayland_zero(ctx_t * ctx) {
 void wlm_wayland_init(ctx_t * ctx) {
     // initialize core components
     wlm_wayland_core_init(ctx);
-
-    // initialize components
-    wlm_wayland_output_init(ctx);
-    wlm_wayland_window_init(ctx);
-
-    // initialize registry last so everything is ready for event handlers
     wlm_wayland_registry_init(ctx);
+
+    // other components are initialized in event handlers
+    // when dependencies are ready
 }
 
 void wlm_wayland_cleanup(ctx_t * ctx) {

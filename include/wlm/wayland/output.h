@@ -69,7 +69,6 @@ typedef struct {
 
 void wlm_wayland_output_on_add(ctx_t *, struct wl_output * output);
 void wlm_wayland_output_on_remove(ctx_t *, struct wl_output * output);
-void wlm_wayland_output_on_registry_initial_sync(ctx_t *);
 
 void wlm_wayland_output_zero(ctx_t *);
 void wlm_wayland_output_init(ctx_t *);

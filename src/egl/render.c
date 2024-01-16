@@ -27,7 +27,27 @@ static void redraw(ctx_t * ctx) {
 
 // --- internal event handlers ---
 
-void wlm_egl_render_on_window_initial_configure(ctx_t * ctx) {
+void wlm_egl_render_on_render_request_redraw(ctx_t * ctx) {
+    redraw(ctx);
+}
+
+// --- initialization and cleanup ---
+
+void wlm_egl_render_zero(ctx_t * ctx) {
+    ctx->egl.render.vbo = 0;
+    ctx->egl.render.texture = 0;
+    ctx->egl.render.freeze_texture = 0;
+    ctx->egl.render.freeze_framebuffer = 0;
+    ctx->egl.render.shader_program = 0;
+    ctx->egl.render.texture_transform_uniform = 0;
+    ctx->egl.render.invert_colors_uniform = 0;
+
+    ctx->egl.render.tex_width = 0;
+    ctx->egl.render.tex_height = 0;
+    ctx->egl.render.tex_gl_format = 0;
+}
+
+void wlm_egl_render_init(ctx_t * ctx) {
     // create vertex buffer object
     glGenBuffers(1, &ctx->egl.render.vbo);
     glBindBuffer(GL_ARRAY_BUFFER, ctx->egl.render.vbo);
@@ -77,7 +97,7 @@ void wlm_egl_render_on_window_initial_configure(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(vertex_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        log_error("egl::render::on_window_initial_configure(): failed to compile vertex shader: %s\n", errorLog);
+        log_error("egl::render::init(): failed to compile vertex shader: %s\n", errorLog);
         glDeleteShader(vertex_shader);
         wlm_exit_fail(ctx);
     }
@@ -91,7 +111,7 @@ void wlm_egl_render_on_window_initial_configure(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(fragment_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        log_error("egl::render::on_window_initial_configure(): failed to compile fragment shader: %s\n", errorLog);
+        log_error("egl::render::init(): failed to compile fragment shader: %s\n", errorLog);
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
         wlm_exit_fail(ctx);
@@ -104,7 +124,7 @@ void wlm_egl_render_on_window_initial_configure(ctx_t * ctx) {
     glLinkProgram(ctx->egl.render.shader_program);
     glGetProgramiv(ctx->egl.render.shader_program, GL_LINK_STATUS, &success);
     if (success != GL_TRUE) {
-        log_error("egl::render::on_window_initial_configure(): failed to link shader program\n");
+        log_error("egl::render::init(): failed to link shader program\n");
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
         glDeleteProgram(ctx->egl.render.shader_program);
@@ -119,34 +139,8 @@ void wlm_egl_render_on_window_initial_configure(ctx_t * ctx) {
     glDeleteShader(fragment_shader);
 
     // trigger redraw
+    log_debug(ctx, "egl::render::init(): triggering initial redraw\n");
     redraw(ctx);
-}
-
-void wlm_egl_render_on_window_changed(ctx_t * ctx) {
-    if (!(ctx->wl.window.changed & WLM_WAYLAND_WINDOW_BUFFER_SIZE_CHANGED)) return;
-
-    // trigger redraw
-    redraw(ctx);
-}
-
-// --- initialization and cleanup ---
-
-void wlm_egl_render_zero(ctx_t * ctx) {
-    ctx->egl.render.vbo = 0;
-    ctx->egl.render.texture = 0;
-    ctx->egl.render.freeze_texture = 0;
-    ctx->egl.render.freeze_framebuffer = 0;
-    ctx->egl.render.shader_program = 0;
-    ctx->egl.render.texture_transform_uniform = 0;
-    ctx->egl.render.invert_colors_uniform = 0;
-
-    ctx->egl.render.tex_width = 0;
-    ctx->egl.render.tex_height = 0;
-    ctx->egl.render.tex_gl_format = 0;
-}
-
-void wlm_egl_render_init(ctx_t * ctx) {
-    (void)ctx;
 }
 
 void wlm_egl_render_cleanup(ctx_t * ctx) {

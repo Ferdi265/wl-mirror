@@ -49,8 +49,7 @@ typedef struct {
     wlm_wayland_window_flags_t flags;
 } ctx_wl_window_t;
 
-void wlm_wayland_window_on_registry_initial_sync(ctx_t *);
-void wlm_wayland_window_on_output_initial_sync(ctx_t *);
+void wlm_wayland_window_on_output_init_done(ctx_t *);
 void wlm_wayland_window_on_output_changed(ctx_t *, wlm_wayland_output_entry_t * entry);
 void wlm_wayland_window_on_output_removed(ctx_t *, wlm_wayland_output_entry_t * entry);
 void wlm_wayland_window_on_before_poll(ctx_t *);

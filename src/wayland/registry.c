@@ -163,7 +163,7 @@ static void on_sync_callback_done(
         wlm_exit_fail(ctx);
     }
 
-    wlm_event_emit_registry_initial_sync(ctx);
+    wlm_event_emit_registry_init_done(ctx);
 
     (void)callback_data;
 }
