@@ -17,7 +17,7 @@ static bool output_complete_ready(wlm_wayland_output_entry_t * entry) {
 }
 
 static bool output_complete(wlm_wayland_output_entry_t * entry) {
-    return (entry->flags & WLM_WAYLAND_OUTPUT_DONE) == WLM_WAYLAND_OUTPUT_DONE;
+    return (entry->flags & WLM_WAYLAND_OUTPUT_COMPLETE) == WLM_WAYLAND_OUTPUT_COMPLETE;
 }
 
 static void check_all_outputs_complete(ctx_t * ctx) {
@@ -40,7 +40,7 @@ static void check_all_outputs_complete(ctx_t * ctx) {
 
 static void check_output_complete(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
     if (output_complete_ready(entry)) {
-        entry->flags |= WLM_WAYLAND_OUTPUT_DONE;
+        entry->flags |= WLM_WAYLAND_OUTPUT_COMPLETE;
         ctx->wl.output.incomplete_outputs--;
         check_all_outputs_complete(ctx);
     }

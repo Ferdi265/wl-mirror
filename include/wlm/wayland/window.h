@@ -21,9 +21,15 @@ typedef enum {
 } wlm_wayland_window_changed_t;
 
 typedef enum {
-    WLM_WAYLAND_WINDOW_INCOMPLETE           = 1,
-    WLM_WAYLAND_WINDOW_COMPLETE             = 0
-} wlm_wayland_window_completeness_t;
+    WLM_WAYLAND_WINDOW_TOPLEVEL_DONE        = 1 << 0,
+    WLM_WAYLAND_WINDOW_OUTPUTS_DONE         = 1 << 1,
+    WLM_WAYLAND_WINDOW_COMPLETE             = 1 << 3,
+
+    WLM_WAYLAND_WINDOW_INCOMPLETE           = 0,
+    WLM_WAYLAND_WINDOW_READY                =
+        WLM_WAYLAND_WINDOW_TOPLEVEL_DONE |
+        WLM_WAYLAND_WINDOW_OUTPUTS_DONE
+} wlm_wayland_window_flags_t;
 
 typedef struct {
     struct wl_surface * surface;
@@ -40,7 +46,7 @@ typedef struct {
     double scale;
 
     wlm_wayland_window_changed_t changed;
-    wlm_wayland_window_completeness_t incomplete;
+    wlm_wayland_window_flags_t flags;
 } ctx_wl_window_t;
 
 void wlm_wayland_window_on_registry_initial_sync(ctx_t *);

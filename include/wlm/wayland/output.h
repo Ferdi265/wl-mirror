@@ -35,7 +35,7 @@ typedef enum {
     WLM_WAYLAND_OUTPUT_WL_DONE              = 1 << 0,
     WLM_WAYLAND_OUTPUT_XDG_PARTIAL          = 1 << 1,
     WLM_WAYLAND_OUTPUT_XDG_DONE             = 1 << 2,
-    WLM_WAYLAND_OUTPUT_DONE                 = 1 << 3,
+    WLM_WAYLAND_OUTPUT_COMPLETE             = 1 << 3,
 
     WLM_WAYLAND_OUTPUT_INCOMPLETE           = 0,
     WLM_WAYLAND_OUTPUT_READY                =

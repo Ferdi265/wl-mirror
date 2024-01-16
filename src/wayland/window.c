@@ -3,6 +3,14 @@
 
 // --- private helper functions ---
 
+static bool window_configure_ready(ctx_t * ctx) {
+    return (ctx->wl.window.flags & WLM_WAYLAND_WINDOW_READY) == WLM_WAYLAND_WINDOW_READY;
+}
+
+static bool window_complete(ctx_t * ctx) {
+    return (ctx->wl.window.flags & WLM_WAYLAND_WINDOW_COMPLETE) == WLM_WAYLAND_WINDOW_COMPLETE;
+}
+
 static bool use_output_scale(ctx_t * ctx) {
     return ctx->wl.protocols.fractional_scale_manager == NULL && wl_surface_get_version(ctx->wl.window.surface) < 6;
 }
@@ -40,7 +48,7 @@ static void apply_surface_changes(ctx_t * ctx) {
     // TODO: react to preferred transform
 
     // trigger buffer resize and render
-    if (ctx->wl.window.incomplete) {
+    if (!window_complete(ctx)) {
         wlm_event_emit_window_initial_configure(ctx);
     } else {
         wlm_event_emit_window_changed(ctx);
@@ -50,7 +58,19 @@ static void apply_surface_changes(ctx_t * ctx) {
     wl_surface_commit(ctx->wl.window.surface);
 
     ctx->wl.window.changed = WLM_WAYLAND_WINDOW_UNCHANGED;
-    ctx->wl.window.incomplete = WLM_WAYLAND_WINDOW_COMPLETE;
+    ctx->wl.window.flags |= WLM_WAYLAND_WINDOW_COMPLETE;
+}
+
+static void trigger_initial_configure(ctx_t * ctx) {
+    // TODO: set fullscreen here if already requested
+
+    // set libdecor app properties
+    libdecor_frame_set_app_id(ctx->wl.window.libdecor_frame, "at.yrlf.wl_mirror");
+    libdecor_frame_set_title(ctx->wl.window.libdecor_frame, "Wayland Output Mirror");
+
+    // map libdecor frame
+    log_debug(ctx, "wayland::window::trigger_initial_configure(): mapping frame\n");
+    libdecor_frame_map(ctx->wl.window.libdecor_frame);
 }
 
 // --- xdg_wm_base event handlers ---
@@ -308,23 +328,18 @@ void wlm_wayland_window_on_registry_initial_sync(ctx_t * ctx) {
     ctx->wl.window.libdecor_frame = libdecor_decorate(ctx->wl.core.libdecor_context, ctx->wl.window.surface, &libdecor_frame_listener, (void *)ctx);
 
     // don't map frame or commit surface yet, wait for outputs
+    ctx->wl.window.flags |= WLM_WAYLAND_WINDOW_TOPLEVEL_DONE;
+    if (window_configure_ready(ctx)) {
+        trigger_initial_configure(ctx);
+    }
 }
 
 void wlm_wayland_window_on_output_initial_sync(ctx_t * ctx) {
-    // TODO: verify initial sync complete?
-    //       if not, trigger this "soon"?
-    // TODO: set fullscreen here if already requested
-
-    // set libdecor app properties
-    libdecor_frame_set_app_id(ctx->wl.window.libdecor_frame, "at.yrlf.wl_mirror");
-    libdecor_frame_set_title(ctx->wl.window.libdecor_frame, "Wayland Output Mirror");
-
-    // map libdecor frame
-    log_debug(ctx, "wayland::window::on_output_initial_sync(): mapping frame\n");
-    libdecor_frame_map(ctx->wl.window.libdecor_frame);
-
-    // check if things changed, emit events
-    apply_surface_changes(ctx);
+    // remember that output information is complete
+    ctx->wl.window.flags |= WLM_WAYLAND_WINDOW_OUTPUTS_DONE;
+    if (window_configure_ready(ctx)) {
+        trigger_initial_configure(ctx);
+    }
 }
 
 void wlm_wayland_window_on_output_changed(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
@@ -346,7 +361,7 @@ void wlm_wayland_window_on_output_removed(ctx_t * ctx, wlm_wayland_output_entry_
 }
 
 void wlm_wayland_window_on_before_poll(ctx_t * ctx) {
-    if (ctx->wl.window.incomplete) return;
+    if (!window_complete(ctx)) return;
 
     // check if things changed, emit events
     apply_surface_changes(ctx);
@@ -369,7 +384,7 @@ void wlm_wayland_window_zero(ctx_t * ctx) {
     ctx->wl.window.scale = 1.0;
 
     ctx->wl.window.changed = WLM_WAYLAND_WINDOW_UNCHANGED;
-    ctx->wl.window.incomplete = WLM_WAYLAND_WINDOW_INCOMPLETE;
+    ctx->wl.window.flags = WLM_WAYLAND_WINDOW_INCOMPLETE;
 }
 
 void wlm_wayland_window_init(ctx_t * ctx) {
