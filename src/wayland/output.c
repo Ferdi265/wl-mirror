@@ -12,11 +12,19 @@ static void print_output(ctx_t * ctx, wlm_wayland_output_entry_t * output) {
     log_debug(ctx, "wayland::output::print_output(): - transform = %s\n", WLM_PRINT_OUTPUT_TRANSFORM(output->transform));
 }
 
-static void check_outputs_complete(ctx_t * ctx) {
+static bool output_complete_ready(wlm_wayland_output_entry_t * entry) {
+    return (entry->flags & WLM_WAYLAND_OUTPUT_READY) == WLM_WAYLAND_OUTPUT_READY;
+}
+
+static bool output_complete(wlm_wayland_output_entry_t * entry) {
+    return (entry->flags & WLM_WAYLAND_OUTPUT_DONE) == WLM_WAYLAND_OUTPUT_DONE;
+}
+
+static void check_all_outputs_complete(ctx_t * ctx) {
     if (!wlm_wayland_registry_is_initial_sync_complete(ctx)) return;
     if (ctx->wl.output.incomplete_outputs > 0) return;
 
-    log_debug(ctx, "wayland::output::check_outputs_complete(): output information complete\n");
+    log_debug(ctx, "wayland::output::check_all_outputs_complete(): output information complete\n");
     wlm_wayland_output_entry_t *cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         print_output(ctx, cur);
@@ -27,6 +35,14 @@ static void check_outputs_complete(ctx_t * ctx) {
     // mark outputs unchanged after initial sync
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         cur->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
+    }
+}
+
+static void check_output_complete(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
+    if (output_complete_ready(entry)) {
+        entry->flags |= WLM_WAYLAND_OUTPUT_DONE;
+        ctx->wl.output.incomplete_outputs--;
+        check_all_outputs_complete(ctx);
     }
 }
 
@@ -67,7 +83,7 @@ static wlm_wayland_output_entry_t * find_xdg_output(ctx_t * ctx, struct zxdg_out
 }
 
 static void remove_output(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
-    if (!entry->incomplete) {
+    if (output_complete(entry)) {
         wlm_event_emit_output_removed(ctx, entry);
     }
 
@@ -171,19 +187,23 @@ static void on_output_done(
     if (output == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wlm_wayland_output_entry_t * cur = find_output(ctx, output);
+    wlm_wayland_output_entry_t * entry = find_output(ctx, output);
 
-    if (cur->incomplete == WLM_WAYLAND_OUTPUT_XDG_COMPLETE) {
-        cur->incomplete = WLM_WAYLAND_OUTPUT_COMPLETE;
-        ctx->wl.output.incomplete_outputs--;
+    if (!output_complete(entry)) {
+        entry->flags |= WLM_WAYLAND_OUTPUT_WL_DONE;
 
-        check_outputs_complete(ctx);
-    } else if (!cur->incomplete && cur->changed) {
-        log_debug(ctx, "wayland::output::on_output_done(): output %s changed\n", cur->name);
-        print_output(ctx, cur);
+        // wl_output::done also counts for xdg_output after version 3
+        if (entry->xdg_output != NULL && zxdg_output_v1_get_version(entry->xdg_output) >= 3) {
+            entry->flags |= WLM_WAYLAND_OUTPUT_XDG_DONE;
+        }
 
-        wlm_event_emit_output_changed(ctx, cur);
-        cur->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
+        check_output_complete(ctx, entry);
+    } else if (entry->changed) {
+        log_debug(ctx, "wayland::output::on_output_done(): output %s changed\n", entry->name);
+        print_output(ctx, entry);
+
+        wlm_event_emit_output_changed(ctx, entry);
+        entry->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
     }
 }
 
@@ -202,16 +222,30 @@ static void on_xdg_output_name(
     void * data, struct zxdg_output_v1 * xdg_output,
     const char * name
 ) {
-    // ignore: event is deprecated in favor of on_output_name
-    (void)data;
-    (void)xdg_output;
-    (void)name;
+    if (xdg_output == NULL) return;
+
+    ctx_t * ctx = (ctx_t *)data;
+    wlm_wayland_output_entry_t * cur = find_xdg_output(ctx, xdg_output);
+
+    if (wl_output_get_version(cur->output) >= 4) {
+        // ignore: event is deprecated in favor of on_output_name
+        return;
+    }
+
+    if (cur->name == NULL || strcmp(cur->name, name) != 0) {
+        if (cur->name != NULL) free(cur->name);
+        cur->name = strdup(name);
+        cur->changed |= WLM_WAYLAND_OUTPUT_NAME_CHANGED;
+    }
+
+    cur->flags |= WLM_WAYLAND_OUTPUT_XDG_PARTIAL;
 }
 
 static void on_xdg_output_description(
     void * data, struct zxdg_output_v1 * xdg_output,
     const char * description
 ) {
+    // ignore: description information not needed
     // ignore: event is deprecated in favor of on_output_description
     (void)data;
     (void)xdg_output;
@@ -233,9 +267,7 @@ static void on_xdg_output_logical_position(
         cur->changed |= WLM_WAYLAND_OUTPUT_POSITION_CHANGED;
     }
 
-    if (cur->incomplete) {
-        cur->incomplete = WLM_WAYLAND_OUTPUT_XDG_COMPLETE;
-    }
+    cur->flags |= WLM_WAYLAND_OUTPUT_XDG_PARTIAL;
 }
 
 static void on_xdg_output_logical_size(
@@ -253,17 +285,32 @@ static void on_xdg_output_logical_size(
         cur->changed |= WLM_WAYLAND_OUTPUT_POSITION_CHANGED;
     }
 
-    if (cur->incomplete) {
-        cur->incomplete = WLM_WAYLAND_OUTPUT_XDG_COMPLETE;
-    }
+    cur->flags |= WLM_WAYLAND_OUTPUT_XDG_PARTIAL;
 }
 
 static void on_xdg_output_done(
     void * data, struct zxdg_output_v1 * xdg_output
 ) {
-    // ignore: event is deprecated in favor of on_output_done
-    (void)data;
-    (void)xdg_output;
+    if (xdg_output == NULL) return;
+
+    ctx_t * ctx = (ctx_t *)data;
+    wlm_wayland_output_entry_t * entry = find_xdg_output(ctx, xdg_output);
+
+    if (zxdg_output_v1_get_version(xdg_output) >= 3) {
+        // ignore: event is deprecated in favor of on_output_done
+        return;
+    }
+
+    if (!output_complete(entry)) {
+        entry->flags |= WLM_WAYLAND_OUTPUT_XDG_DONE;
+        check_output_complete(ctx, entry);
+    } else if (entry->changed) {
+        log_debug(ctx, "wayland::output::on_xdg_output_done(): output %s changed\n", entry->name);
+        print_output(ctx, entry);
+
+        wlm_event_emit_output_changed(ctx, entry);
+        entry->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
+    }
 }
 
 static const struct zxdg_output_v1_listener xdg_output_listener = {
@@ -290,7 +337,7 @@ void wlm_wayland_output_on_add(ctx_t * ctx, struct wl_output * output) {
     cur->scale = 0;
     cur->transform = WL_OUTPUT_TRANSFORM_NORMAL;
     cur->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
-    cur->incomplete = WLM_WAYLAND_OUTPUT_INCOMPLETE;
+    cur->flags = WLM_WAYLAND_OUTPUT_INCOMPLETE;
     wl_list_insert(&ctx->wl.output.output_list, &cur->link);
 
     ctx->wl.output.incomplete_outputs++;
@@ -313,7 +360,7 @@ void wlm_wayland_output_on_registry_initial_sync(ctx_t * ctx) {
         }
     }
 
-    check_outputs_complete(ctx);
+    check_all_outputs_complete(ctx);
 }
 
 // --- initialization and cleanup

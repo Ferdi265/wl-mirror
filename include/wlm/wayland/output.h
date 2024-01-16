@@ -32,10 +32,17 @@ typedef enum {
 } wlm_wayland_output_entry_changed_t;
 
 typedef enum {
-    WLM_WAYLAND_OUTPUT_INCOMPLETE           = 2,
-    WLM_WAYLAND_OUTPUT_XDG_COMPLETE         = 1,
-    WLM_WAYLAND_OUTPUT_COMPLETE             = 0
-} wlm_wayland_output_completeness_t;
+    WLM_WAYLAND_OUTPUT_WL_DONE              = 1 << 0,
+    WLM_WAYLAND_OUTPUT_XDG_PARTIAL          = 1 << 1,
+    WLM_WAYLAND_OUTPUT_XDG_DONE             = 1 << 2,
+    WLM_WAYLAND_OUTPUT_DONE                 = 1 << 3,
+
+    WLM_WAYLAND_OUTPUT_INCOMPLETE           = 0,
+    WLM_WAYLAND_OUTPUT_READY                =
+        WLM_WAYLAND_OUTPUT_WL_DONE |
+        WLM_WAYLAND_OUTPUT_XDG_PARTIAL |
+        WLM_WAYLAND_OUTPUT_XDG_DONE
+} wlm_wayland_output_flags_t;
 
 typedef struct {
     struct wl_list link;
@@ -51,7 +58,7 @@ typedef struct {
     enum wl_output_transform transform;
 
     wlm_wayland_output_entry_changed_t changed;
-    wlm_wayland_output_completeness_t incomplete;
+    wlm_wayland_output_flags_t flags;
 } wlm_wayland_output_entry_t;
 
 typedef struct {
