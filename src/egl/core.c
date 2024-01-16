@@ -1,32 +1,7 @@
 #include <GLES2/gl2.h>
 #include <wlm/context.h>
 
-// --- initialization and cleanup ---
-
-void wlm_egl_core_zero(ctx_t * ctx) {
-    ctx->egl.core.display = EGL_NO_DISPLAY;
-    ctx->egl.core.config = NULL;
-    ctx->egl.core.context = EGL_NO_CONTEXT;
-
-    ctx->egl.core.window = NULL;
-    ctx->egl.core.surface = EGL_NO_SURFACE;
-}
-
-void wlm_egl_core_init(ctx_t * ctx) {
-    (void)ctx;
-}
-
-void wlm_egl_core_cleanup(ctx_t * ctx) {
-    if (ctx->egl.core.surface != EGL_NO_SURFACE) eglDestroySurface(ctx->egl.core.display, ctx->egl.core.surface);
-    if (ctx->egl.core.window != NULL) wl_egl_window_destroy(ctx->egl.core.window);
-
-    if (ctx->egl.core.context != EGL_NO_CONTEXT) eglDestroyContext(ctx->egl.core.display, ctx->egl.core.context);
-    if (ctx->egl.core.display != EGL_NO_DISPLAY) eglTerminate(ctx->egl.core.display);
-
-    wlm_wayland_core_zero(ctx);
-}
-
-// --- internal events ---
+// --- internal event handlers ---
 
 void wlm_egl_core_on_window_initial_configure(ctx_t * ctx) {
     // create egl display
@@ -90,13 +65,6 @@ void wlm_egl_core_on_window_initial_configure(ctx_t * ctx) {
         log_error("egl::core::on_window_initial_configure(): failed to activate EGL context\n");
         wlm_exit_fail(ctx);
     }
-
-    // TODO: trigger redraw?
-    glClear(GL_COLOR_BUFFER_BIT);
-    if (eglSwapBuffers(ctx->egl.core.display, ctx->egl.core.surface) != EGL_TRUE) {
-        log_error("egl::core::on_window_initial_configure(): failed to swap buffers\n");
-        wlm_exit_fail(ctx);
-    }
 }
 
 
@@ -105,6 +73,29 @@ void wlm_egl_core_on_window_changed(ctx_t * ctx) {
 
     log_debug(ctx, "egl::core::on_window_changed(): resizing buffer to %dx%d\n", ctx->wl.window.buffer_width, ctx->wl.window.buffer_height);
     wl_egl_window_resize(ctx->egl.core.window, ctx->wl.window.buffer_width, ctx->wl.window.buffer_height, 0, 0);
+}
 
-    // TODO: trigger redraw?
+// --- initialization and cleanup ---
+
+void wlm_egl_core_zero(ctx_t * ctx) {
+    ctx->egl.core.display = EGL_NO_DISPLAY;
+    ctx->egl.core.config = NULL;
+    ctx->egl.core.context = EGL_NO_CONTEXT;
+
+    ctx->egl.core.window = NULL;
+    ctx->egl.core.surface = EGL_NO_SURFACE;
+}
+
+void wlm_egl_core_init(ctx_t * ctx) {
+    (void)ctx;
+}
+
+void wlm_egl_core_cleanup(ctx_t * ctx) {
+    if (ctx->egl.core.surface != EGL_NO_SURFACE) eglDestroySurface(ctx->egl.core.display, ctx->egl.core.surface);
+    if (ctx->egl.core.window != NULL) wl_egl_window_destroy(ctx->egl.core.window);
+
+    if (ctx->egl.core.context != EGL_NO_CONTEXT) eglDestroyContext(ctx->egl.core.display, ctx->egl.core.context);
+    if (ctx->egl.core.display != EGL_NO_DISPLAY) eglTerminate(ctx->egl.core.display);
+
+    wlm_wayland_core_zero(ctx);
 }

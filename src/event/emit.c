@@ -24,8 +24,10 @@ void wlm_event_emit_output_removed(ctx_t * ctx, wlm_wayland_output_entry_t * ent
 
 void wlm_event_emit_window_initial_configure(ctx_t * ctx) {
     wlm_egl_core_on_window_initial_configure(ctx);
+    wlm_egl_render_on_window_initial_configure(ctx);
 }
 
 void wlm_event_emit_window_changed(ctx_t * ctx) {
     wlm_egl_core_on_window_changed(ctx);
+    wlm_egl_render_on_window_changed(ctx);
 }
