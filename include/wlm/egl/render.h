@@ -20,6 +20,7 @@ typedef struct {
 } ctx_egl_render_t;
 
 void wlm_egl_render_on_render_request_redraw(ctx_t *);
+void wlm_egl_render_on_window_changed(ctx_t *);
 
 void wlm_egl_render_zero(ctx_t *);
 void wlm_egl_render_init(ctx_t *);

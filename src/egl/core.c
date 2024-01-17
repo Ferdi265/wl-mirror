@@ -8,9 +8,6 @@ void wlm_egl_core_on_window_changed(ctx_t * ctx) {
 
     log_debug(ctx, "egl::core::on_window_changed(): resizing buffer to %dx%d\n", ctx->wl.window.buffer_width, ctx->wl.window.buffer_height);
     wl_egl_window_resize(ctx->egl.core.window, ctx->wl.window.buffer_width, ctx->wl.window.buffer_height, 0, 0);
-
-    // request redraw
-    wlm_event_emit_render_request_redraw(ctx);
 }
 
 // --- initialization and cleanup ---

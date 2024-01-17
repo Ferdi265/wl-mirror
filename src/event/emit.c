@@ -28,6 +28,7 @@ void wlm_event_emit_window_init_done(ctx_t * ctx) {
 
 void wlm_event_emit_window_changed(ctx_t * ctx) {
     wlm_egl_core_on_window_changed(ctx);
+    wlm_egl_render_on_window_changed(ctx);
 }
 
 void wlm_event_emit_render_request_redraw(ctx_t * ctx) {
