@@ -44,13 +44,11 @@ endif()
 # main target
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS src/*.c)
 list(REMOVE_ITEM sources
-    ${CMAKE_SOURCE_DIR}/src/egl_old.c
     ${CMAKE_SOURCE_DIR}/src/mirror.c
     ${CMAKE_SOURCE_DIR}/src/mirror-dmabuf.c
     ${CMAKE_SOURCE_DIR}/src/mirror-screencopy.c
     ${CMAKE_SOURCE_DIR}/src/options.c
     ${CMAKE_SOURCE_DIR}/src/stream.c
-    ${CMAKE_SOURCE_DIR}/src/transform.c
 )
 add_executable(wl-mirror ${sources})
 target_compile_options(wl-mirror PRIVATE -Wall -Wextra)
