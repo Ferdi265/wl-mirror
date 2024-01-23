@@ -632,7 +632,7 @@ static void on_loop_each(ctx_t * ctx) {
 static void on_fractional_scale_preferred_scale(void * data, struct wp_fractional_scale_v1 * fractional_scale, uint32_t scale_times_120) {
     ctx_t * ctx = (ctx_t *)data;
     double scale = scale_times_120 / 120.0;
-    log_debug(ctx, "wayland::on_fractional_scale_preferred_scale(): scale = %.3f\n", scale);
+    log_debug(ctx, "wayland::on_fractional_scale_preferred_scale(): scale = %.4f\n", scale);
 
     // fractionally scaled surfaces have buffer scale of 1
     update_window_scale(ctx, scale, true);
@@ -868,7 +868,7 @@ void update_window_scale(ctx_t * ctx, double scale, bool is_fractional) {
     if (ctx->wl.fractional_scale != NULL && !is_fractional) return;
 
     if (ctx->wl.scale != scale) {
-        log_debug(ctx, "wayland::update_window_scale(): setting window scale to %.3f\n", scale);
+        log_debug(ctx, "wayland::update_window_scale(): setting window scale to %.4f\n", scale);
         ctx->wl.scale = scale;
         resize = true;
     }
