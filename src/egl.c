@@ -328,12 +328,22 @@ void resize_viewport(ctx_t * ctx) {
         }
     } else if (ctx->opt.scaling == SCALE_EXACT) {
         // select biggest fitting integer scale
-        uint32_t width_scale = win_width / tex_width;
-        uint32_t height_scale = win_height / tex_height;
-        uint32_t scale = width_scale < height_scale ? width_scale : height_scale;
-        if (scale > 0) {
-            view_width = scale * tex_width;
-            view_height = scale * tex_height;
+        float width_scale = (float)win_width / tex_width;
+        float height_scale = (float)win_height / tex_height;
+        uint32_t upscale_factor = floorf(fminf(width_scale, height_scale));
+        uint32_t downscale_factor = ceilf(fmaxf(1 / width_scale, 1 / height_scale));
+
+        if (upscale_factor > 1) {
+            log_debug(ctx, "egl::resize_viewport(): upscaling by factor = %d\n", upscale_factor);
+            view_width = tex_width * upscale_factor;
+            view_height = tex_height * upscale_factor;
+        } else if (downscale_factor > 1) {
+            log_debug(ctx, "egl::resize_viewport(): downscaling by factor = %d\n", downscale_factor);
+            view_width = tex_width / downscale_factor;
+            view_height = tex_height / downscale_factor;
+        } else {
+            view_width = tex_width;
+            view_height = tex_height;
         }
     }
 
