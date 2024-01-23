@@ -38,9 +38,11 @@ options:
         --no-fullscreen         open wl-mirror as a window (default)
         --fullscreen-output O   open wl-mirror as fullscreen on output O
         --no-fullscreen-output  open wl-mirror as fullscreen on the current output (default)
+  -s f, --scaling fit           scale to fit (default)
+  -s c, --scaling cover         scale to cover, cropping if needed
+  -s e, --scaling exact         only scale to exact multiples of the output size
   -s l, --scaling linear        use linear scaling (default)
   -s n, --scaling nearest       use nearest neighbor scaling
-  -s e, --scaling exact         only scale to exact multiples of the output size
   -b B  --backend B             use a specific backend for capturing the screen
   -t T, --transform T           apply custom transform T
   -r R, --region R              capture custom region R

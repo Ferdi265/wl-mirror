@@ -42,15 +42,20 @@ wl-mirror - a simple Wayland output mirror client
 *    --no-fullscreen-output*
 	Set a different output to fullscreen on (default is the current output).
 
+*-s f, --scaling fit*
+	Scale to fit and if necessary add letterboxing (enabled by default).
+
+*-s c, --scaling cover*
+	Scale to cover and if necessary crop the image.
+
+*-s e, --scaling exact*
+	Use exact multiple scaling and if necessary add letterboxing.
+
 *-s l, --scaling linear*
 	Use linear scaling (enabled by default).
 
 *-s n, --scaling nearest*
 	Use nearest-neighbor scaling.
-
-*-s e, --scaling exact*
-	Use exact multiple scaling (and if necessary add letterboxing).
-	Uses nearest neighbor scaling for downscaling.
 
 *-b B, --backend B*
 	Use a specific screen capture backend, see *BACKENDS*.
