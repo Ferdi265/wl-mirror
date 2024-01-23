@@ -12,7 +12,8 @@ void init_opt(ctx_t * ctx) {
     ctx->opt.freeze = false;
     ctx->opt.has_region = false;
     ctx->opt.fullscreen = false;
-    ctx->opt.scaling = SCALE_LINEAR;
+    ctx->opt.scaling = SCALE_FIT;
+    ctx->opt.scaling_filter = SCALE_FILTER_LINEAR;
     ctx->opt.backend = BACKEND_AUTO;
     ctx->opt.transform = (transform_t){ .rotation = ROT_NORMAL, .flip_x = false, .flip_y = false };
     ctx->opt.region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
@@ -25,15 +26,21 @@ void cleanup_opt(ctx_t * ctx) {
     if (ctx->opt.fullscreen_output != NULL) free(ctx ->opt.fullscreen_output);
 }
 
-bool parse_scaling_opt(scale_t * scaling, const char * scaling_arg) {
-    if (strcmp(scaling_arg, "l") == 0 || strcmp(scaling_arg, "linear") == 0) {
-        *scaling = SCALE_LINEAR;
+bool parse_scaling_opt(scale_t * scaling, scale_filter_t * scaling_filter, const char * scaling_arg) {
+    if (strcmp(scaling_arg, "f") == 0 || strcmp(scaling_arg, "fit") == 0) {
+        *scaling = SCALE_FIT;
         return true;
-    } else if (strcmp(scaling_arg, "n") == 0 || strcmp(scaling_arg, "nearest") == 0) {
-        *scaling = SCALE_NEAREST;
+    } else if (strcmp(scaling_arg, "c") == 0 || strcmp(scaling_arg, "cover") == 0) {
+        *scaling = SCALE_COVER;
         return true;
     } else if (strcmp(scaling_arg, "e") == 0 || strcmp(scaling_arg, "exact") == 0) {
         *scaling = SCALE_EXACT;
+        return true;
+    } else if (strcmp(scaling_arg, "l") == 0 || strcmp(scaling_arg, "linear") == 0) {
+        *scaling_filter = SCALE_FILTER_LINEAR;
+        return true;
+    } else if (strcmp(scaling_arg, "n") == 0 || strcmp(scaling_arg, "nearest") == 0) {
+        *scaling_filter = SCALE_FILTER_NEAREST;
         return true;
     } else {
         return false;
@@ -348,9 +355,11 @@ void usage_opt(ctx_t * ctx) {
     printf("        --no-fullscreen         open wl-mirror as a window (default)\n");
     printf("        --fullscreen-output O   open wl-mirror as fullscreen on output O\n");
     printf("        --no-fullscreen-output  open wl-mirror as fullscreen on the current output (default)\n");
+    printf("  -s f, --scaling fit           scale to fit (default)\n");
+    printf("  -s c, --scaling cover         scale to cover, cropping if needed\n");
+    printf("  -s e, --scaling exact         only scale to exact multiples of the output size\n");
     printf("  -s l, --scaling linear        use linear scaling (default)\n");
     printf("  -s n, --scaling nearest       use nearest neighbor scaling\n");
-    printf("  -s e, --scaling exact         only scale to exact multiples of the output size\n");
     printf("  -b B  --backend B             use a specific backend for capturing the screen\n");
     printf("  -t T, --transform T           apply custom transform T\n");
     printf("  -r R, --region R              capture custom region R\n");
@@ -458,7 +467,7 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
                 log_error("options::parse(): option %s requires an argument\n", argv[0]);
                 if (is_cli_args) exit_fail(ctx);
             } else {
-                if (!parse_scaling_opt(&ctx->opt.scaling, argv[1])) {
+                if (!parse_scaling_opt(&ctx->opt.scaling, &ctx->opt.scaling_filter, argv[1])) {
                     log_error("options::parse(): invalid scaling mode %s\n", argv[1]);
                     if (is_cli_args) exit_fail(ctx);
                 }

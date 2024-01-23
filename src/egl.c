@@ -157,7 +157,7 @@ void init_egl(ctx_t * ctx) {
     // create texture and set scaling mode
     glGenTextures(1, &ctx->egl.texture);
     glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
-    if (ctx->opt.scaling == SCALE_LINEAR) {
+    if (ctx->opt.scaling_filter == SCALE_FILTER_LINEAR) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     } else {
@@ -168,7 +168,7 @@ void init_egl(ctx_t * ctx) {
     // create freeze texture and set scaling mode
     glGenTextures(1, &ctx->egl.freeze_texture);
     glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
-    if (ctx->opt.scaling == SCALE_LINEAR) {
+    if (ctx->opt.scaling_filter == SCALE_FILTER_LINEAR) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     } else {
@@ -308,17 +308,26 @@ void resize_viewport(ctx_t * ctx) {
     // rotate texture dimensions by user transform
     viewport_apply_transform(&tex_width, &tex_height, ctx->opt.transform);
 
-    // select biggest width or height that fits and preserves aspect ratio
+    // calculate aspect ratio
     float win_aspect = (float)win_width / win_height;
     float tex_aspect = (float)tex_width / tex_height;
-    if (win_aspect > tex_aspect) {
-        view_width = view_height * tex_aspect;
-    } else if (win_aspect < tex_aspect) {
-        view_height = view_width / tex_aspect;
-    }
 
-    // find biggest fitting integer scale
-    if (ctx->opt.scaling == SCALE_EXACT) {
+    if (ctx->opt.scaling == SCALE_FIT) {
+        // select biggest width or height that fits and preserves aspect ratio
+        if (win_aspect > tex_aspect) {
+            view_width = view_height * tex_aspect;
+        } else if (win_aspect < tex_aspect) {
+            view_height = view_width / tex_aspect;
+        }
+    } else if (ctx->opt.scaling == SCALE_COVER) {
+        // select biggest width or height that covers and preserves aspect ratio
+        if (win_aspect < tex_aspect) {
+            view_width = view_height * tex_aspect;
+        } else if (win_aspect > tex_aspect) {
+            view_height = view_width / tex_aspect;
+        }
+    } else if (ctx->opt.scaling == SCALE_EXACT) {
+        // select biggest fitting integer scale
         uint32_t width_scale = win_width / tex_width;
         uint32_t height_scale = win_height / tex_height;
         uint32_t scale = width_scale < height_scale ? width_scale : height_scale;
@@ -328,8 +337,14 @@ void resize_viewport(ctx_t * ctx) {
         }
     }
 
+    log_debug(ctx, "egl::resize_viewport(): win_width = %d, win_height = %d\n", win_width, win_height);
+    log_debug(ctx, "egl::resize_viewport(): view_width = %d, view_height = %d\n", view_width, view_height);
+
     // updating GL viewport
-    glViewport((win_width - view_width) / 2, (win_height - view_height) / 2, view_width, view_height);
+    log_debug(ctx, "egl::resize_viewport(): viewport %d, %d, %d, %d\n",
+        (int32_t)(win_width - view_width) / 2, (int32_t)(win_height - view_height) / 2, view_width, view_height
+    );
+    glViewport((int32_t)(win_width - view_width) / 2, (int32_t)(win_height - view_height) / 2, view_width, view_height);
 
     // recalculate texture transform
     mat3_t texture_transform;
@@ -387,7 +402,7 @@ void update_uniforms(ctx_t * ctx) {
 
     // set texture scaling mode
     glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
-    if (ctx->opt.scaling == SCALE_LINEAR) {
+    if (ctx->opt.scaling_filter == SCALE_FILTER_LINEAR) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     } else {
@@ -396,7 +411,7 @@ void update_uniforms(ctx_t * ctx) {
     }
 
     glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
-    if (ctx->opt.scaling == SCALE_LINEAR) {
+    if (ctx->opt.scaling_filter == SCALE_FILTER_LINEAR) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     } else {
