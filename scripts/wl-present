@@ -79,7 +79,7 @@ ask-region() {
 }
 
 ask-scaling() {
-    (echo linear; echo nearest; echo exact) | "$DMENU" -p "wl-present scaling"
+    (echo fit; echo cover; echo exact; echo linear; echo nearest) | "$DMENU" -p "wl-present scaling"
     [[ $? -ne 0 ]] && exit 1
 }
 
@@ -98,9 +98,11 @@ ask-custom() {
 --no-fullscreen
 --fullscreen-output
 --no-fullscreen-output
+--scaling fit
+--scaling cover
+--scaling exact
 --scaling linear
 --scaling nearest
---scaling exact
 --backend
 --transform
 --region
