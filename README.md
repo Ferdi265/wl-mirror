@@ -94,7 +94,7 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 `wl-mirror` is already packaged in many distros and can be installed via the
 package manager:
 
-[![Packaging Status](https://repology.org/badge/vertical-allrepos/wl-mirror.svg)](https://repology.org/project/wl-mirror/versions)
+[![Packaging Status](https://repology.org/badge/vertical-allrepos/wl-mirror.svg?columns=3)](https://repology.org/project/wl-mirror/versions)
 
 ## Supported Wayland Compositors
 
