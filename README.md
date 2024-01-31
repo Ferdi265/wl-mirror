@@ -94,17 +94,7 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 `wl-mirror` is already packaged in many distros and can be installed via the
 package manager:
 
-- Arch Linux: `pacman -S wl-mirror`
-- Fedora: `dnf install wl-mirror`
-- Ubuntu: `apt install wl-mirror` in mantic (23.10), .deb file download for jammy (22.04) in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/)
-- Debian: `apt install wl-mirror` in trixie (testing), .deb file download for bookworm (12) in [releases](https://github.com/Ferdi265/wl-mirror/releases/latest/)
-- Alpine Linux: `apk add wl-mirror wl-mirror-doc`
-- NixOS: `nix profile install nixpkgs#wl-mirror`
-- Void Linux: `xbps-install -S wl-mirror`
-- FreeBSD Ports: [x11/wl-mirror](https://www.freshports.org/x11/wl-mirror)
-- DragonflyBSD Ports: [x11/wl-mirror](https://github.com/DragonFlyBSD/DPorts/tree/master/x11/wl-mirror)
-- Gentoo GURU: [gui-apps/wl-mirror](https://github.com/gentoo-mirror/guru/tree/master/gui-apps/wl-mirror)
-- LiGurOS: [gui-apps/wl-mirror](https://gitlab.com/liguros/liguros-repo/-/tree/develop/gui-apps/wl-mirror)
+[![Packaging Status](https://repology.org/badge/vertical-allrepos/wl-mirror.svg)](https://repology.org/project/wl-mirror/versions)
 
 ## Supported Wayland Compositors
 
