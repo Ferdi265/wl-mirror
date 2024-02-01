@@ -36,6 +36,35 @@ dmenu-rofi() {
     rofi -dmenu -width 30 -columns 1 "$@"
 }
 
+type -p pipectl >/dev/null
+if [[ $? -eq 0 ]]; then
+    PIPECTL=pipectl-shim
+else
+    PIPECTL=pipectl-shim
+fi
+
+pipectl-shim() {
+    PIPEPATH="${XDG_RUNTIME_DIR:-"${TMPDIR:-/tmp}"}"
+    PIPENAME="pipectl.$(id -u).pipe"
+    MODE=
+
+    while [[ $# -gt 0 && "${1:0:1}" == "-" ]]; do
+        opt="$1"
+        shift
+        case "$opt" in
+            -n|--name) arg="$1"; shift; PIPENAME="pipectl.$(id -u).$arg.pipe";;
+            -i) MODE=in;;
+            -o) MODE=out;;
+        esac
+    done
+
+    PIPE="$PIPEPATH/$PIPENAME"
+    case "$MODE" in
+        "in") test -p "$PIPE" && cat > "$PIPE";;
+        "out") rm -f "$PIPE"; mkfifo "$PIPE"; tail -f "$PIPE"; rm -f "$PIPE";;
+    esac
+}
+
 slurp-output() {
     slurp -b \#00000000 -B \#00000000 -c \#859900 -w 4 -f %o -or 2>/dev/null
 }
