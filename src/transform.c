@@ -178,7 +178,7 @@ bool region_contains(const region_t * region, const region_t * output) {
     return true;
 }
 
-void region_scale(region_t * region, float scale) {
+void region_scale(region_t * region, double scale) {
     region->x *= scale;
     region->y *= scale;
     region->width *= scale;

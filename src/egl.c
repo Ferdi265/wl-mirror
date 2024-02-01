@@ -300,7 +300,7 @@ void resize_viewport(ctx_t * ctx) {
 
         // HACK: calculate effective output fractional scale
         // wayland doesn't provide this information
-        float output_scale = (float)tex_width / ctx->mirror.current_target->width;
+        double output_scale = (double)tex_width / ctx->mirror.current_target->width;
         region_scale(&clamp_region, output_scale);
         region_clamp(&clamp_region, &output_region);
 
@@ -312,8 +312,8 @@ void resize_viewport(ctx_t * ctx) {
     viewport_apply_transform(&tex_width, &tex_height, ctx->opt.transform);
 
     // calculate aspect ratio
-    float win_aspect = (float)win_width / win_height;
-    float tex_aspect = (float)tex_width / tex_height;
+    double win_aspect = (double)win_width / win_height;
+    double tex_aspect = (double)tex_width / tex_height;
 
     if (ctx->opt.scaling == SCALE_FIT) {
         // select biggest width or height that fits and preserves aspect ratio
@@ -331,8 +331,8 @@ void resize_viewport(ctx_t * ctx) {
         }
     } else if (ctx->opt.scaling == SCALE_EXACT) {
         // select biggest fitting integer scale
-        float width_scale = (float)win_width / tex_width;
-        float height_scale = (float)win_height / tex_height;
+        double width_scale = (double)win_width / tex_width;
+        double height_scale = (double)win_height / tex_height;
         uint32_t upscale_factor = floorf(fminf(width_scale, height_scale));
         uint32_t downscale_factor = ceilf(fmaxf(1 / width_scale, 1 / height_scale));
 

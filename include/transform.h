@@ -48,7 +48,7 @@ void viewport_apply_transform(uint32_t * width, uint32_t * height, transform_t t
 void viewport_apply_output_transform(uint32_t * width, uint32_t * height, enum wl_output_transform transform);
 
 bool region_contains(const region_t * region, const region_t * output);
-void region_scale(region_t * region, float scale);
+void region_scale(region_t * region, double scale);
 void region_clamp(region_t * region, const region_t * output);
 
 #endif
