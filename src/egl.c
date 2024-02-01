@@ -298,7 +298,10 @@ void resize_viewport(ctx_t * ctx) {
         };
         clamp_region = ctx->mirror.current_region;
 
-        region_scale(&clamp_region, ctx->mirror.current_target->scale);
+        // HACK: calculate effective output fractional scale
+        // wayland doesn't provide this information
+        float output_scale = (float)tex_width / ctx->mirror.current_target->width;
+        region_scale(&clamp_region, output_scale);
         region_clamp(&clamp_region, &output_region);
 
         tex_width = clamp_region.width;
