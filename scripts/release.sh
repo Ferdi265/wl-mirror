@@ -56,7 +56,8 @@ tar caf "$REPODIR/wl-mirror-$VERSION.tar.gz" "wl-mirror-$VERSION/"
 
 if [[ ! -z "${SIGKEY+z}" ]]; then
     echo "- signing archive"
-    gpg --yes -u "$SIGKEY" -o "$REPODIR/wl-mirror-$VERSION.tar.gz.sig" --detach-sig "$REPODIR/wl-mirror-$VERSION.tar.gz"
+    gpg --yes -u "$SIGKEY" -o "$REPODIR/wl-mirror-$VERSION.tar.gz.asc" --armor --detach-sig "$REPODIR/wl-mirror-$VERSION.tar.gz"
+    gpg --yes -o "$REPODIR/wl-mirror-$VERSION.tar.gz.sig" --dearmor "$REPODIR/wl-mirror-$VERSION.tar.gz.asc"
 else
     echo "- skipping signing archive (SIGKEY not set)"
 fi
