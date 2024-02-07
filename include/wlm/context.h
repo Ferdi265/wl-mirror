@@ -15,6 +15,7 @@
 
 typedef struct ctx {
     //ctx_opt_t opt;
+    ctx_log_t log;
     ctx_event_loop_t event;
     //ctx_stream_t stream;
     ctx_wl_t wl;
