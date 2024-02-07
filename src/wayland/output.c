@@ -24,29 +24,26 @@ static bool output_complete(wlm_wayland_output_entry_t * entry) {
 
 static void check_all_outputs_complete(ctx_t * ctx) {
     if (!wlm_wayland_registry_is_init_done(ctx)) return;
+    if (wlm_wayland_output_is_init_done(ctx)) return;
     if (ctx->wl.output.incomplete_outputs > 0) return;
 
-    wlm_log(ctx, WLM_DEBUG, "output information complete");
-    wlm_wayland_output_entry_t *cur;
-    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
-        print_output(ctx, cur);
-    }
-
+    wlm_log(ctx, WLM_INFO, "output information complete");
     ctx->wl.output.init_done = true;
     wlm_event_emit_output_init_done(ctx);
-
-    // mark outputs unchanged after initial sync
-    wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
-        cur->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
-    }
 }
 
 static void check_output_complete(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
-    if (output_complete_ready(entry)) {
-        entry->flags |= WLM_WAYLAND_OUTPUT_COMPLETE;
-        ctx->wl.output.incomplete_outputs--;
-        check_all_outputs_complete(ctx);
-    }
+    if (!output_complete_ready(entry)) return;
+
+    // mark outputs unchanged when they are initially completed
+    entry->changed = WLM_WAYLAND_OUTPUT_UNCHANGED;
+    entry->flags |= WLM_WAYLAND_OUTPUT_COMPLETE;
+
+    wlm_log(ctx, WLM_INFO, "output %s added", entry->name);
+    print_output(ctx, entry);
+
+    ctx->wl.output.incomplete_outputs--;
+    check_all_outputs_complete(ctx);
 }
 
 static wlm_wayland_output_entry_t * find_output(ctx_t * ctx, struct wl_output * output) {
@@ -87,6 +84,7 @@ static wlm_wayland_output_entry_t * find_xdg_output(ctx_t * ctx, struct zxdg_out
 
 static void remove_output(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
     if (output_complete(entry)) {
+        wlm_log(ctx, WLM_INFO, "output %s removed", entry->name);
         wlm_event_emit_output_removed(ctx, entry);
     }
 
@@ -202,7 +200,7 @@ static void on_output_done(
 
         check_output_complete(ctx, entry);
     } else if (entry->changed) {
-        wlm_log(ctx, WLM_DEBUG, "output %s changed", entry->name);
+        wlm_log(ctx, WLM_INFO, "output %s changed", entry->name);
         print_output(ctx, entry);
 
         wlm_event_emit_output_changed(ctx, entry);

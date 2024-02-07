@@ -142,7 +142,7 @@ static void on_sync_callback_done(
     if (callback == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wlm_log(ctx, WLM_TRACE, "all globals received");
+    wlm_log(ctx, WLM_TRACE, "initial sync done");
 
     wl_callback_destroy(ctx->wl.registry.sync_callback);
     ctx->wl.registry.sync_callback = NULL;
