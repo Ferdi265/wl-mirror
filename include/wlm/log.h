@@ -83,6 +83,14 @@ typedef struct {
         } \
     } while (0)
 
+#define wlm_assert(expr, ctx, level, fmt, ...) \
+    do { \
+        if (!(expr)) { \
+            wlm_log(ctx, level, "assertion '" #expr "' failed: " fmt, ##__VA_ARGS__); \
+            if ((level) == WLM_FATAL) wlm_exit_fail(ctx); \
+        } \
+    } while (0)
+
 void wlm_log_zero(ctx_t *);
 void wlm_log_init(ctx_t *);
 void wlm_log_cleanup(ctx_t *);
