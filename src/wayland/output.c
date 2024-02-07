@@ -23,7 +23,7 @@ static bool output_complete(wlm_wayland_output_entry_t * entry) {
 }
 
 static void check_all_outputs_complete(ctx_t * ctx) {
-    if (!wlm_wayland_registry_is_initial_sync_complete(ctx)) return;
+    if (!wlm_wayland_registry_is_init_done(ctx)) return;
     if (ctx->wl.output.incomplete_outputs > 0) return;
 
     wlm_log(ctx, WLM_DEBUG, "output information complete");
@@ -32,6 +32,7 @@ static void check_all_outputs_complete(ctx_t * ctx) {
         print_output(ctx, cur);
     }
 
+    ctx->wl.output.init_done = true;
     wlm_event_emit_output_init_done(ctx);
 
     // mark outputs unchanged after initial sync
@@ -362,10 +363,16 @@ void wlm_wayland_output_zero(ctx_t * ctx) {
     wl_list_init(&ctx->wl.output.output_list);
 
     ctx->wl.output.incomplete_outputs = 0;
+
+    ctx->wl.output.init_called = false;
+    ctx->wl.output.init_done = false;
 }
 
 void wlm_wayland_output_init(ctx_t * ctx) {
     wlm_log(ctx, WLM_TRACE, "initializing");
+    wlm_assert(wlm_wayland_registry_is_init_done(ctx), ctx, WLM_FATAL, "initial sync not complete");
+    wlm_assert(!wlm_wayland_output_is_init_called(ctx), ctx, WLM_FATAL, "already initialized");
+    ctx->wl.output.init_called = true;
 
     wlm_wayland_output_entry_t *cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
@@ -384,6 +391,8 @@ void wlm_wayland_output_cleanup(ctx_t * ctx) {
     wl_list_for_each_safe(cur, next, &ctx->wl.output.output_list, link) {
         remove_output(ctx, cur);
     }
+
+    wlm_wayland_output_zero(ctx);
 }
 
 // --- public functions ---
@@ -399,4 +408,12 @@ wlm_wayland_output_entry_t * wlm_wayland_output_find_by_name(ctx_t * ctx, const 
     }
 
     return NULL;
+}
+
+bool wlm_wayland_output_is_init_called(ctx_t * ctx) {
+    return ctx->wl.output.init_called;
+}
+
+bool wlm_wayland_output_is_init_done(ctx_t * ctx) {
+    return ctx->wl.output.init_done;
 }

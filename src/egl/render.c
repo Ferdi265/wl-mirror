@@ -92,10 +92,13 @@ static void update_render_options(ctx_t * ctx) {
 // --- internal event handlers ---
 
 void wlm_egl_render_on_render_request_redraw(ctx_t * ctx) {
+    wlm_assert(wlm_egl_render_is_init_done(ctx), ctx, WLM_FATAL, "not yet initialized");
+
     redraw(ctx);
 }
 
 void wlm_egl_render_on_window_changed(ctx_t * ctx) {
+    wlm_assert(wlm_egl_render_is_init_done(ctx), ctx, WLM_FATAL, "not yet initialized");
     if (!(ctx->wl.window.changed & WLM_WAYLAND_WINDOW_BUFFER_SIZE_CHANGED)) return;
 
     update_viewport(ctx);
@@ -118,10 +121,16 @@ void wlm_egl_render_zero(ctx_t * ctx) {
     ctx->egl.render.tex_width = 0;
     ctx->egl.render.tex_height = 0;
     ctx->egl.render.tex_gl_format = 0;
+
+    ctx->egl.render.init_called = false;
+    ctx->egl.render.init_done = false;
 }
 
 void wlm_egl_render_init(ctx_t * ctx) {
     wlm_log(ctx, WLM_TRACE, "initializing");
+    wlm_assert(wlm_egl_core_is_init_done(ctx), ctx, WLM_FATAL, "EGL must be initialized");
+    wlm_assert(!wlm_egl_render_is_init_called(ctx), ctx, WLM_FATAL, "already initialized");
+    ctx->egl.render.init_called = true;
 
     // create vertex buffer object
     glGenBuffers(1, &ctx->egl.render.vbo);
@@ -208,6 +217,8 @@ void wlm_egl_render_init(ctx_t * ctx) {
     // trigger redraw
     wlm_log(ctx, WLM_DEBUG, "triggering initial redraw");
     redraw(ctx);
+
+    ctx->egl.render.init_done = true;
 }
 
 void wlm_egl_render_cleanup(ctx_t * ctx) {
@@ -220,4 +231,14 @@ void wlm_egl_render_cleanup(ctx_t * ctx) {
     if (ctx->egl.render.vbo != 0) glDeleteBuffers(1, &ctx->egl.render.vbo);
 
     wlm_egl_render_zero(ctx);
+}
+
+// --- public functions ---
+
+bool wlm_egl_render_is_init_called(ctx_t * ctx) {
+    return ctx->egl.render.init_called;
+}
+
+bool wlm_egl_render_is_init_done(ctx_t * ctx) {
+    return ctx->egl.render.init_done;
 }

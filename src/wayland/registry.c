@@ -19,7 +19,7 @@ static struct wl_proxy * try_bind(
                 spec->interface->name, version, spec->version_min
             );
 
-            if (ctx->wl.registry.initial_sync_complete) {
+            if (wlm_wayland_registry_is_init_done(ctx)) {
                 wlm_exit_fail(ctx);
             } else {
                 ctx->wl.registry.initial_sync_had_errors = true;
@@ -58,7 +58,7 @@ static void try_bind_singleton(ctx_t * ctx, uint32_t id, uint32_t version, const
     if (*proxy_ptr != NULL) {
         wlm_log(ctx, WLM_FATAL, "duplicate singleton %s", bind->spec.interface->name);
 
-        if (ctx->wl.registry.initial_sync_complete) {
+        if (wlm_wayland_registry_is_init_done(ctx)) {
             wlm_exit_fail(ctx);
         } else {
             ctx->wl.registry.initial_sync_had_errors = true;
@@ -142,7 +142,7 @@ static void on_sync_callback_done(
     if (callback == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    wlm_log(ctx, WLM_DEBUG, "all globals received");
+    wlm_log(ctx, WLM_TRACE, "all globals received");
 
     wl_callback_destroy(ctx->wl.registry.sync_callback);
     ctx->wl.registry.sync_callback = NULL;
@@ -160,11 +160,11 @@ static void on_sync_callback_done(
         }
     }
 
-    ctx->wl.registry.initial_sync_complete = true;
     if (ctx->wl.registry.initial_sync_had_errors) {
         wlm_exit_fail(ctx);
     }
 
+    ctx->wl.registry.init_done = true;
     wlm_event_emit_registry_init_done(ctx);
 
     (void)callback_data;
@@ -188,7 +188,9 @@ void wlm_wayland_registry_zero(ctx_t * ctx) {
     // reset initial sync flags
     ctx->wl.registry.sync_callback = NULL;
     ctx->wl.registry.initial_sync_had_errors = false;
-    ctx->wl.registry.initial_sync_complete = false;
+
+    ctx->wl.registry.init_called = false;
+    ctx->wl.registry.init_done = false;
 
     // clear all bound singleton proxies
     const wlm_wayland_registry_bind_singleton_t * bind_singleton = wlm_wayland_registry_bind_singleton;
@@ -199,6 +201,8 @@ void wlm_wayland_registry_zero(ctx_t * ctx) {
 
 void wlm_wayland_registry_init(ctx_t * ctx) {
     wlm_log(ctx, WLM_TRACE, "initializing");
+    wlm_assert(!wlm_wayland_registry_is_init_called(ctx), ctx, WLM_FATAL, "already initialized");
+    ctx->wl.registry.init_called = true;
 
     // get registry handle
     ctx->wl.registry.handle = wl_display_get_registry(ctx->wl.core.display);
@@ -237,10 +241,14 @@ void wlm_wayland_registry_cleanup(ctx_t * ctx) {
 
 // --- public functions ---
 
-bool wlm_wayland_registry_is_initial_sync_complete(ctx_t * ctx) {
-    return ctx->wl.registry.initial_sync_complete;
-}
-
 bool wlm_wayland_registry_is_own_proxy(struct wl_proxy * proxy) {
     return wl_proxy_get_tag(proxy) == &proxy_tag;
+}
+
+bool wlm_wayland_registry_is_init_called(ctx_t * ctx) {
+    return ctx->wl.registry.init_called;
+}
+
+bool wlm_wayland_registry_is_init_done(ctx_t * ctx) {
+    return ctx->wl.registry.init_done;
 }

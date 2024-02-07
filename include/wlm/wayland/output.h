@@ -65,6 +65,9 @@ typedef struct {
     struct wl_list output_list;
 
     size_t incomplete_outputs;
+
+    bool init_called;
+    bool init_done;
 } ctx_wl_output_t;
 
 void wlm_wayland_output_on_add(ctx_t *, struct wl_output * output);
@@ -76,5 +79,8 @@ void wlm_wayland_output_cleanup(ctx_t *);
 
 wlm_wayland_output_entry_t * wlm_wayland_output_find(ctx_t *, struct wl_output * output);
 wlm_wayland_output_entry_t * wlm_wayland_output_find_by_name(ctx_t *, const char * name);
+
+bool wlm_wayland_output_is_init_called(ctx_t *);
+bool wlm_wayland_output_is_init_done(ctx_t *);
 
 #endif

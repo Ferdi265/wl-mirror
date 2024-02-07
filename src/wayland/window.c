@@ -51,6 +51,7 @@ static void apply_surface_changes(ctx_t * ctx) {
 
     // trigger buffer resize and render
     if (!window_complete(ctx)) {
+        ctx->wl.window.init_done = true;
         wlm_event_emit_window_init_done(ctx);
     } else {
         wlm_event_emit_window_changed(ctx);
@@ -314,6 +315,7 @@ void wlm_wayland_window_on_output_init_done(ctx_t * ctx) {
 }
 
 void wlm_wayland_window_on_output_changed(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
+    if (!wlm_wayland_window_is_init_called(ctx)) return;
     if (ctx->wl.window.current_output != entry) return;
 
     if (use_output_scale(ctx) && ctx->wl.window.scale != entry->scale) {
@@ -325,6 +327,7 @@ void wlm_wayland_window_on_output_changed(ctx_t * ctx, wlm_wayland_output_entry_
 }
 
 void wlm_wayland_window_on_output_removed(ctx_t * ctx, wlm_wayland_output_entry_t * entry) {
+    if (!wlm_wayland_window_is_init_called(ctx)) return;
     if (ctx->wl.window.current_output != entry) return;
 
     // set current output to null because it would dangle otherwise
@@ -332,7 +335,7 @@ void wlm_wayland_window_on_output_removed(ctx_t * ctx, wlm_wayland_output_entry_
 }
 
 void wlm_wayland_window_on_before_poll(ctx_t * ctx) {
-    if (!window_complete(ctx)) return;
+    if (!wlm_wayland_window_is_init_done(ctx)) return;
 
     // check if things changed, emit events
     apply_surface_changes(ctx);
@@ -358,10 +361,16 @@ void wlm_wayland_window_zero(ctx_t * ctx) {
 
     ctx->wl.window.changed = WLM_WAYLAND_WINDOW_UNCHANGED;
     ctx->wl.window.flags = WLM_WAYLAND_WINDOW_INCOMPLETE;
+
+    ctx->wl.window.init_called = false;
+    ctx->wl.window.init_done = false;
 }
 
 void wlm_wayland_window_init(ctx_t * ctx) {
     wlm_log(ctx, WLM_TRACE, "initializing");
+    wlm_assert(wlm_wayland_registry_is_init_done(ctx), ctx, WLM_FATAL, "initial sync not complete");
+    wlm_assert(!wlm_wayland_window_is_init_called(ctx), ctx, WLM_FATAL, "already initialized");
+    ctx->wl.window.init_called = true;
 
     // listen for ping events
     xdg_wm_base_add_listener(ctx->wl.protocols.xdg_wm_base, &xdg_wm_base_listener, (void *)ctx);
@@ -400,4 +409,14 @@ void wlm_wayland_window_cleanup(ctx_t * ctx) {
     if (ctx->wl.window.surface != NULL) wl_surface_destroy(ctx->wl.window.surface);
 
     wlm_wayland_window_zero(ctx);
+}
+
+// --- public functions ---
+
+bool wlm_wayland_window_is_init_called(ctx_t * ctx) {
+    return ctx->wl.window.init_called;
+}
+
+bool wlm_wayland_window_is_init_done(ctx_t * ctx) {
+    return ctx->wl.window.init_done;
 }

@@ -6,6 +6,7 @@
 // --- internal event handlers ---
 
 void wlm_egl_core_on_window_changed(ctx_t * ctx) {
+    wlm_assert(wlm_egl_core_is_init_done(ctx), ctx, WLM_FATAL, "not yet initialized");
     if (!(ctx->wl.window.changed & WLM_WAYLAND_WINDOW_BUFFER_SIZE_CHANGED)) return;
 
     wlm_log(ctx, WLM_DEBUG, "resizing buffer to %dx%d", ctx->wl.window.buffer_width, ctx->wl.window.buffer_height);
@@ -23,10 +24,16 @@ void wlm_egl_core_zero(ctx_t * ctx) {
 
     ctx->egl.core.window = NULL;
     ctx->egl.core.surface = EGL_NO_SURFACE;
+
+    ctx->egl.core.init_called = false;
+    ctx->egl.core.init_done = false;
 }
 
 void wlm_egl_core_init(ctx_t * ctx) {
     wlm_log(ctx, WLM_TRACE, "initializing");
+    wlm_assert(wlm_wayland_window_is_init_done(ctx), ctx, WLM_FATAL, "window not configured");
+    wlm_assert(!wlm_egl_core_is_init_called(ctx), ctx, WLM_FATAL, "already initialized");
+    ctx->egl.core.init_called = true;
 
     // create egl display
     ctx->egl.core.display = eglGetDisplay((EGLNativeDisplayType)ctx->wl.core.display);
@@ -89,6 +96,8 @@ void wlm_egl_core_init(ctx_t * ctx) {
         wlm_log(ctx, WLM_FATAL, "failed to activate EGL context");
         wlm_exit_fail(ctx);
     }
+
+    ctx->egl.core.init_done = true;
 }
 
 void wlm_egl_core_cleanup(ctx_t * ctx) {
@@ -101,4 +110,14 @@ void wlm_egl_core_cleanup(ctx_t * ctx) {
     if (ctx->egl.core.display != EGL_NO_DISPLAY) eglTerminate(ctx->egl.core.display);
 
     wlm_wayland_core_zero(ctx);
+}
+
+// --- public functions ---
+
+bool wlm_egl_core_is_init_called(ctx_t * ctx) {
+    return ctx->egl.core.init_called;
+}
+
+bool wlm_egl_core_is_init_done(ctx_t * ctx) {
+    return ctx->egl.core.init_done;
 }

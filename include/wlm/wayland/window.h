@@ -47,6 +47,9 @@ typedef struct {
 
     wlm_wayland_window_changed_t changed;
     wlm_wayland_window_flags_t flags;
+
+    bool init_called;
+    bool init_done;
 } ctx_wl_window_t;
 
 void wlm_wayland_window_on_output_init_done(ctx_t *);
@@ -57,5 +60,8 @@ void wlm_wayland_window_on_before_poll(ctx_t *);
 void wlm_wayland_window_zero(ctx_t *);
 void wlm_wayland_window_init(ctx_t *);
 void wlm_wayland_window_cleanup(ctx_t *);
+
+bool wlm_wayland_window_is_init_called(ctx_t *);
+bool wlm_wayland_window_is_init_done(ctx_t *);
 
 #endif

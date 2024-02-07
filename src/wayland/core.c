@@ -46,17 +46,22 @@ void wlm_wayland_core_zero(ctx_t * ctx) {
     // libdecor context
     ctx->wl.core.libdecor_context = NULL;
 
-    // program state
-    ctx->wl.core.closing = false;
-
     // event loop handler
     wlm_event_loop_handler_zero(ctx, &ctx->wl.core.event_handler);
     ctx->wl.core.event_handler.events = EPOLLIN;
     ctx->wl.core.event_handler.on_event = on_loop_event;
+
+    // program state
+    ctx->wl.core.closing = false;
+
+    ctx->wl.core.init_called = false;
+    ctx->wl.core.init_done = false;
 }
 
 void wlm_wayland_core_init(ctx_t * ctx) {
     wlm_log(ctx, WLM_TRACE, "initializing");
+    wlm_assert(!wlm_wayland_core_is_init_called(ctx), ctx, WLM_FATAL, "already initialized");
+    ctx->wl.core.init_called = true;
 
     // connect to wayland display
     ctx->wl.core.display = wl_display_connect(NULL);
@@ -72,6 +77,8 @@ void wlm_wayland_core_init(ctx_t * ctx) {
     // add fd to event loop
     ctx->wl.core.event_handler.fd = wl_display_get_fd(ctx->wl.core.display);
     wlm_event_loop_add_fd(ctx, &ctx->wl.core.event_handler);
+
+    ctx->wl.core.init_done = true;
 }
 
 void wlm_wayland_core_cleanup(ctx_t * ctx) {
@@ -97,4 +104,12 @@ void wlm_wayland_core_request_close(ctx_t * ctx) {
 
 bool wlm_wayland_core_is_closing(ctx_t * ctx) {
     return ctx->wl.core.closing;
+}
+
+bool wlm_wayland_core_is_init_called(ctx_t * ctx) {
+    return ctx->wl.core.init_called;
+}
+
+bool wlm_wayland_core_is_init_done(ctx_t * ctx) {
+    return ctx->wl.core.init_done;
 }

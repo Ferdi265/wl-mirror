@@ -83,14 +83,18 @@ typedef struct {
     // initial global sync flags
     struct wl_callback * sync_callback;
     bool initial_sync_had_errors;
-    bool initial_sync_complete;
+
+    bool init_called;
+    bool init_done;
 } ctx_wl_registry_t;
 
 void wlm_wayland_registry_zero(ctx_t *);
 void wlm_wayland_registry_init(ctx_t *);
 void wlm_wayland_registry_cleanup(ctx_t *);
 
-bool wlm_wayland_registry_is_initial_sync_complete(ctx_t *);
 bool wlm_wayland_registry_is_own_proxy(struct wl_proxy * proxy);
+
+bool wlm_wayland_registry_is_init_called(ctx_t *);
+bool wlm_wayland_registry_is_init_done(ctx_t *);
 
 #endif

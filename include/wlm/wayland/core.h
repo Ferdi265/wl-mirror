@@ -16,12 +16,17 @@ typedef struct {
     // libdecor context
     struct libdecor * libdecor_context;
 
+    // event loop handler
+    wlm_event_loop_handler_t event_handler;
+
     // program state
     bool closing;
 
-    // event loop handler
-    wlm_event_loop_handler_t event_handler;
+    bool init_called;
+    bool init_done;
 } ctx_wl_core_t;
+
+void wlm_wayland_core_on_before_poll(ctx_t *);
 
 void wlm_wayland_core_zero(ctx_t *);
 void wlm_wayland_core_init(ctx_t *);
@@ -30,6 +35,7 @@ void wlm_wayland_core_cleanup(ctx_t *);
 void wlm_wayland_core_request_close(ctx_t *);
 bool wlm_wayland_core_is_closing(ctx_t *);
 
-void wlm_wayland_core_on_before_poll(ctx_t *);
+bool wlm_wayland_core_is_init_called(ctx_t *);
+bool wlm_wayland_core_is_init_done(ctx_t *);
 
 #endif
