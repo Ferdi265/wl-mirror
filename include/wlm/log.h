@@ -74,7 +74,7 @@ typedef struct {
 #define wlm_log(ctx, level, fmt, ...) \
     do { \
         if ((ctx)->log. WLM_CONCAT(WLM_LOG_COMPONENT, _level) >= (level)) { \
-            fprintf(stderr, "wl-mirror | %-5s | %-7s | %s() in %s:%-3d || " fmt "\n", \
+            fprintf(stderr, "| %-5s | %-7s | %s() in %s:%d || " fmt "\n", \
                 WLM_PRINT_LOG_LEVEL(level), \
                 WLM_STRINGIFY(WLM_LOG_COMPONENT), \
                 __func__, __FILE__, __LINE__, \
