@@ -49,3 +49,10 @@ if(NOT has-epoll)
     pkg_check_modules(EPoll REQUIRED IMPORTED_TARGET "epoll-shim")
     target_link_libraries(deps INTERFACE PkgConfig::EPoll)
 endif()
+
+# check for macro prefix map support in compiler
+include(CheckCCompilerFlag)
+check_c_compiler_flag("-fmacro-prefix-map=A=B" HAS_MACRO_PREFIX_MAP)
+if(${HAS_MACRO_PREFIX_MAP})
+    target_compile_options(deps INTERFACE -fmacro-prefix-map=${CMAKE_SOURCE_DIR}=.)
+endif()
