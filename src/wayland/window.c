@@ -1,6 +1,8 @@
 #include <math.h>
 #include <wlm/context.h>
 
+#define WLM_LOG_COMPONENT wayland
+
 // --- private helper functions ---
 
 static bool window_configure_ready(ctx_t * ctx) {
@@ -27,7 +29,7 @@ static void apply_surface_changes(ctx_t * ctx) {
     if (!ctx->wl.window.changed) return;
 
     if (ctx->wl.window.changed & WLM_WAYLAND_WINDOW_SIZE_CHANGED) {
-        log_debug(ctx, "wayland::window::apply_surface_changes(): new viewport destination size = %dx%d\n",
+        wlm_log(ctx, WLM_DEBUG, "new viewport destination size = %dx%d",
             ctx->wl.window.width, ctx->wl.window.height
         );
         wp_viewport_set_destination(ctx->wl.window.viewport, ctx->wl.window.width, ctx->wl.window.height);
@@ -37,7 +39,7 @@ static void apply_surface_changes(ctx_t * ctx) {
         uint32_t buffer_width = round(ctx->wl.window.width * ctx->wl.window.scale);
         uint32_t buffer_height = round(ctx->wl.window.height * ctx->wl.window.scale);
         if (ctx->wl.window.buffer_width != buffer_width || ctx->wl.window.buffer_height != buffer_height) {
-            log_debug(ctx, "wayland::window::apply_surface_changes(): new buffer size = %dx%d\n", buffer_width, buffer_height);
+            wlm_log(ctx, WLM_DEBUG, "new buffer size = %dx%d", buffer_width, buffer_height);
 
             ctx->wl.window.buffer_width = buffer_width;
             ctx->wl.window.buffer_height = buffer_height;
@@ -69,7 +71,7 @@ static void trigger_initial_configure(ctx_t * ctx) {
     libdecor_frame_set_title(ctx->wl.window.libdecor_frame, "Wayland Output Mirror");
 
     // map libdecor frame
-    log_debug(ctx, "wayland::window::trigger_initial_configure(): mapping frame\n");
+    wlm_log(ctx, WLM_DEBUG, "mapping frame");
     libdecor_frame_map(ctx->wl.window.libdecor_frame);
 }
 
@@ -102,13 +104,13 @@ static void on_surface_enter(
     wlm_wayland_output_entry_t * entry = wlm_wayland_output_find(ctx, output);
     if (ctx->wl.window.current_output == entry) return;
 
-    log_debug(ctx, "wayland::window::on_surface_enter(): entering output %s\n", entry->name);
+    wlm_log(ctx, WLM_DEBUG, "entering output %s", entry->name);
 
     ctx->wl.window.current_output = entry;
     ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_OUTPUT_CHANGED;
 
     if (use_output_scale(ctx) && ctx->wl.window.scale != entry->scale) {
-        log_debug(ctx, "wayland::window::on_surface_enter(): using output scale = %d\n", entry->scale);
+        wlm_log(ctx, WLM_DEBUG, "using output scale = %d", entry->scale);
 
         ctx->wl.window.scale = entry->scale;
         ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
@@ -126,7 +128,7 @@ static void on_surface_leave(
     wlm_wayland_output_entry_t * entry = wlm_wayland_output_find(ctx, output);
     if (ctx->wl.window.current_output != entry) return;
 
-    log_debug(ctx, "wayland::window::on_surface_leave(): leaving output %s\n", entry->name);
+    wlm_log(ctx, WLM_DEBUG, "leaving output %s", entry->name);
 
     // ignore: current output is set with next entered output anyway
 }
@@ -140,7 +142,7 @@ static void on_surface_preferred_buffer_scale(
     ctx_t * ctx = (ctx_t *)data;
 
     if (use_surface_preferred_scale(ctx) && ctx->wl.window.scale != scale) {
-        log_debug(ctx, "wayland::window::on_surface_preferred_buffer_scale(): using preferred integer scale = %d\n", scale);
+        wlm_log(ctx, WLM_DEBUG, "using preferred integer scale = %d", scale);
 
         ctx->wl.window.scale = scale;
         ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
@@ -158,7 +160,7 @@ static void on_surface_preferred_buffer_transform(
 
 
     if (ctx->wl.window.transform != transform) {
-        log_debug(ctx, "wayland::window::on_surface_preferred_buffer_transform(): using preferred transform = %s\n",
+        wlm_log(ctx, WLM_DEBUG, "using preferred transform = %s",
             WLM_PRINT_OUTPUT_TRANSFORM(transform)
         );
 
@@ -186,7 +188,7 @@ static void on_fractional_scale_preferred_scale(
     double scale = scale_times_120 / 120.;
 
     if (use_fractional_preferred_scale(ctx) && ctx->wl.window.scale != scale) {
-        log_debug(ctx, "wayland::window::on_fractional_scale_preferred_scale(): using preferred fractional scale = %.3f\n", scale);
+        wlm_log(ctx, WLM_DEBUG, "using preferred fractional scale = %.3f", scale);
 
         ctx->wl.window.scale = scale;
         ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
@@ -206,7 +208,7 @@ static void on_libdecor_frame_configure(
     if (frame == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): configuring\n");
+    wlm_log(ctx, WLM_DEBUG, "configuring");
 
     // get minimum window size
     int min_width = 0;
@@ -219,7 +221,7 @@ static void on_libdecor_frame_configure(
     if (new_min_width < DEFAULT_WIDTH) new_min_width = DEFAULT_WIDTH;
     if (new_min_height < DEFAULT_HEIGHT) new_min_height = DEFAULT_HEIGHT;
     if (new_min_width != min_width || new_min_height != min_height) {
-        log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): setting minimum size = %dx%d\n", new_min_width, new_min_height);
+        wlm_log(ctx, WLM_DEBUG, "setting minimum size = %dx%d", new_min_width, new_min_height);
         libdecor_frame_set_min_content_size(frame, new_min_width, new_min_height);
     }
 
@@ -228,11 +230,11 @@ static void on_libdecor_frame_configure(
     int height = 0;
     if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
         if (ctx->wl.window.width == 0 || ctx->wl.window.height == 0) {
-            log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): falling back to default size\n");
+            wlm_log(ctx, WLM_DEBUG, "falling back to default size");
             width = new_min_width;
             height = new_min_height;
         } else {
-            log_debug(ctx, "wayland::window::on_libdecor_frame_configure(): falling back to previous size\n");
+            wlm_log(ctx, WLM_DEBUG, "falling back to previous size");
             width = ctx->wl.window.width;
             height = ctx->wl.window.height;
         }
@@ -280,7 +282,7 @@ static void on_libdecor_frame_close(
     if (frame == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    log_debug(ctx, "wayland::window::on_libdecor_frame_close(): close requested\n");
+    wlm_log(ctx, WLM_DEBUG, "close requested");
 
     wlm_wayland_core_request_close(ctx);
 }
@@ -315,7 +317,7 @@ void wlm_wayland_window_on_output_changed(ctx_t * ctx, wlm_wayland_output_entry_
     if (ctx->wl.window.current_output != entry) return;
 
     if (use_output_scale(ctx) && ctx->wl.window.scale != entry->scale) {
-        log_debug(ctx, "wayland::window::on_output_changed(): using new output scale = %d\n", entry->scale);
+        wlm_log(ctx, WLM_DEBUG, "using new output scale = %d", entry->scale);
 
         ctx->wl.window.scale = entry->scale;
         ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
@@ -339,6 +341,8 @@ void wlm_wayland_window_on_before_poll(ctx_t * ctx) {
 // --- initialization and cleanup ---
 
 void wlm_wayland_window_zero(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "zeroing");
+
     ctx->wl.window.surface = NULL;
     ctx->wl.window.viewport = NULL;
     ctx->wl.window.fractional_scale = NULL;
@@ -357,7 +361,7 @@ void wlm_wayland_window_zero(ctx_t * ctx) {
 }
 
 void wlm_wayland_window_init(ctx_t * ctx) {
-    log_debug(ctx, "wayland::window::init(): creating window\n");
+    wlm_log(ctx, WLM_TRACE, "initializing");
 
     // listen for ping events
     xdg_wm_base_add_listener(ctx->wl.protocols.xdg_wm_base, &xdg_wm_base_listener, (void *)ctx);
@@ -388,6 +392,8 @@ void wlm_wayland_window_init(ctx_t * ctx) {
 }
 
 void wlm_wayland_window_cleanup(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "cleaning up");
+
     if (ctx->wl.window.libdecor_frame != NULL) libdecor_frame_unref(ctx->wl.window.libdecor_frame);
     if (ctx->wl.window.fractional_scale != NULL) wp_fractional_scale_v1_destroy(ctx->wl.window.fractional_scale);
     if (ctx->wl.window.viewport != NULL) wp_viewport_destroy(ctx->wl.window.viewport);

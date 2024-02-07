@@ -5,6 +5,8 @@
 #include "glsl_vertex_shader.h"
 #include "glsl_fragment_shader.h"
 
+#define WLM_LOG_COMPONENT egl
+
 // --- buffers ---
 
 static const float vertex_array[] = {
@@ -26,7 +28,7 @@ static void redraw(ctx_t * ctx) {
     glDrawArrays(GL_TRIANGLES, 0, WLM_ARRAY_LENGTH(vertex_array));
 
     if (eglSwapBuffers(ctx->egl.core.display, ctx->egl.core.surface) != EGL_TRUE) {
-        log_error("egl::render::redraw(): failed to swap buffers\n");
+        wlm_log(ctx, WLM_FATAL, "failed to swap buffers");
         wlm_exit_fail(ctx);
     }
 }
@@ -55,7 +57,7 @@ static void update_viewport(ctx_t * ctx) {
     // TODO: exact scale
 
     // updating GL viewport
-    log_debug(ctx, "egl::render::update_viewport(): resizing view to %dx%d\n", view_width, view_height);
+    wlm_log(ctx, WLM_DEBUG, "resizing view to %dx%d", view_width, view_height);
     glViewport((win_width - view_width) / 2, (win_height - view_height) / 2, view_width, view_height);
 
     // recalculate texture transform
@@ -103,6 +105,8 @@ void wlm_egl_render_on_window_changed(ctx_t * ctx) {
 // --- initialization and cleanup ---
 
 void wlm_egl_render_zero(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "zeroing");
+
     ctx->egl.render.vbo = 0;
     ctx->egl.render.texture = 0;
     ctx->egl.render.freeze_texture = 0;
@@ -117,6 +121,8 @@ void wlm_egl_render_zero(ctx_t * ctx) {
 }
 
 void wlm_egl_render_init(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "initializing");
+
     // create vertex buffer object
     glGenBuffers(1, &ctx->egl.render.vbo);
     glBindBuffer(GL_ARRAY_BUFFER, ctx->egl.render.vbo);
@@ -147,7 +153,7 @@ void wlm_egl_render_init(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(vertex_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        log_error("egl::render::init(): failed to compile vertex shader: %s\n", errorLog);
+        wlm_log(ctx, WLM_FATAL, "%s", errorLog);
         glDeleteShader(vertex_shader);
         wlm_exit_fail(ctx);
     }
@@ -161,7 +167,7 @@ void wlm_egl_render_init(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(fragment_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        log_error("egl::render::init(): failed to compile fragment shader: %s\n", errorLog);
+        wlm_log(ctx, WLM_FATAL, "%s", errorLog);
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
         wlm_exit_fail(ctx);
@@ -174,7 +180,7 @@ void wlm_egl_render_init(ctx_t * ctx) {
     glLinkProgram(ctx->egl.render.shader_program);
     glGetProgramiv(ctx->egl.render.shader_program, GL_LINK_STATUS, &success);
     if (success != GL_TRUE) {
-        log_error("egl::render::init(): failed to link shader program\n");
+        wlm_log(ctx, WLM_FATAL, "failed to link shader program");
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
         glDeleteProgram(ctx->egl.render.shader_program);
@@ -200,11 +206,13 @@ void wlm_egl_render_init(ctx_t * ctx) {
     update_render_options(ctx);
 
     // trigger redraw
-    log_debug(ctx, "egl::render::init(): triggering initial redraw\n");
+    wlm_log(ctx, WLM_DEBUG, "triggering initial redraw");
     redraw(ctx);
 }
 
 void wlm_egl_render_cleanup(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "cleaning up");
+
     if (ctx->egl.render.shader_program != 0) glDeleteProgram(ctx->egl.render.shader_program);
     if (ctx->egl.render.freeze_framebuffer != 0) glDeleteFramebuffers(1, &ctx->egl.render.freeze_framebuffer);
     if (ctx->egl.render.freeze_texture != 0) glDeleteTextures(1, &ctx->egl.render.freeze_texture);

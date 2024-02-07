@@ -2,14 +2,16 @@
 #include <string.h>
 #include <wlm/context.h>
 
+#define WLM_LOG_COMPONENT wayland
+
 // --- private utility functions ---
 
 static void print_output(ctx_t * ctx, wlm_wayland_output_entry_t * output) {
-    log_debug(ctx, "wayland::output::print_output(): output %s\n", output->name);
-    log_debug(ctx, "wayland::output::print_output(): - size      = %dx%d\n", output->width, output->height);
-    log_debug(ctx, "wayland::output::print_output(): - position  = %dx%d\n", output->x, output->y);
-    log_debug(ctx, "wayland::output::print_output(): - scale     = %d\n", output->scale);
-    log_debug(ctx, "wayland::output::print_output(): - transform = %s\n", WLM_PRINT_OUTPUT_TRANSFORM(output->transform));
+    wlm_log(ctx, WLM_INFO, "output %s", output->name);
+    wlm_log(ctx, WLM_INFO, "- size      = %dx%d", output->width, output->height);
+    wlm_log(ctx, WLM_INFO, "- position  = %dx%d", output->x, output->y);
+    wlm_log(ctx, WLM_INFO, "- scale     = %d", output->scale);
+    wlm_log(ctx, WLM_INFO, "- transform = %s", WLM_PRINT_OUTPUT_TRANSFORM(output->transform));
 }
 
 static bool output_complete_ready(wlm_wayland_output_entry_t * entry) {
@@ -24,7 +26,7 @@ static void check_all_outputs_complete(ctx_t * ctx) {
     if (!wlm_wayland_registry_is_initial_sync_complete(ctx)) return;
     if (ctx->wl.output.incomplete_outputs > 0) return;
 
-    log_debug(ctx, "wayland::output::check_all_outputs_complete(): output information complete\n");
+    wlm_log(ctx, WLM_DEBUG, "output information complete");
     wlm_wayland_output_entry_t *cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         print_output(ctx, cur);
@@ -57,7 +59,7 @@ static wlm_wayland_output_entry_t * find_output(ctx_t * ctx, struct wl_output * 
     }
 
     if (!found) {
-        log_error("wayland::output::find_output(): could not find output entry for output %p\n", output);
+        wlm_log(ctx, WLM_FATAL, "could not find output entry for output %p", output);
         wlm_exit_fail(ctx);
     }
 
@@ -75,7 +77,7 @@ static wlm_wayland_output_entry_t * find_xdg_output(ctx_t * ctx, struct zxdg_out
     }
 
     if (!found) {
-        log_error("wayland::output::find_xdg_output(): could not find output entry for xdg_output %p\n", xdg_output);
+        wlm_log(ctx, WLM_FATAL, "could not find output entry for xdg_output %p", xdg_output);
         wlm_exit_fail(ctx);
     }
 
@@ -199,7 +201,7 @@ static void on_output_done(
 
         check_output_complete(ctx, entry);
     } else if (entry->changed) {
-        log_debug(ctx, "wayland::output::on_output_done(): output %s changed\n", entry->name);
+        wlm_log(ctx, WLM_DEBUG, "output %s changed", entry->name);
         print_output(ctx, entry);
 
         wlm_event_emit_output_changed(ctx, entry);
@@ -305,7 +307,7 @@ static void on_xdg_output_done(
         entry->flags |= WLM_WAYLAND_OUTPUT_XDG_DONE;
         check_output_complete(ctx, entry);
     } else if (entry->changed) {
-        log_debug(ctx, "wayland::output::on_xdg_output_done(): output %s changed\n", entry->name);
+        wlm_log(ctx, WLM_DEBUG, "output %s changed", entry->name);
         print_output(ctx, entry);
 
         wlm_event_emit_output_changed(ctx, entry);
@@ -355,12 +357,16 @@ void wlm_wayland_output_on_remove(ctx_t * ctx, struct wl_output * output) {
 // --- initialization and cleanup
 
 void wlm_wayland_output_zero(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "zeroing");
+
     wl_list_init(&ctx->wl.output.output_list);
 
     ctx->wl.output.incomplete_outputs = 0;
 }
 
 void wlm_wayland_output_init(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "initializing");
+
     wlm_wayland_output_entry_t *cur;
     wl_list_for_each(cur, &ctx->wl.output.output_list, link) {
         if (cur->xdg_output == NULL) {
@@ -372,6 +378,8 @@ void wlm_wayland_output_init(ctx_t * ctx) {
 }
 
 void wlm_wayland_output_cleanup(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "cleaning up");
+
     wlm_wayland_output_entry_t *cur, *next;
     wl_list_for_each_safe(cur, next, &ctx->wl.output.output_list, link) {
         remove_output(ctx, cur);

@@ -1,5 +1,7 @@
 #include <wlm/context.h>
 
+#define WLM_LOG_COMPONENT wayland
+
 // --- event loop handlers ---
 
 static void on_loop_event(ctx_t * ctx) {
@@ -19,7 +21,7 @@ static void on_libdecor_error(
 
     ctx_t * ctx = libdecor_error_context;
 
-    log_error("wayland::core::on_libdecor_error(): error %d, %s\n", error, message);
+    wlm_log(ctx, WLM_FATAL, "error %d, %s", error, message);
     wlm_exit_fail(ctx);
 }
 
@@ -36,6 +38,8 @@ void wlm_wayland_core_on_before_poll(ctx_t * ctx) {
 // --- initialization and cleanup ---
 
 void wlm_wayland_core_zero(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "zeroing");
+
     // wayland display
     ctx->wl.core.display = NULL;
 
@@ -52,10 +56,12 @@ void wlm_wayland_core_zero(ctx_t * ctx) {
 }
 
 void wlm_wayland_core_init(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "initializing");
+
     // connect to wayland display
     ctx->wl.core.display = wl_display_connect(NULL);
     if (ctx->wl.core.display == NULL) {
-        log_error("wayland::core::init(): failed to connect to wayland display\n");
+        wlm_log(ctx, WLM_FATAL, "failed to connect to wayland display");
         wlm_exit_fail(ctx);
     }
 
@@ -69,6 +75,8 @@ void wlm_wayland_core_init(ctx_t * ctx) {
 }
 
 void wlm_wayland_core_cleanup(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "cleaning up");
+
     // remove fd from event loop
     if (ctx->wl.core.event_handler.fd != -1) wlm_event_loop_remove_fd(ctx, &ctx->wl.core.event_handler);
 

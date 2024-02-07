@@ -3,7 +3,10 @@
 #include <string.h>
 #include <wlm/context.h>
 
+#define WLM_LOG_COMPONENT main
+
 void wlm_zero(ctx_t * ctx) {
+
     // wlm_opt_zero(ctx);
     wlm_log_zero(ctx);
     wlm_event_loop_zero(ctx);
@@ -14,37 +17,32 @@ void wlm_zero(ctx_t * ctx) {
 }
 
 void wlm_init(ctx_t * ctx, int argc, char ** argv) {
+    wlm_log(ctx, WLM_TRACE, "initializing");
+
     //parse_opt(&ctx, argc, argv);
     (void)argc;
     (void)argv;
 
     wlm_log_init(ctx);
 
-    //log_debug(&ctx, "main::init(): initializing stream\n");
     //init_stream(&ctx);
 
-    log_debug(ctx, "main::init(): initializing event system\n");
     wlm_event_loop_init(ctx);
 
-    log_debug(ctx, "main::init(): initializing wayland\n");
     wlm_wayland_init(ctx);
 
     // egl is initialized in event handlers
     // when wayland is ready
 
-    //log_debug(&ctx, "main::init(): initializing mirror\n");
     //init_mirror(&ctx);
 
-    //log_debug(&ctx, "main::init(): initializing mirror backend\n");
     //init_mirror_backend(&ctx);
 
-    log_debug(ctx, "main::init(): entering event loop\n");
     wlm_event_loop_run(ctx);
-    log_debug(ctx, "main::init(): exiting event loop\n");
 }
 
 void wlm_cleanup(ctx_t * ctx) {
-    log_debug(ctx, "main::cleanup(): deallocating resources\n");
+    wlm_log(ctx, WLM_TRACE, "cleaning up");
 
     // wlm_mirror_cleanup(ctx);
     wlm_wayland_cleanup(ctx);
@@ -55,6 +53,8 @@ void wlm_cleanup(ctx_t * ctx) {
 }
 
 noreturn void wlm_exit_fail(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "exiting");
+
     wlm_cleanup(ctx);
     exit(1);
 }

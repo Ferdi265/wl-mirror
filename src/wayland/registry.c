@@ -2,6 +2,8 @@
 #include <string.h>
 #include <wlm/context.h>
 
+#define WLM_LOG_COMPONENT wayland
+
 // --- private utility functions ---
 
 static const char * proxy_tag = "wl-mirror";
@@ -13,7 +15,7 @@ static struct wl_proxy * try_bind(
 ) {
     if (version < spec->version_min) {
         if (spec->required) {
-            log_error("wayland::registry::try_bind(): interface %s only available in version %d, but %zd required\n",
+            wlm_log(ctx, WLM_FATAL, "interface %s only available in version %d, but %zd required",
                 spec->interface->name, version, spec->version_min
             );
 
@@ -54,7 +56,7 @@ static void try_bind_multiple(ctx_t * ctx, uint32_t id, uint32_t version, const 
 static void try_bind_singleton(ctx_t * ctx, uint32_t id, uint32_t version, const wlm_wayland_registry_bind_singleton_t * bind) {
     struct wl_proxy ** proxy_ptr = (struct wl_proxy **)((char *)ctx + bind->proxy_offset);
     if (*proxy_ptr != NULL) {
-        log_error("wayland::registry::try_bind_singleton(): duplicate singleton %s\n", bind->spec.interface->name);
+        wlm_log(ctx, WLM_FATAL, "duplicate singleton %s", bind->spec.interface->name);
 
         if (ctx->wl.registry.initial_sync_complete) {
             wlm_exit_fail(ctx);
@@ -82,7 +84,7 @@ static void on_registry_add(
     if (registry == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    log_debug(ctx, "wayland::registry::on_registry_add(): %s (version = %d, id = %d)\n", interface, version, id);
+    wlm_log(ctx, WLM_DEBUG, "%s (version = %d, id = %d)", interface, version, id);
 
     const wlm_wayland_registry_bind_multiple_t * bind_multiple = wlm_wayland_registry_bind_multiple;
     for (; bind_multiple->spec.interface != NULL; bind_multiple++) {
@@ -108,13 +110,13 @@ static void on_registry_remove(
     if (registry == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    log_debug(ctx, "wayland::registry::on_registry_remove(): id = %d\n", id);
+    wlm_log(ctx, WLM_DEBUG, "id = %d", id);
 
     wlm_wayland_registry_bound_global_t *cur, *next;
     wl_list_for_each_safe(cur, next, &ctx->wl.registry.bound_globals, link) {
         if (cur->id != id) continue;
         if (cur->on_remove == NULL) {
-            log_error("wayland::registry::on_registry_remove(): singleton interface %s removed\n", cur->interface->name);
+            wlm_log(ctx, WLM_FATAL, "singleton interface %s removed", cur->interface->name);
             wlm_exit_fail(ctx);
         }
 
@@ -140,7 +142,7 @@ static void on_sync_callback_done(
     if (callback == NULL) return;
 
     ctx_t * ctx = (ctx_t *)data;
-    log_debug(ctx, "wayland::registry::on_sync_callback_done(): all globals received\n");
+    wlm_log(ctx, WLM_DEBUG, "all globals received");
 
     wl_callback_destroy(ctx->wl.registry.sync_callback);
     ctx->wl.registry.sync_callback = NULL;
@@ -151,9 +153,9 @@ static void on_sync_callback_done(
         struct wl_proxy ** proxy_ptr = (struct wl_proxy **)((char *)ctx + bind_singleton->proxy_offset);
 
         if (*proxy_ptr != NULL)
-            log_debug(ctx, "wayland::registry::on_sync_callback_done(): bound %s (version = %d)\n", bind_singleton->spec.interface->name, wl_proxy_get_version(*proxy_ptr));
+            wlm_log(ctx, WLM_INFO, "bound %s (version = %d)", bind_singleton->spec.interface->name, wl_proxy_get_version(*proxy_ptr));
         if (*proxy_ptr == NULL && bind_singleton->spec.required) {
-            log_error("wayland::registry::on_sync_callback_done(): required singleton interface %s missing\n", bind_singleton->spec.interface->name);
+            wlm_log(ctx, WLM_FATAL, "required singleton interface %s missing", bind_singleton->spec.interface->name);
             ctx->wl.registry.initial_sync_had_errors = true;
         }
     }
@@ -175,6 +177,8 @@ static const struct wl_callback_listener sync_callback_listener = {
 // --- initialization and cleanup ---
 
 void wlm_wayland_registry_zero(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "zeroing");
+
     // registry handle
     ctx->wl.registry.handle = NULL;
 
@@ -194,10 +198,12 @@ void wlm_wayland_registry_zero(ctx_t * ctx) {
 }
 
 void wlm_wayland_registry_init(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "initializing");
+
     // get registry handle
     ctx->wl.registry.handle = wl_display_get_registry(ctx->wl.core.display);
     if (ctx->wl.registry.handle == NULL) {
-        log_error("wayland::registry::init(): failed to get registry handle\n");
+        wlm_log(ctx, WLM_FATAL, "failed to get registry handle");
         wlm_exit_fail(ctx);
     }
 
@@ -210,6 +216,8 @@ void wlm_wayland_registry_init(ctx_t * ctx) {
 }
 
 void wlm_wayland_registry_cleanup(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "cleaning up");
+
     // destroy sync callback
     if (ctx->wl.registry.sync_callback != NULL) wl_callback_destroy(ctx->wl.registry.sync_callback);
 

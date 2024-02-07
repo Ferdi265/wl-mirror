@@ -1,5 +1,7 @@
 #include <wlm/context.h>
 
+#define WLM_LOG_COMPONENT event
+
 void wlm_event_emit_before_poll(ctx_t * ctx) {
     wlm_wayland_window_on_before_poll(ctx);
     wlm_wayland_core_on_before_poll(ctx);
