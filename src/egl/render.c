@@ -23,7 +23,7 @@ static void redraw(ctx_t * ctx) {
 
     GLint texture = ctx->egl.render.texture /* TODO: ctx->opt.freeze ? ctx->egl.freeze_texture : ctx->egl.texture */;
     glBindTexture(GL_TEXTURE_2D, texture);
-    glDrawArrays(GL_TRIANGLES, 0, ARRAY_LENGTH(vertex_array));
+    glDrawArrays(GL_TRIANGLES, 0, WLM_ARRAY_LENGTH(vertex_array));
 
     if (eglSwapBuffers(ctx->egl.core.display, ctx->egl.core.surface) != EGL_TRUE) {
         log_error("egl::render::redraw(): failed to swap buffers\n");
