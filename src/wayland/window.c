@@ -111,7 +111,7 @@ static void on_surface_enter(
     ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_OUTPUT_CHANGED;
 
     if (use_output_scale(ctx) && ctx->wl.window.scale != entry->scale) {
-        wlm_log(ctx, WLM_DEBUG, "using output scale = %d", entry->scale);
+        wlm_log(ctx, WLM_INFO, "using output scale = %d", entry->scale);
 
         ctx->wl.window.scale = entry->scale;
         ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
@@ -143,7 +143,7 @@ static void on_surface_preferred_buffer_scale(
     ctx_t * ctx = (ctx_t *)data;
 
     if (use_surface_preferred_scale(ctx) && ctx->wl.window.scale != scale) {
-        wlm_log(ctx, WLM_DEBUG, "using preferred integer scale = %d", scale);
+        wlm_log(ctx, WLM_INFO, "using preferred integer scale = %d", scale);
 
         ctx->wl.window.scale = scale;
         ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
@@ -161,7 +161,7 @@ static void on_surface_preferred_buffer_transform(
 
 
     if (ctx->wl.window.transform != transform) {
-        wlm_log(ctx, WLM_DEBUG, "using preferred transform = %s",
+        wlm_log(ctx, WLM_INFO, "using preferred transform = %s",
             WLM_PRINT_OUTPUT_TRANSFORM(transform)
         );
 
@@ -189,7 +189,7 @@ static void on_fractional_scale_preferred_scale(
     double scale = scale_times_120 / 120.;
 
     if (use_fractional_preferred_scale(ctx) && ctx->wl.window.scale != scale) {
-        wlm_log(ctx, WLM_DEBUG, "using preferred fractional scale = %.3f", scale);
+        wlm_log(ctx, WLM_INFO, "using preferred fractional scale = %.3f", scale);
 
         ctx->wl.window.scale = scale;
         ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
@@ -319,7 +319,7 @@ void wlm_wayland_window_on_output_changed(ctx_t * ctx, wlm_wayland_output_entry_
     if (ctx->wl.window.current_output != entry) return;
 
     if (use_output_scale(ctx) && ctx->wl.window.scale != entry->scale) {
-        wlm_log(ctx, WLM_DEBUG, "using new output scale = %d", entry->scale);
+        wlm_log(ctx, WLM_INFO, "using output scale = %d", entry->scale);
 
         ctx->wl.window.scale = entry->scale;
         ctx->wl.window.changed |= WLM_WAYLAND_WINDOW_SCALE_CHANGED;
