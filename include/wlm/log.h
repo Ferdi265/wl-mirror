@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include <wlm/util.h>
 
 typedef struct ctx ctx_t;
@@ -63,30 +64,24 @@ extern const wlm_log_component_spec_t wlm_log_component_specs[];
 
 typedef struct {
     wlm_log_level_t all_level;
-    wlm_log_level_t general_level;
+    wlm_log_level_t main_level;
     wlm_log_level_t log_level;
     wlm_log_level_t event_level;
     wlm_log_level_t wayland_level;
     wlm_log_level_t egl_level;
 } ctx_log_t;
 
-#define WLM_LOG_COMPONENT general
-
 #define wlm_log(ctx, level, fmt, ...) \
     do { \
         if ((ctx)->log. WLM_CONCAT(WLM_LOG_COMPONENT, _level) >= (level)) { \
-            fprintf(stderr, "wl-mirror | %-5s | " WLM_STRINGIFY(WLM_LOG_COMPONENT) " | %s:%-4d in %s(): " fmt "\n", \
+            fprintf(stderr, "wl-mirror | %-5s | %-7s | %s() in %s:%-3d || " fmt "\n", \
                 WLM_PRINT_LOG_LEVEL(level), \
-                __FILE__, __LINE__, __func__, \
+                WLM_STRINGIFY(WLM_LOG_COMPONENT), \
+                __func__, __FILE__, __LINE__, \
                 ##__VA_ARGS__ \
             ); \
         } \
     } while (0)
-
-// TODO: HACK! compatibility macros
-#define log_error(fmt, ...) wlm_log(ctx, WLM_ERROR, fmt, ##__VA_ARGS__)
-#define log_warn(fmt, ...) wlm_log(ctx, WLM_WARN, fmt, ##__VA_ARGS__)
-#define log_debug(ctx, fmt, ...) wlm_log(ctx, WLM_DEBUG, fmt, ##__VA_ARGS__)
 
 void wlm_log_zero(ctx_t *);
 void wlm_log_init(ctx_t *);

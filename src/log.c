@@ -3,7 +3,6 @@
 #include <strings.h>
 #include <wlm/context.h>
 
-#undef WLM_LOG_COMPONENT
 #define WLM_LOG_COMPONENT log
 
 const wlm_log_level_spec_t wlm_log_level_specs[] = {
@@ -18,7 +17,7 @@ const wlm_log_level_spec_t wlm_log_level_specs[] = {
 
 const wlm_log_component_spec_t wlm_log_component_specs[] = {
     WLM_LOG_COMPONENT_SPEC(all),
-    WLM_LOG_COMPONENT_SPEC(general),
+    WLM_LOG_COMPONENT_SPEC(main),
     WLM_LOG_COMPONENT_SPEC(log),
     WLM_LOG_COMPONENT_SPEC(event),
     WLM_LOG_COMPONENT_SPEC(wayland),
@@ -117,6 +116,8 @@ void wlm_log_zero(ctx_t * ctx) {
 }
 
 void wlm_log_init(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "initializing");
+
     const char * log_level_env = getenv("WLM_LOG_LEVEL");
     if (log_level_env != NULL) {
         parse_log_level_config(ctx, log_level_env);
@@ -124,6 +125,8 @@ void wlm_log_init(ctx_t * ctx) {
 }
 
 void wlm_log_cleanup(ctx_t * ctx) {
+    wlm_log(ctx, WLM_TRACE, "cleaning up");
+
     // nothing to clean up
 
     wlm_log_zero(ctx);
