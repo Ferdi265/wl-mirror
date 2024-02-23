@@ -19,6 +19,7 @@ const wlm_log_component_spec_t wlm_log_component_specs[] = {
     WLM_LOG_COMPONENT_SPEC(all),
     WLM_LOG_COMPONENT_SPEC(main),
     WLM_LOG_COMPONENT_SPEC(log),
+    WLM_LOG_COMPONENT_SPEC(options),
     WLM_LOG_COMPONENT_SPEC(event),
     WLM_LOG_COMPONENT_SPEC(wayland),
     WLM_LOG_COMPONENT_SPEC(egl),

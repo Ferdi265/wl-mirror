@@ -7,8 +7,8 @@
 
 void wlm_zero(ctx_t * ctx) {
 
-    // wlm_opt_zero(ctx);
     wlm_log_zero(ctx);
+    wlm_opt_zero(ctx);
     wlm_event_loop_zero(ctx);
     // wlm_stream_zero(ctx);
     wlm_wayland_zero(ctx);
@@ -19,11 +19,11 @@ void wlm_zero(ctx_t * ctx) {
 void wlm_init(ctx_t * ctx, int argc, char ** argv) {
     wlm_log(ctx, WLM_TRACE, "initializing");
 
-    //parse_opt(&ctx, argc, argv);
+    wlm_log_init(ctx);
+
+    wlm_opt_parse(ctx, argc, argv);
     (void)argc;
     (void)argv;
-
-    wlm_log_init(ctx);
 
     //init_stream(&ctx);
 
@@ -48,8 +48,8 @@ void wlm_cleanup(ctx_t * ctx) {
     wlm_wayland_cleanup(ctx);
     // wlm_stream_cleanup(ctx);
     wlm_event_loop_cleanup(ctx);
+    wlm_opt_cleanup(ctx);
     wlm_log_cleanup(ctx);
-    // wlm_opt_cleanup(ctx);
 }
 
 noreturn void wlm_exit_fail(ctx_t * ctx) {

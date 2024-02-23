@@ -47,7 +47,7 @@ list(REMOVE_ITEM sources
     ${CMAKE_SOURCE_DIR}/src/mirror.c
     ${CMAKE_SOURCE_DIR}/src/mirror-dmabuf.c
     ${CMAKE_SOURCE_DIR}/src/mirror-screencopy.c
-    ${CMAKE_SOURCE_DIR}/src/options.c
+    ${CMAKE_SOURCE_DIR}/src/options_old.c
     ${CMAKE_SOURCE_DIR}/src/stream.c
 )
 add_executable(wl-mirror ${sources})

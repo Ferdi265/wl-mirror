@@ -5,7 +5,7 @@
 #include <stdnoreturn.h>
 
 #include <wlm/log.h>
-//#include "options.h"
+#include <wlm/options.h>
 #include <wlm/event/emit.h>
 #include <wlm/event/loop.h>
 //#include "stream.h"

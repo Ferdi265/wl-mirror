@@ -1,628 +1,264 @@
 #include <stdlib.h>
-#include <string.h>
+#include <wlm/context.h>
 
-#include "context.h"
-#include "version.h"
+#define WLM_LOG_COMPONENT options
 
-void init_opt(ctx_t * ctx) {
-    ctx->opt.verbose = false;
-    ctx->opt.stream = false;
-    ctx->opt.show_cursor = true;
-    ctx->opt.invert_colors = false;
-    ctx->opt.freeze = false;
-    ctx->opt.has_region = false;
-    ctx->opt.fullscreen = false;
-    ctx->opt.scaling = SCALE_FIT;
-    ctx->opt.scaling_filter = SCALE_FILTER_LINEAR;
-    ctx->opt.backend = BACKEND_AUTO;
-    ctx->opt.transform = (transform_t){ .rotation = ROT_NORMAL, .flip_x = false, .flip_y = false };
-    ctx->opt.region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
-    ctx->opt.output = NULL;
-    ctx->opt.fullscreen_output = NULL;
+static void opt_spec_length(const wlm_opt_spec_t * spec, int * short_length, int * long_length) {
+    int arg_length   = spec->arg_name == NULL ? 0 : 1 + strlen(spec->arg_name);
+    *short_length = spec->short_name == NULL ? 0 : arg_length + strlen(spec->short_name) + 2;
+    *long_length  = spec->long_name == NULL ? 0 : arg_length + strlen(spec->long_name);
 }
 
-void cleanup_opt(ctx_t * ctx) {
-    if (ctx->opt.output != NULL) free(ctx->opt.output);
-    if (ctx->opt.fullscreen_output != NULL) free(ctx ->opt.fullscreen_output);
+static void opt_spec_print(ctx_t * ctx, const wlm_opt_spec_t * spec, int max_short_length, int max_long_length) {
+    int short_length, long_length;
+    opt_spec_length(spec, &short_length, &long_length);
+
+    int short_pad = max_short_length - short_length;
+    int long_pad  = max_long_length - long_length;
+
+    wlm_log(ctx, WLM_TRACE, "%-20s: pad: short = %d, long = %d", spec->long_name, short_pad, long_pad);
+    wlm_print(ctx, WLM_FATAL, "  %s%s%s%s%-*s%s%s%s%s%-*s%s",
+        spec->short_name == NULL ? "" : spec->short_name,
+        spec->short_name == NULL || spec->arg_name == NULL ? "" : " ",
+        spec->short_name == NULL || spec->arg_name == NULL ? "" : spec->arg_name,
+        spec->short_name == NULL ? "" : ", ",
+        short_pad,
+        "",
+        spec->long_name == NULL ? "" : spec->long_name,
+        spec->long_name == NULL || spec->arg_name == NULL ? "" : " ",
+        spec->long_name == NULL || spec->arg_name == NULL ? "" : spec->arg_name,
+        spec->long_name == NULL ? "" : " ",
+        long_pad,
+        "",
+        spec->inline_help
+    );
 }
 
-bool parse_scaling_opt(scale_t * scaling, scale_filter_t * scaling_filter, const char * scaling_arg) {
-    if (strcmp(scaling_arg, "f") == 0 || strcmp(scaling_arg, "fit") == 0) {
-        *scaling = SCALE_FIT;
-        return true;
-    } else if (strcmp(scaling_arg, "c") == 0 || strcmp(scaling_arg, "cover") == 0) {
-        *scaling = SCALE_COVER;
-        return true;
-    } else if (strcmp(scaling_arg, "e") == 0 || strcmp(scaling_arg, "exact") == 0) {
-        *scaling = SCALE_EXACT;
-        return true;
-    } else if (strcmp(scaling_arg, "l") == 0 || strcmp(scaling_arg, "linear") == 0) {
-        *scaling_filter = SCALE_FILTER_LINEAR;
-        return true;
-    } else if (strcmp(scaling_arg, "n") == 0 || strcmp(scaling_arg, "nearest") == 0) {
-        *scaling_filter = SCALE_FILTER_NEAREST;
-        return true;
-    } else {
-        return false;
-    }
-}
+static bool on_help_parse(ctx_t * ctx, const char * arg) {
+    (void)arg;
 
-bool parse_backend_opt(backend_t * backend, const char * backend_arg) {
-    if (strcmp(backend_arg, "auto") == 0) {
-        *backend = BACKEND_AUTO;
-        return true;
-    } else if (strcmp(backend_arg, "dmabuf") == 0) {
-        *backend = BACKEND_DMABUF;
-        return true;
-    } else if (strcmp(backend_arg, "screencopy") == 0) {
-        *backend = BACKEND_SCREENCOPY;
-        return true;
-    } else {
-        return false;
-    }
-}
+    wlm_print(ctx, WLM_FATAL, "usage: wl-mirror [options] [output]");
 
-bool parse_transform_opt(transform_t * transform, const char * transform_arg) {
-    transform_t local_transform = { .rotation = ROT_NORMAL, .flip_x = false, .flip_y = false };
+    // count lengths
+    int max_short_length = 0;
+    int max_long_length = 0;
+    const wlm_opt_spec_t * spec = wlm_opt_specs;
+    for (; spec->on_parse != NULL; spec++) {
+        int short_length, long_length;
+        opt_spec_length(spec, &short_length, &long_length);
+        wlm_log(ctx, WLM_DEBUG, "%-20s: short = %d, long = %d", spec->long_name, short_length, long_length);
 
-    if (strcmp(transform_arg, "normal") == 0) {
-        *transform = local_transform;
-        return true;
+        if (short_length > max_short_length) max_short_length = short_length;
+        if (long_length > max_long_length) max_long_length = long_length;
     }
 
-    char * transform_str = strdup(transform_arg);
-    if (transform_str == NULL) {
-        log_error("options::parse_transform_option(): failed to allocate copy of transform argument\n");
-        return false;
+    wlm_log(ctx, WLM_DEBUG, "max short length: %d", max_short_length);
+    wlm_log(ctx, WLM_DEBUG, "max long  length: %d", max_long_length);
+
+    // print CLI inline help
+    wlm_print(ctx, WLM_FATAL, "");
+    wlm_print(ctx, WLM_FATAL, "cli options:");
+    spec = wlm_opt_specs;
+    for (; spec->on_parse != NULL; spec++) {
+        if (!(spec->allow_mode & WLM_OPT_CLI)) continue;
+        opt_spec_print(ctx, spec, max_short_length, max_long_length);
     }
 
-    bool success = true;
-    bool has_rotation = false;
-    char * transform_spec = strtok(transform_str, "-");
-    while (transform_spec != NULL) {
-        if (strcmp(transform_spec, "normal") == 0) {
-            log_error("options::parse_transform_option(): %s must be the only transform specifier\n", transform_spec);
-            success = false;
-            break;
-        } else if (strcmp(transform_spec, "flipX") == 0 || strcmp(transform_spec, "flipped") == 0) {
-            if (local_transform.flip_x) {
-                log_error("options::parse_transform_option(): duplicate flip specifier %s\n", transform_spec);
-                success = false;
-                break;
-            }
-
-            local_transform.flip_x = true;
-        } else if (strcmp(transform_spec, "flipY") == 0) {
-            if (local_transform.flip_y) {
-                log_error("options::parse_transform_option(): duplicate flip specifier %s\n", transform_spec);
-                success = false;
-                break;
-            }
-
-            local_transform.flip_y = true;
-        } else if (strcmp(transform_spec, "0") == 0 || strcmp(transform_spec, "0cw") == 0 || strcmp(transform_spec, "0ccw") == 0) {
-            if (has_rotation) {
-                log_error("options::parse_transform_option(): duplicate rotation specifier %s\n", transform_spec);
-                success = false;
-                break;
-            }
-
-            has_rotation = true;
-            local_transform.rotation = ROT_NORMAL;
-        } else if (strcmp(transform_spec, "90") == 0 || strcmp(transform_spec, "90cw") == 0 || strcmp(transform_spec, "270ccw") == 0) {
-            if (has_rotation) {
-                log_error("options::parse_transform_option(): duplicate rotation specifier %s\n", transform_spec);
-                success = false;
-                break;
-            }
-
-            has_rotation = true;
-            local_transform.rotation = ROT_CW_90;
-        } else if (strcmp(transform_spec, "180") == 0 || strcmp(transform_spec, "180cw") == 0 || strcmp(transform_spec, "180ccw") == 0) {
-            if (has_rotation) {
-                log_error("options::parse_transform_option(): duplicate rotation specifier %s\n", transform_spec);
-                success = false;
-                break;
-            }
-
-            has_rotation = true;
-            local_transform.rotation = ROT_CW_180;
-        } else if (strcmp(transform_spec, "270") == 0 || strcmp(transform_spec, "270cw") == 0 || strcmp(transform_spec, "90ccw") == 0) {
-            if (has_rotation) {
-                log_error("options::parse_transform_option(): duplicate rotation specifier %s\n", transform_spec);
-                success = false;
-                break;
-            }
-
-            has_rotation = true;
-            local_transform.rotation = ROT_CW_270;
-        } else {
-            log_error("options::parse_transform_option(): invalid transform specifier %s\n", transform_spec);
-            success = false;
-            break;
-        }
-
-        transform_spec = strtok(NULL, "-");
+    // print STREAM inline help
+    wlm_print(ctx, WLM_FATAL, "");
+    wlm_print(ctx, WLM_FATAL, "stream options:");
+    spec = wlm_opt_specs;
+    for (; spec->on_parse != NULL; spec++) {
+        if (!(spec->allow_mode & WLM_OPT_STREAM)) continue;
+        opt_spec_print(ctx, spec, max_short_length, max_long_length);
     }
 
-    if (success) {
-        *transform = local_transform;
+    // print LONG inline help
+    spec = wlm_opt_specs;
+    for (; spec->on_parse != NULL; spec++) {
+        if (spec->long_help == NULL) continue;
+        wlm_print(ctx, WLM_FATAL, "\n%s", spec->long_help);
     }
 
-    free(transform_str);
-    return success;
-}
-
-bool parse_region_opt(region_t * region, char ** output, const char * region_arg) {
-    region_t local_region = { .x = 0, .y = 0, .width = 0, .height = 0 };
-
-    char * region_str = strdup(region_arg);
-    if (region_str == NULL) {
-        log_error("options::parse_region_option(): failed to allocate copy of region argument\n");
-        return false;
-    }
-
-    char * position = strtok(region_str, " ");
-    char * size = strtok(NULL, " ");
-    char * output_label = strtok(NULL, " ");
-
-    if (position == NULL) {
-        log_error("options::parse_region_option(): missing region position\n");
-        free(region_str);
-        return false;
-    }
-
-    char * x = strtok(position, ",");
-    char * y = strtok(NULL, ",");
-    char * rest = strtok(NULL, ",");
-
-    if (x == NULL) {
-        log_error("options::parse_region_option(): missing x position\n");
-        free(region_str);
-        return false;
-    } else if (y == NULL) {
-        log_error("options::parse_region_option(): missing y position\n");
-        free(region_str);
-        return false;
-    } else if (rest != NULL) {
-        log_error("options::parse_region_option(): unexpected position component %s\n", rest);
-        free(region_str);
-        return false;
-    }
-
-    char * end = NULL;
-    local_region.x = strtoul(x, &end, 10);
-    if (*end != '\0') {
-        log_error("options::parse_region_option(): invalid x position %s\n", x);
-        free(region_str);
-        return false;
-    }
-
-    end = NULL;
-    local_region.y = strtoul(y, &end, 10);
-    if (*end != '\0') {
-        log_error("options::parse_region_option(): invalid y position %s\n", y);
-        free(region_str);
-        return false;
-    }
-
-    if (size == NULL) {
-        log_error("options::parse_region_option(): missing size\n");
-        free(region_str);
-        return false;
-    }
-
-    char * width = strtok(size, "x");
-    char * height = strtok(NULL, "x");
-    rest = strtok(NULL, "x");
-    if (width == NULL) {
-        log_error("options::parse_region_option(): missing width\n");
-        free(region_str);
-        return false;
-    } else if (height == NULL) {
-        log_error("options::parse_region_option(): missing height\n");
-        free(region_str);
-        return false;
-    } else if (rest != NULL) {
-        log_error("options::parse_region_option(): unexpected size component %s\n", rest);
-        free(region_str);
-        return false;
-    }
-
-    end = NULL;
-    local_region.width = strtoul(width, &end, 10);
-    if (*end != '\0') {
-        log_error("options::parse_region_option(): invalid width %s\n", width);
-        free(region_str);
-        return false;
-    } else if (local_region.width == 0) {
-        log_error("options::parse_region_option(): invalid width %d\n", local_region.width);
-        free(region_str);
-        return false;
-    }
-
-    end = NULL;
-    local_region.height = strtoul(height, &end, 10);
-    if (*end != '\0') {
-        log_error("options::parse_region_option(): invalid height %s\n", height);
-        free(region_str);
-        return false;
-    } else if (local_region.height == 0) {
-        log_error("options::parse_region_option(): invalid height %d\n", local_region.height);
-        free(region_str);
-        return false;
-    }
-
-    if (output_label != NULL) {
-        *output = strdup(output_label);
-        if (*output == NULL) {
-            log_error("options::parse_region_option(): failed to allocate copy of output name\n");
-            free(region_str);
-            return false;
-        }
-    }
-
-    *region = local_region;
-    free(region_str);
-    return true;
-}
-
-bool find_output_opt(ctx_t * ctx, output_list_node_t ** output_handle, region_t * region_handle) {
-    char * output_name = ctx->opt.output;
-    output_list_node_t * local_output_handle = NULL;
-    region_t local_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
-
-    if (ctx->opt.output != NULL) {
-        log_debug(ctx, "options::find_output(): searching for output by name\n");
-        output_list_node_t * cur = ctx->wl.outputs;
-        while (cur != NULL) {
-            if (cur->name != NULL && strcmp(cur->name, ctx->opt.output) == 0) {
-                local_output_handle = cur;
-                output_name = cur->name;
-                break;
-            }
-
-            cur = cur->next;
-        }
-    } else if (ctx->opt.has_region) {
-        log_debug(ctx, "options::find_output(): searching for output by region\n");
-        output_list_node_t * cur = ctx->wl.outputs;
-        while (cur != NULL) {
-            region_t output_region = {
-                .x = cur->x, .y = cur->y,
-                .width = cur->width, .height = cur->height
-            };
-            if (region_contains(&ctx->opt.region, &output_region)) {
-                local_output_handle = cur;
-                output_name = cur->name;
-                break;
-            }
-
-            cur = cur->next;
-        }
-    }
-
-    if (local_output_handle == NULL && ctx->opt.output != NULL) {
-        log_error("options::find_output(): output %s not found\n", ctx->opt.output);
-        return false;
-    } else if (local_output_handle == NULL && ctx->opt.has_region) {
-        log_error("options::find_output(): output for region not found\n");
-        return false;
-    } else if (local_output_handle == NULL) {
-        log_error("options::find_output(): no output or region specified\n");
-        return false;
-    } else {
-        log_debug(ctx, "options::find_output(): found output with name %s\n", output_name);
-    }
-
-    if (ctx->opt.has_region) {
-        log_debug(ctx, "options::find_output(): checking if region in output\n");
-        region_t output_region = {
-            .x = local_output_handle->x, .y = local_output_handle->y,
-            .width = local_output_handle->width, .height = local_output_handle->height
-        };
-        if (!region_contains(&ctx->opt.region, &output_region)) {
-            log_error("options::find_output(): output does not contain region\n");
-            return false;
-        }
-
-        log_debug(ctx, "options::find_output(): clamping region to output bounds\n");
-        local_region = ctx->opt.region;
-        region_clamp(&local_region, &output_region);
-    }
-
-    *output_handle = local_output_handle;
-    *region_handle = local_region;
-    return true;
-}
-
-void usage_opt(ctx_t * ctx) {
-    printf("usage: wl-mirror [options] <output>\n");
-    printf("\n");
-    printf("options:\n");
-    printf("  -h,   --help                  show this help\n");
-    printf("  -V,   --version               print version\n");
-    printf("  -v,   --verbose               enable debug logging\n");
-    printf("        --no-verbose            disable debug logging (default)\n");
-    printf("  -c,   --show-cursor           show the cursor on the mirrored screen (default)\n");
-    printf("        --no-show-cursor        don't show the cursor on the mirrored screen\n");
-    printf("  -i,   --invert-colors         invert colors in the mirrored screen\n");
-    printf("        --no-invert-colors      don't invert colors in the mirrored screen (default)\n");
-    printf("  -f,   --freeze                freeze the current image on the screen\n");
-    printf("        --unfreeze              resume the screen capture after a freeze\n");
-    printf("        --toggle-freeze         toggle freeze state of screen capture\n");
-    printf("  -F,   --fullscreen            open wl-mirror as fullscreen\n");
-    printf("        --no-fullscreen         open wl-mirror as a window (default)\n");
-    printf("        --fullscreen-output O   open wl-mirror as fullscreen on output O\n");
-    printf("        --no-fullscreen-output  open wl-mirror as fullscreen on the current output (default)\n");
-    printf("  -s f, --scaling fit           scale to fit (default)\n");
-    printf("  -s c, --scaling cover         scale to cover, cropping if needed\n");
-    printf("  -s e, --scaling exact         only scale to exact multiples of the output size\n");
-    printf("  -s l, --scaling linear        use linear scaling (default)\n");
-    printf("  -s n, --scaling nearest       use nearest neighbor scaling\n");
-    printf("  -b B  --backend B             use a specific backend for capturing the screen\n");
-    printf("  -t T, --transform T           apply custom transform T\n");
-    printf("  -r R, --region R              capture custom region R\n");
-    printf("        --no-region             capture the entire output (default)\n");
-    printf("  -S,   --stream                accept a stream of additional options on stdin\n");
-    printf("\n");
-    printf("backends:\n");
-    printf("  - auto        automatically try the backends in order and use the first that works (default)\n");
-    printf("  - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs\n");
-    printf("  - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs\n");
-    printf("\n");
-    printf("transforms:\n");
-    printf("  transforms are specified as a dash-separated list of flips followed by a rotation\n");
-    printf("  flips are applied before rotations\n");
-    printf("  - normal                         no transformation\n");
-    printf("  - flipX, flipY                   flip the X or Y coordinate\n");
-    printf("  - 0cw,  90cw,  180cw,  270cw     apply a clockwise rotation\n");
-    printf("  - 0ccw, 90ccw, 180ccw, 270ccw    apply a counter-clockwise rotation\n");
-    printf("  the following transformation options are provided for compatibility with sway output transforms\n");
-    printf("  - flipped                        flip the X coordinate\n");
-    printf("  - 0,    90,    180,    270       apply a clockwise rotation\n");
-    printf("\n");
-    printf("regions:\n");
-    printf("  regions are specified in the format used by the slurp utility\n");
-    printf("  - '<x>,<y> <width>x<height> [output]'\n");
-    printf("  on start, the region is translated into output coordinates\n");
-    printf("  when the output moves, the captured region moves with it\n");
-    printf("  when a region is specified, the <output> argument is optional\n");
-    printf("\n");
-    printf("stream mode:\n");
-    printf("  in stream mode, wl-mirror interprets lines on stdin as additional command line options\n");
-    printf("  - arguments can be quoted with single or double quotes, but every argument must be fully\n");
-    printf("    quoted or fully unquoted\n");
-    printf("  - unquoted arguments are split on whitespace\n");
-    printf("  - no escape sequences are implemented\n");
-    cleanup(ctx);
+    wlm_cleanup(ctx);
     exit(0);
 }
 
-void version_opt(ctx_t * ctx) {
-    printf("wl-mirror %s\n", VERSION);
-    cleanup(ctx);
-    exit(0);
+static bool on_option_parse_TODO(ctx_t * ctx, const char * arg) {
+    return true;
 }
 
-void parse_opt(ctx_t * ctx, int argc, char ** argv) {
-    bool is_cli_args = !ctx->opt.stream;
-    bool was_frozen = ctx->opt.freeze;
-    bool was_fullscreen = ctx->opt.fullscreen;
-    bool new_backend = false;
-    bool new_region = false;
-    bool new_output = false;
-    bool new_fullscreen_output = false;
-    char * region_output = NULL;
-    char * arg_output = NULL;
+#define on_version_parse on_option_parse_TODO
+#define on_verbose_parse on_option_parse_TODO
+#define on_no_verbose_parse on_option_parse_TODO
+#define on_log_level_parse on_option_parse_TODO
+#define on_show_cursor_parse on_option_parse_TODO
+#define on_no_show_cursor_parse on_option_parse_TODO
+#define on_invert_colors_parse on_option_parse_TODO
+#define on_no_invert_colors_parse on_option_parse_TODO
+#define on_freeze_parse on_option_parse_TODO
+#define on_unfreeze_parse on_option_parse_TODO
+#define on_toggle_freeze_parse on_option_parse_TODO
+#define on_fullscreen_parse on_option_parse_TODO
+#define on_fullscreen_output_parse on_option_parse_TODO
+#define on_unfullscreen_parse on_option_parse_TODO
+#define on_toggle_fullscreen_parse on_option_parse_TODO
+#define on_scaling_parse on_option_parse_TODO
 
+const wlm_opt_spec_t wlm_opt_specs[] = {
+    WLM_OPT_SPEC_FLAG("-h", "--help", WLM_OPT_CLI,
+        "show this help",
+        on_help_parse
+    ),
+    WLM_OPT_SPEC_FLAG("-V", "--version", WLM_OPT_CLI,
+        "print version",
+        on_version_parse
+    ),
+    WLM_OPT_SPEC_FLAG("-v", "--verbose", WLM_OPT_ALWAYS,
+        "increase log level to DEBUG",
+        on_verbose_parse
+    ),
+    WLM_OPT_SPEC_FLAG(NULL, "--no-verbose", WLM_OPT_ALWAYS,
+        "decrease log level to WARN",
+        on_no_verbose_parse
+    ),
+    WLM_OPT_SPEC_LONG("-l", "--log-level", "L", WLM_OPT_ALWAYS,
+        "set log level to L (see 'log level' below)",
+        (
+            "log level:\n"
+            "  log level can be set for the whole application or for individual components\n"
+            "  the syntax is a colon-separated list of log levels for the components\n"
+            "  - e.g. 'INFO', or 'INFO:wayland=DEBUG', or 'INFO:wayland=DEBUG:egl=TRACE'\n"
+            "\n"
+            "  the following log levels are supported:\n"
+            "  - FATAL     only print fatal errors\n"
+            "  - ERROR     also print errors\n"
+            "  - WARN      also print warnings (default)\n"
+            "  - INFO      also print informational messages\n"
+            "  - DEBUG     also print debug messages\n"
+            "  - TRACE     also print low-level trace messages\n"
+            "\n"
+            "  the following components exist:\n"
+            "  - main      main function and application lifecycle\n"
+            "  - log       logging system\n"
+            "  - options   option parsing\n"
+            "  - event     event system\n"
+            "  - wayland   wayland protocol\n"
+            "  - egl       EGL rendering and graphics handling"
+        ),
+        on_log_level_parse
+    ),
+    WLM_OPT_SPEC_FLAG("-c", "--show-cursor", WLM_OPT_ALWAYS,
+        "show the cursor on the mirrored screen (default)",
+        on_show_cursor_parse
+    ),
+    WLM_OPT_SPEC_FLAG(NULL, "--no-show-cursor", WLM_OPT_ALWAYS,
+        "don't show the cursor on the mirrored screen",
+        on_no_show_cursor_parse
+    ),
+    WLM_OPT_SPEC_FLAG("-i", "--invert-colors", WLM_OPT_ALWAYS,
+        "invert colors in the mirrored screen",
+        on_invert_colors_parse
+    ),
+    WLM_OPT_SPEC_FLAG(NULL, "--no-invert-colors", WLM_OPT_ALWAYS,
+        "don't invert colors in the mirrored screen (default)",
+        on_no_invert_colors_parse
+    ),
+    WLM_OPT_SPEC_FLAG("-f", "--freeze", WLM_OPT_STREAM,
+        "freeze the current image on the screen",
+        on_freeze_parse
+    ),
+    WLM_OPT_SPEC_FLAG(NULL, "--unfreeze", WLM_OPT_STREAM,
+        "unfreeze the current image on the screen",
+        on_unfreeze_parse
+    ),
+    WLM_OPT_SPEC_FLAG(NULL, "--toggle-freeze", WLM_OPT_STREAM,
+        "toggle freeze state of screen capture",
+        on_toggle_freeze_parse
+    ),
+    WLM_OPT_SPEC_FLAG("-F", "--fullscreen", WLM_OPT_ALWAYS,
+        "fullscreen the wl-mirror window",
+        on_fullscreen_parse
+    ),
+    WLM_OPT_SPEC_ARG(NULL, "--fullscreen-output", "O", WLM_OPT_ALWAYS,
+        "fullscreen the wl-mirror window on a specific output",
+        on_fullscreen_output_parse
+    ),
+    WLM_OPT_SPEC_FLAG(NULL, "--unfullscreen", WLM_OPT_STREAM,
+        "unfullscreen the wl-mirror window",
+        on_unfullscreen_parse
+    ),
+    WLM_OPT_SPEC_FLAG(NULL, "--toggle-fullscreen", WLM_OPT_STREAM,
+        "toggle the fullscreen state of the wl-mirror window",
+        on_toggle_fullscreen_parse
+    ),
+    WLM_OPT_SPEC_LONG("-s", "--scaling", "S", WLM_OPT_ALWAYS,
+        "set the scaling mode for wl-mirror",
+        (
+            "scaling:\n"
+            "  the scaling setting consists of a scaling mode and a filter\n"
+            "  passing the option multiple times allows setting both\n"
+            "  - e.g. '-s nearest', or '-s exact -s nearest'\n"
+            "\n"
+            "  scaling modes:\n"
+            "  - fit      scale to fit (default)\n"
+            "  - cover    scale to cover, cropping\n"
+            "  - exact    scale to exact multiples\n"
+            "\n"
+            "  scaling filters:\n"
+            "  - linear   linear scaling (default)\n"
+            "  - nearest  nearest neighbor scaling"
+        ),
+        on_scaling_parse
+    ),
+    WLM_OPT_SPEC_END
+};
+
+void wlm_opt_parse(ctx_t * ctx, int argc, char ** argv) {
+    bool has_error = false;
     while (argc > 0 && argv[0][0] == '-') {
-        if (is_cli_args && (strcmp(argv[0], "-h") == 0 || strcmp(argv[0], "--help") == 0)) {
-            usage_opt(ctx);
-        } else if (strcmp(argv[0], "-V") == 0 || strcmp(argv[0], "--version") == 0) {
-            version_opt(ctx);
-        } else if (strcmp(argv[0], "-v") == 0 || strcmp(argv[0], "--verbose") == 0) {
-            ctx->opt.verbose = true;
-        } else if (strcmp(argv[0], "--no-verbose") == 0) {
-            ctx->opt.verbose = false;
-        } else if (strcmp(argv[0], "-c") == 0 || strcmp(argv[0], "--show-cursor") == 0) {
-            ctx->opt.show_cursor = true;
-        } else if (strcmp(argv[0], "--no-show-cursor") == 0) {
-            ctx->opt.show_cursor = false;
-        } else if (strcmp(argv[0], "-n") == 0) {
-            log_warn("options::parse(): -n is deprecated, use --no-show-cursor\n");
-            ctx->opt.show_cursor = false;
-        } else if (strcmp(argv[0], "-i") == 0 || strcmp(argv[0], "--invert-colors") == 0) {
-            ctx->opt.invert_colors = true;
-        } else if (strcmp(argv[0], "--no-invert-colors") == 0) {
-            ctx->opt.invert_colors = false;
-        } else if (strcmp(argv[0], "-f") == 0 || strcmp(argv[0], "--freeze") == 0) {
-            ctx->opt.freeze = true;
-        } else if (strcmp(argv[0], "--unfreeze") == 0) {
-            ctx->opt.freeze = false;
-        } else if (strcmp(argv[0], "--toggle-freeze") == 0) {
-            ctx->opt.freeze ^= 1;
-        } else if (strcmp(argv[0], "-F") == 0 || strcmp(argv[0], "--fullscreen") == 0) {
-            ctx->opt.fullscreen = true;
-        } else if (strcmp(argv[0], "--no-fullscreen") == 0) {
-            ctx->opt.fullscreen = false;
-        } else if (strcmp(argv[0], "--fullscreen-output") == 0) {
-            if (argc < 2) {
-                log_error("options::parse(): option %s requires an argument\n", argv[0]);
-                if (is_cli_args) exit_fail(ctx);
-            } else {
-                free(ctx->opt.fullscreen_output);
-                ctx->opt.fullscreen = true;
-                ctx->opt.fullscreen_output = strdup(argv[1]);
-                new_fullscreen_output = true;
-                argv++;
-                argc--;
-            }
-        } else if (strcmp(argv[0], "--no-fullscreen-output") == 0) {
-            free(ctx->opt.fullscreen_output);
-            ctx->opt.fullscreen_output = NULL;
-            new_fullscreen_output = true;
-        } else if (strcmp(argv[0], "-s") == 0 || strcmp(argv[0], "--scaling") == 0) {
-            if (argc < 2) {
-                log_error("options::parse(): option %s requires an argument\n", argv[0]);
-                if (is_cli_args) exit_fail(ctx);
-            } else {
-                if (!parse_scaling_opt(&ctx->opt.scaling, &ctx->opt.scaling_filter, argv[1])) {
-                    log_error("options::parse(): invalid scaling mode %s\n", argv[1]);
-                    if (is_cli_args) exit_fail(ctx);
-                }
+        const char * opt = argv[0];
+        argc--, argv++;
 
-                argv++;
-                argc--;
-            }
-        } else if (strcmp(argv[0], "-b") == 0 || strcmp(argv[0], "--backend") == 0) {
-            if (argc < 2) {
-                log_error("options::parse(): option %s requires an argument\n", argv[0]);
-                if (is_cli_args) exit_fail(ctx);
-            } else {
-                if (!parse_backend_opt(&ctx->opt.backend, argv[1])) {
-                    log_error("options::parse(): invalid backend %s\n", argv[1]);
-                    if (is_cli_args) exit_fail(ctx);
-                }
+        if (strcmp(opt, "--") == 0) break;
 
-                new_backend = true;
-                argv++;
-                argc--;
-            }
-        } else if (strcmp(argv[0], "-t") == 0 || strcmp(argv[0], "--transform") == 0) {
-            if (argc < 2) {
-                log_error("options::parse(): option %s requires an argument\n", argv[0]);
-                if (is_cli_args) exit_fail(ctx);
-            } else {
-                if (!parse_transform_opt(&ctx->opt.transform, argv[1])) {
-                    log_error("options::parse(): invalid transform %s\n", argv[1]);
-                    if (is_cli_args) exit_fail(ctx);
-                }
-
-                argv++;
-                argc--;
-            }
-        } else if (strcmp(argv[0], "-r") == 0 || strcmp(argv[0], "--region") == 0) {
-            if (argc < 2) {
-                log_error("options::parse(): option %s requires an argument\n", argv[0]);
-                if (is_cli_args) exit_fail(ctx);
-            } else {
-                char * new_region_output = NULL;
-                if (!parse_region_opt(&ctx->opt.region, &new_region_output, argv[1])) {
-                    log_error("options::parse(): invalid region %s\n", argv[1]);
-                    if (is_cli_args) exit_fail(ctx);
-                } else {
-                    ctx->opt.has_region = true;
-                    free(region_output);
-                    region_output = new_region_output;
-                    new_region = true;
-                }
-
-                argv++;
-                argc--;
-            }
-        } else if (strcmp(argv[0], "--no-region") == 0) {
-            ctx->opt.has_region = false;
-            ctx->opt.region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
-        } else if (strcmp(argv[0], "-S") == 0 || strcmp(argv[0], "--stream") == 0) {
-            ctx->opt.stream = true;
-        } else if (strcmp(argv[0], "--") == 0) {
-            argv++;
-            argc--;
-            break;
-        } else {
-            log_error("options::parse(): invalid option %s\n", argv[0]);
-            if (is_cli_args) exit_fail(ctx);
+        bool match = false;
+        const wlm_opt_spec_t * spec = wlm_opt_specs;
+        for (; spec->on_parse != NULL; spec++) {
+            match = match || (spec->short_name != NULL && strcmp(spec->short_name, opt) == 0);
+            match = match || (spec->long_name != NULL && strcmp(spec->long_name, opt) == 0);
+            if (match) break;
         }
 
-        argv++;
-        argc--;
-    }
+        if (!match) {
+            wlm_log(ctx, WLM_ERROR, "invalid option '%s'", opt);
+            has_error = true;
+            continue;
+        }
 
-    if (argc > 0) {
-        arg_output = strdup(argv[0]);
-        if (arg_output == NULL) {
-            log_error("options::parse(): failed to allocate copy of output name\n");
-            if (is_cli_args) exit_fail(ctx);
-        } else {
-            new_output = true;
+        if (spec->arg_name != NULL && argc == 0) {
+            wlm_log(ctx, WLM_ERROR, "option '%s' requires an argument", opt);
+            has_error = true;
+            continue;
+        }
+
+        const char * arg = argv[0];
+        if (!spec->on_parse(ctx, arg)) {
+            has_error = true;
+            continue;
         }
     }
 
-    if (new_output || new_region) {
-        free(ctx->opt.output);
-        ctx->opt.output = NULL;
-    }
-
-    if (new_output && !new_region) {
-        ctx->opt.has_region = false;
-        ctx->opt.region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
-    }
-
-    if (!new_output && new_region && region_output == NULL) {
-        // output implicitly defined by region
-        ctx->opt.output = NULL;
-    } else if (!new_output && new_region && region_output != NULL) {
-        // output explicitly defined by region
-        ctx->opt.output = region_output;
-    } else if (new_output && new_region && region_output == NULL) {
-        // output defined by argument
-        // region must be in this output
-        ctx->opt.output = arg_output;
-    } else if (new_output && new_region && region_output != NULL) {
-        // output defined by both region and argument
-        // must be the same
-        // region must be in this output
-        if (strcmp(region_output, arg_output) != 0) {
-            log_error("options::parse(): region and argument output differ: %s vs %s\n", region_output, arg_output);
-            if (is_cli_args) exit_fail(ctx);
-        }
-        ctx->opt.output = region_output;
-    } else if (new_output && !new_region) {
-        // output defined by argument
-        ctx->opt.output = arg_output;
-    } else if (!new_output && !new_region && is_cli_args) {
-        // no output or region specified
-        usage_opt(ctx);
-    }
-
-    if (
-        ctx->opt.output != NULL && ctx->opt.fullscreen_output != NULL &&
-        strcmp(ctx->opt.output, ctx->opt.fullscreen_output) == 0
-    ) {
-        log_error("options::parse(): fullscreen_output cannot be same as the output to be mirrored");
-        exit_fail(ctx);
-    }
-
-    if (argc > 1) {
-        log_error("options::parse(): unexpected trailing arguments after output name\n");
-        if (is_cli_args) exit_fail(ctx);
-    }
-
-    if (!is_cli_args && ctx->opt.fullscreen && (!was_fullscreen || new_fullscreen_output)) {
-        set_window_fullscreen(ctx);
-    } else if (!is_cli_args && !ctx->opt.fullscreen && was_fullscreen) {
-        unset_window_fullscreen(ctx);
-    }
-
-    output_list_node_t * target_output = NULL;
-    region_t target_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
-    if (!is_cli_args && find_output_opt(ctx, &target_output, &target_region)) {
-        ctx->mirror.current_target = target_output;
-        ctx->mirror.current_region = target_region;
-    }
-
-    if (!is_cli_args && new_backend) {
-        init_mirror_backend(ctx);
-    }
-
-    if (!is_cli_args && !was_frozen && ctx->opt.freeze) {
-        freeze_framebuffer(ctx);
-    }
-
-    if (!is_cli_args) {
-        update_uniforms(ctx);
-        update_title(ctx);
+    if (has_error) {
+        wlm_log(ctx, WLM_FATAL, "invalid usage, see 'wl-mirror --help'");
+        wlm_exit_fail(ctx);
     }
 }
 
+void wlm_opt_zero(ctx_t * ctx) {
+    (void)ctx;
+}
+
+void wlm_opt_cleanup(ctx_t * ctx) {
+    (void)ctx;
+}

@@ -66,6 +66,7 @@ typedef struct {
     wlm_log_level_t all_level;
     wlm_log_level_t main_level;
     wlm_log_level_t log_level;
+    wlm_log_level_t options_level;
     wlm_log_level_t event_level;
     wlm_log_level_t wayland_level;
     wlm_log_level_t egl_level;
@@ -78,6 +79,15 @@ typedef struct {
                 WLM_PRINT_LOG_LEVEL(level), \
                 WLM_STRINGIFY(WLM_LOG_COMPONENT), \
                 __func__, __FILE__, __LINE__, \
+                ##__VA_ARGS__ \
+            ); \
+        } \
+    } while (0)
+
+#define wlm_print(ctx, level, fmt, ...) \
+    do { \
+        if ((ctx)->log. WLM_CONCAT(WLM_LOG_COMPONENT, _level) >= (level)) { \
+            fprintf(stderr, fmt "\n", \
                 ##__VA_ARGS__ \
             ); \
         } \
