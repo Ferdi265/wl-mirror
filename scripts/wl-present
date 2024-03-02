@@ -38,7 +38,7 @@ dmenu-rofi() {
 
 type -p pipectl >/dev/null
 if [[ $? -eq 0 ]]; then
-    PIPECTL=pipectl-shim
+    PIPECTL=pipectl
 else
     PIPECTL=pipectl-shim
 fi
@@ -74,11 +74,11 @@ slurp-region() {
 }
 
 mirror() {
-    pipectl -n wl-present -o | wl-mirror -S "$1"
+    "$PIPECTL" -n wl-present -o | wl-mirror -S "$1"
 }
 
 mirror-cmd() {
-    pipectl -n wl-present -i <<< "$1"
+    "$PIPECTL" -n wl-present -i <<< "$1"
 }
 
 set-output() {
