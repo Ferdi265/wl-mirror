@@ -122,7 +122,7 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 
 - `pipectl` (optional for `scripts/wl-present`)
 - `slurp` (`scripts/wl-present`)
-- `rofi` or `dmenu` (`scripts/wl-present`)
+- `wofi`, `wmenu`, `rofi` or `dmenu` (`scripts/wl-present`)
 
 ## Building
 
