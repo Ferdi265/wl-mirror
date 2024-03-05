@@ -85,9 +85,31 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 - [`wl-present`](scripts/wl-present) is a small script to demonstrate the use
   of the `-S` option to interactively present on Sway.  
   This script is especially useful when binding the `wl-present` subcommands to
-  keyboard shortcuts.
+  keyboard shortcuts. See example below
 - [`release.sh`](scripts/release.sh) Generates a release tar ball for the
   currently checked out commit if there's a release tag on it.
+
+### Sway Keybindings Example
+The following keybindings shortcuts can be used in your sway config.
+```
+mode "present" {
+    # command starts mirroring
+    bindsym m mode "default"; exec wl-present mirror
+    # these commands modify an already running mirroring window
+    bindsym o mode "default"; exec wl-present set-output
+    bindsym r mode "default"; exec wl-present set-region
+    bindsym Shift+r mode "default"; exec wl-present custom --no-region
+    bindsym s mode "default"; exec wl-present set-scaling
+    bindsym f mode "default"; exec wl-present toggle-freeze
+    bindsym c mode "default"; exec wl-present custom
+
+    # return to default mode
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $super+p mode "present"
+```
+This requires `wl-mirror`, the `wl-present` script, `pipectl` (optional), slurp, and one of `wofi`, `wmenu`, `rofi`, or `dmenu`. 
 
 ## Installation
 

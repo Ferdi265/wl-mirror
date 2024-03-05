@@ -17,7 +17,7 @@ usage() {
     echo "  fullscreen                  fullscreen the wl-mirror window"
     echo "  no-fullscreen               unfullscreen the wl-mirror window"
     echo "  fullscreen-output [output]  set the output to fullscreen to (default asks via slurp)"
-    echo "  no-fullscreen-output        set the output to fullscreen to to the current output"
+    echo "  no-fullscreen-output        set the output to fullscreen to the current output"
     echo "  custom [options]            send custom options to wl-mirror (default asks via rofi)"
     echo
     echo "dependencies:"
