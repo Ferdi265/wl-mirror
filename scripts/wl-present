@@ -10,13 +10,13 @@ usage() {
     echo "  mirror [output]             start wl-mirror on output [output] (default asks via slurp)"
     echo "  set-output [output]         set the recorded output (default asks via slurp)"
     echo "  set-region [region]         set the recorded region (default asks via slurp)"
-    echo "  no-region                   unset the recorded region"
+    echo "  unset-region                unset the recorded region"
     echo "  set-scaling [scale]         set the scaling mode (default asks via rofi)"
     echo "  freeze                      freeze the screen"
     echo "  unfreeze                    resume the screen capture after freeze"
     echo "  toggle-freeze               toggle freeze state of screen capture"
     echo "  fullscreen                  fullscreen the wl-mirror window"
-    echo "  no-fullscreen               unfullscreen the wl-mirror window"
+    echo "  unfullscreen                unfullscreen the wl-mirror window"
     echo "  fullscreen-output [output]  set the output to fullscreen to (default asks via slurp)"
     echo "  no-fullscreen-output        set the output to fullscreen to the current output"
     echo "  custom [options]            send custom options to wl-mirror (default asks via rofi)"
@@ -156,13 +156,13 @@ case "$1" in
     mirror) mirror "${2:-$(ask-output)}";;
     set-output) set-output "${2:-$(ask-output)}";;
     set-region) set-region "${2:-$(ask-region)}";;
-    no-region) mirror-cmd --no-region;;
+    unset-region|no-region) mirror-cmd --no-region;;
     set-scaling) set-scaling "${2:-$(ask-scaling)}";;
     freeze) mirror-cmd --freeze;;
     unfreeze) mirror-cmd --unfreeze;;
     toggle-freeze) mirror-cmd --toggle-freeze;;
     fullscreen) mirror-cmd --fullscreen;;
-    no-fullscreen) mirror-cmd --no-fullscreen;;
+    unfullscreen|no-fullscreen) mirror-cmd --no-fullscreen;;
     fullscreen-output) set-fullscreen-output "${2:-$(ask-output)}";;
     no-fullscreen-output) mirror-cmd --no-fullscreen-output;;
     custom) mirror-cmd "${2:-$(ask-custom)}";;
