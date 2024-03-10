@@ -100,7 +100,7 @@ mode "present" {
     # these commands modify an already running mirroring window
     bindsym o mode "default"; exec wl-present set-output
     bindsym r mode "default"; exec wl-present set-region
-    bindsym Shift+r mode "default"; exec wl-present custom --no-region
+    bindsym Shift+r mode "default"; exec wl-present unset-region
     bindsym s mode "default"; exec wl-present set-scaling
     bindsym f mode "default"; exec wl-present toggle-freeze
     bindsym c mode "default"; exec wl-present custom
