@@ -109,7 +109,7 @@ mode "present" {
     bindsym Return mode "default"
     bindsym Escape mode "default"
 }
-bindsym $super+p mode "present"
+bindsym $mod+p mode "present"
 ```
 
 This requires `wl-mirror`, the `wl-present` script, `pipectl` (optional),
