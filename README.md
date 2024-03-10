@@ -90,7 +90,9 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
   currently checked out commit if there's a release tag on it.
 
 ### Sway Keybindings Example
+
 The following keybindings shortcuts can be used in your sway config.
+
 ```
 mode "present" {
     # command starts mirroring
@@ -109,7 +111,9 @@ mode "present" {
 }
 bindsym $super+p mode "present"
 ```
-This requires `wl-mirror`, the `wl-present` script, `pipectl` (optional), slurp, and one of `wofi`, `wmenu`, `rofi`, or `dmenu`. 
+
+This requires `wl-mirror`, the `wl-present` script, `pipectl` (optional),
+slurp, and one of `wofi`, `wmenu`, `rofi`, or `dmenu`. 
 
 ## Installation
 
