@@ -80,8 +80,20 @@ slurp-region() {
     slurp -b \#00000000 -c \#859900 -w 2 2>/dev/null
 }
 
+slurp-output-or-region() {
+    slurp -b \#00000000 -c \#859900 -w 2 -o -f '%o|%x,%y %wx%h' 2>/dev/null
+}
+
 mirror() {
-    $PIPECTL -n wl-present -o | wl-mirror -S "$1"
+    if [ -n "$1" ]; then
+        $PIPECTL -n wl-present -o | wl-mirror -S "$1"
+    else
+        OUTPUT_REGION=$(ask-output-or-region)
+        IFS='|' read -r OUTPUT REGION <<EOF
+$OUTPUT_REGION
+EOF
+        $PIPECTL -n wl-present -o | wl-mirror -S -r "$REGION" "$OUTPUT"
+    fi
 }
 
 mirror-cmd() {
@@ -111,6 +123,11 @@ ask-output() {
 
 ask-region() {
     slurp-region
+    [[ $? -ne 0 ]] && exit 1
+}
+
+ask-output-or-region() {
+    slurp-output-or-region
     [[ $? -ne 0 ]] && exit 1
 }
 
@@ -153,7 +170,7 @@ fi
 
 case "$1" in
     help) usage;;
-    mirror) mirror "${2:-$(ask-output)}";;
+    mirror) mirror "${2:-}";;
     set-output) set-output "${2:-$(ask-output)}";;
     set-region) set-region "${2:-$(ask-region)}";;
     unset-region|no-region) mirror-cmd --no-region;;
