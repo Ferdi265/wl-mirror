@@ -93,6 +93,8 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 
 The following keybindings shortcuts can be used in your sway config.
 
+With `wl-present` script. Requires `slurp`, `pipectl` (optional), and one of:
+`wofi`, `wmenu`, `rofi`, or `dmenu`.
 ```
 mode "present" {
     # command starts mirroring
@@ -112,8 +114,30 @@ mode "present" {
 bindsym $mod+p mode "present"
 ```
 
-This requires `wl-mirror`, the `wl-present` script, `pipectl` (optional),
-slurp, and one of `wofi`, `wmenu`, `rofi`, or `dmenu`. 
+With `wl-mirror-ctl` script. Rrequires `slurp`, `pipectl` (optional), and one of:
+`fuzzel`, `wofi`, `rofi`, `tofi`, `bemenu`, `wmenu`, or `dmenu`.
+```
+mode "present" {
+    # slurp and mirror region
+    bindsym r mode "default"; exec wl-mirror-ctl --region
+    # slurp and mirror output
+    bindsym o mode "default"; exec wl-mirror-ctl --no-region ask
+    # select scaling
+    bindsym s mode "default"; exec wl-mirror-ctl --scaling
+    # toggle freeze
+    bindsym f mode "default"; exec wl-mirror-ctl --toggle-freeze
+    # suggest and select an argument
+    bindsym c mode "default"; exec wl-mirror-ctl suggest
+    # stop daemon
+    bindsym q mode "default"; exec wl-mirror-ctl stop
+
+    # return to default mode
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+p mode "present"
+```
+
 
 ## Installation
 
