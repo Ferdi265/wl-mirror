@@ -1,0 +1,597 @@
+#!/bin/sh
+
+# For https://github.com/Ferdi265/wl-mirror/
+# By  https://github.com/Vladimir-csp/
+# Partially based on wl-present
+
+#### Misc
+
+usage() {
+	shcat <<- EOF
+		Usage: $SELF [wl-mirror/$SELF args...] [output]
+
+		Start wl-mirror on-demand as a daemon and control the mirrored output in a
+		convenient way of sending native wl-mirror arguments.
+
+		Single flags can be merged. Any missing/required values will be requested via
+		slurp or a dmenu implementation. '-S' is silently ignored.
+		Refer to wl-mirror help below.
+
+		Wrapper arguments:
+		  custom             select and inject an argument
+		  ask                explicitly query for a value
+		                     (for argument disambiguation), i.e.:
+		                       $SELF -rvs ask DP-1
+		  stop               stop daemon
+
+		dependencies:
+		  wl-mirror, slurp, pipectl (optional), any of dmenu style tools:
+		    $DMENU_CANDIDATES
+
+		environment variables:
+		  WL_PRESENT_DMENU_CMD     overrides autodetected dmenu implementation
+		                           (full string with arguments ending with -p or analog)
+		  WL_PRESENT_DAEMON_MGMT   overrides autodetected daemon management
+		                           (systemd|pipectl|shell)
+
+		######## wl-mirror -h
+	EOF
+	echo
+	wl-mirror -h
+}
+
+shcat() {
+	# simple builtin stdin cat for reducing subprocess count
+	while IFS='' read -r line; do
+		echo "$line"
+	done
+}
+
+print_msg() {
+	MSG="${1}"
+	echo "$MSG"
+	# if notify-send is installed and stderr is not a terminal, also send notification
+	if [ ! -t 1 ] && command -v notify-send > /dev/null; then
+		notify-send -u critical -i error -a "${SELF}" "Message" "$MSG"
+	fi
+}
+
+print_err() {
+	MSG="${1}"
+	echo "$MSG" >&2
+	# if notify-send is installed and stderr is not a terminal, also send notification
+	if [ ! -t 2 ] && command -v notify-send > /dev/null; then
+		notify-send -u critical -i error -a "${SELF}" "Error" "$MSG"
+	fi
+}
+
+exit_with_msg() {
+	# exit with RC $1 and msg $2
+	RC="${1:-0}"
+	MSG="${2:-Exiting.}"
+	case "$RC" in
+	0) print_msg "$MSG" ;;
+	*) print_err "$MSG" ;;
+	esac
+	exit "$RC"
+}
+
+#### pipectl
+
+pipectl_start() {
+	{
+		pipectl -f -p "$PIPE_PATH" -o | wl-mirror -S "$@" "$OUTPUT" &
+		WLM_PID=$!
+		if ! echo $WLM_PID > "$PIDFILE_PATH"; then
+			kill $WLM_PID
+			exit_with_msg 1 "Could not write to: $PIDFILE_PATH"
+		fi
+		trap 'pipectl_stop' TERM INT EXIT HUP
+		echo "Started wl-mirror, PID: $WLM_PID"
+		wait "$WLM_PID"
+		case "$?" in
+		0 | 143) true ;;
+		*) print_err "wl-mirror daemon failed ($?)" ;;
+		esac
+		trap - TERM INT EXIT HUP
+		pipectl_stop
+	} &
+	sleep 1
+}
+
+pipectl_stop() {
+	shell_stop
+}
+
+pipectl_check() {
+	shell_check
+}
+
+#### shell
+
+pipe_pump() {
+	# echoes lines from pipe $1 while it exists
+	while [ -p "$1" ]; do
+		while read -r line; do
+			echo "$line"
+		done < "$1"
+	done
+}
+
+shell_start() {
+	rm -f "$PIPE_PATH" "${PIPE_PATH}2"
+	mkfifo "$PIPE_PATH" "${PIPE_PATH}2"
+	{
+		# use second named pipe instead of '|' to properly wait for wl-mirror
+		pipe_pump "$PIPE_PATH" > "${PIPE_PATH}2" &
+		PUMP_PID=$!
+		wl-mirror -S "$@" "$OUTPUT" < "${PIPE_PATH}2" &
+		WLM_PID=$!
+		if ! echo $WLM_PID $PUMP_PID > "$PIDFILE_PATH"; then
+			kill $WLM_PID $PUMP_PID
+			exit_with_msg 1 "Could not write to: $PIDFILE_PATH"
+		fi
+		trap 'shell_stop' TERM INT EXIT HUP
+		echo "Started wl-mirror, PID: $WLM_PID"
+		echo "Pipe pump PID: $PUMP_PID"
+		# wait for wl-mirror to exit
+		# notify of failed exit
+		wait "$WLM_PID"
+		case "$?" in
+		0 | 143) true ;;
+		*) print_err "wl-mirror daemon failed ($?)" ;;
+		esac
+		trap - TERM INT EXIT HUP
+		shell_stop
+	} &
+	sleep 1
+}
+
+shell_stop() {
+	# check sets CHECK_WLM_PID and OTHER_PIDS
+	if shell_check; then
+		for pid in $CHECK_WLM_PID $OTHER_PIDS; do
+			if kill -0 "$pid" 2> /dev/null; then
+				echo "Killing $pid"
+				kill "$pid"
+			else
+				echo "$pid is already gone"
+			fi
+		done
+	else
+		echo "Not active"
+	fi
+	rm -vf "$PIDFILE_PATH" "$PIPE_PATH" "${PIPE_PATH}2"
+}
+
+shell_check() {
+	# checks if any pid listed in pidfile exists
+	[ -f "$PIDFILE_PATH" ] && [ -r "$PIDFILE_PATH" ] || return 1
+	read -r CHECK_WLM_PID OTHER_PIDS < "$PIDFILE_PATH"
+	[ -n "$CHECK_WLM_PID" ] || return 1
+	for pid in $CHECK_WLM_PID $OTHER_PIDS; do
+		kill -0 "$pid" 2> /dev/null && return 0
+	done
+	return 1
+}
+
+#### Systemd
+
+systemd_start() {
+	# Deploys transient systemd service with socket
+
+	# use app-graphical.slice if it exists, otherwise use standard app.slice
+	if systemctl --user is-active -q app-graphical.slice; then
+		SLICE=app-graphical.slice
+	else
+		SLICE=app.slice
+	fi
+
+	date=$(date +%s)
+	systemd-run --user \
+		--unit="wl-mirror.service" \
+		--description='Wayland screen mirroring service' \
+		--slice="${SLICE}" \
+		--service-type=exec \
+		--property=StandardInput=socket \
+		--property=StandardOutput=journal \
+		--property=PropagatesStopTo=wl-mirror.socket \
+		--socket-property=ListenFIFO="${PIPE_PATH}" \
+		--socket-property=RemoveOnStop=yes \
+		--collect \
+		wl-mirror -S "$@" "$OUTPUT" || exit_with_msg 1 "Could not initiate units!"
+
+	echo > "${PIPE_PATH}"
+
+	sleep 1
+	if ! systemctl --user is-active -q wl-mirror.service; then
+		print_err "Could not start wl-mirror.service"
+		journalctl --user -u wl-mirror.service --since "@$date" -o cat
+	fi >&2
+
+	echo "Check output with: journalctl --user -u wl-mirror.s* --since @$date"
+}
+
+systemd_stop() {
+	# just stops units
+	case "$(systemctl --user show -q --property=LoadState --value wl-mirror.socket wl-mirror.service)" in
+	*loaded*)
+		echo "Stopping units"
+		systemctl --user stop wl-mirror.s*
+		;;
+	*)
+		echo "Units are not loaded"
+		;;
+	esac
+}
+
+systemd_check() {
+	# check if socket is active
+	systemctl --user is-active -q wl-mirror.socket
+}
+
+#### Daemon management selector
+
+manage_daemon() {
+	# receives start|stop|check as "$1", arguments for start
+	# selects management scheme, performs action
+	ACTION="$1"
+	shift
+	case "$ACTION" in
+	start)
+		[ -n "$OUTPUT" ] || exit_with_msg 1 "Can not initiate without output"
+		;;
+	stop | check)
+		[ "$#" -eq 0 ] || exit_with_msg 1 "manage_daemon: $ACTION does not support arguments"
+		;;
+	*) exit_with_msg 1 "manage_daemon: invalid action $ACTION" ;;
+	esac
+
+	# autodetect if not preselected
+	if [ -z "$DAEMON_MGMT" ]; then
+		# systemd: present, graphical-session.target is active, WAYLAND_DISPLAY is in activation environment
+		if command -v systemctl > /dev/null &&
+			[ "$(systemctl --user show --property=ActiveState --value -q graphical-session.target)" = "active" ] &&
+			case "${N}$(systemctl --user show-environment)" in
+			*"${N}WAYLAND_DISPLAY="[a-z0-9_-]*) true ;;
+			*) false ;;
+			esac then
+			DAEMON_MGMT=systemd
+		elif command -v pipectl > /dev/null; then
+			DAEMON_MGMT=pipectl
+		else
+			DAEMON_MGMT=shell
+		fi
+	fi
+
+	# check selection
+	case "$DAEMON_MGMT" in
+	systemd | pipectl | shell) true ;;
+	*) exit_with_msg 1 "manage_daemon: invalid daemon management scheme: $DAEMON_MGMT" ;;
+	esac
+
+	case "$ACTION" in
+	start)
+		[ -n "$OUTPUT" ] || exit_with_msg 1 "Can not initiate without output"
+		echo "Starting daemon via $DAEMON_MGMT management."
+		echo "Output: $OUTPUT"
+		echo "Arguments: ${*:-no arguments}"
+		;;
+	esac
+
+	# do stuff
+	"${DAEMON_MGMT}_${ACTION}" "$@"
+}
+
+send_args() {
+	# ensures daemon is running, then sends data
+	if manage_daemon check; then
+		[ -p "${PIPE_PATH}" ] || exit_with_msg 1 "${PIPE_PATH} does not exist"
+
+		# reappend output if set
+		[ -z "$OUTPUT" ] || set -- "$@" "$OUTPUT"
+
+		if [ "$#" -gt "0" ]; then
+			# quote each argument and send with a newline
+			{
+				printf ' "%s"' "$@"
+				echo
+			} > "${PIPE_PATH}"
+		else
+			echo > "${PIPE_PATH}"
+		fi
+	else
+		manage_daemon start "$@"
+	fi
+}
+
+#### slurps
+
+slurp_base() {
+	# basic slurp command, for theming
+	slurp -b '#70404020' -B '#40704010' -c '#50a050dd' -s '#40704020' -w 3 "$@"
+}
+
+slurp_output() {
+	slurp_base -o -r -f '%x,%y %wx%h %o'
+}
+
+slurp_output_only() {
+	slurp_base -o -r -f '%o'
+}
+
+slurp_region() {
+	slurp_base -f '%x,%y %wx%h %o'
+}
+
+slurp_output_or_region() {
+	slurp_base -o -f '%x,%y %wx%h %o'
+}
+
+parse_slurp() {
+	# parses slurp output '%x,%y %wx%h %o' from $1
+	# sets $POS, $SIZE ($REGION) $OUTPUT
+	read -r POS SIZE OUTPUT <<- EOF
+		$1
+	EOF
+	REGION="$POS $SIZE"
+}
+
+#### menus
+
+dmenu_wrapper() {
+	if [ -z "$DMENU_CMD" ]; then
+		for candidate in $DMENU_CANDIDATES __END__; do
+			case "$candidate" in
+			__END__) exit_with_msg 1 "Could not find menu app, checked for: $DMENU_CANDIDATES" ;;
+			*) ! command -v "$candidate" > /dev/null || break ;;
+			esac
+		done
+		case "$candidate" in
+		fuzzel) DMENU_CMD='fuzzel --dmenu -R --log-no-syslog --log-level=warning -p' ;;
+		wofi) DMENU_CMD='wofi --dmenu -p' ;;
+		rofi) DMENU_CMD='rofi -dmenu -p' ;;
+		tofi) DMENU_CMD='tofi --prompt-text' ;;
+		bemenu) DMENU_CMD='bemenu -p' ;;
+		wmenu) DMENU_CMD='wmenu -p' ;;
+		dmenu) DMENU_CMD='dmenu -p' ;;
+		esac
+	fi
+	eval "$DMENU_CMD" '"$@"'
+}
+
+ask_scaling() {
+	dmenu_wrapper "wl-mirror scaling" <<- EOF
+		fit
+		cover
+		exact
+		linear
+		nearest
+	EOF
+}
+
+ask_transform() {
+	dmenu_wrapper "wl-mirror transform" <<- EOF
+		normal
+		flipX
+		flipY
+		90
+		180
+		270
+	EOF
+}
+
+ask_backend() {
+	dmenu_wrapper "wl-mirror backend" <<- EOF
+		auto
+		dmabuf
+		screencopy
+	EOF
+}
+
+ask_custom() {
+	dmenu_wrapper "wl-mirror custom" <<- EOF
+		--region
+		--no-region
+		--show-cursor
+		--no-show-cursor
+		--invert-colors
+		--no-invert-colors
+		--freeze
+		--unfreeze
+		--toggle-freeze
+		--fullscreen
+		--no-fullscreen
+		--fullscreen-output
+		--no-fullscreen-output
+		--scaling
+		--backend
+		--transform
+		--verbose
+		--no-verbose
+	EOF
+}
+
+SELF="${0##*/}"
+
+STATE_DIR="${XDG_RUNTIME_DIR:-"${TMPDIR:-/tmp}"}"
+#"
+PIDFILE_NAME="${SELF}.$(id -u).pid"
+PIPE_NAME="${SELF}.$(id -u).pipe"
+
+PIDFILE_PATH="$STATE_DIR/$PIDFILE_NAME"
+PIPE_PATH="$STATE_DIR/$PIPE_NAME"
+
+DAEMON_MGMT="${WL_PRESENT_DAEMON_MGMT:-}"
+DMENU_CANDIDATES='fuzzel wofi rofi tofi bemenu dmenu wmenu'
+DMENU_CMD="${WL_PRESENT_DMENU_CMD:-}"
+
+N='
+'
+
+# Preparse and expand args
+reset=true
+for arg in "$@"; do
+	# reset arguments for reappending
+	case "$reset" in
+	true)
+		set --
+		reset=false
+		;;
+	esac
+	case "$arg" in
+	stop | exit)
+		manage_daemon stop
+		exit
+		;;
+	# expand compacted flags
+	-[a-zA-Z][a-zA-Z]*)
+		arg=${arg#-}
+		# reappend as is, probably will be rejected by wl-mirror
+		case "$arg" in
+		*[!a-zA-Z]*) set -- "$@" "-$arg" ; continue ;;
+		esac
+		# reappend one by one
+		while [ -n "$arg" ] ; do
+			right=${arg#?}
+			first=${arg%$right}
+			arg=${arg#$first}
+			set -- "$@" "-$first"
+		done
+		;;
+	# reappend as is
+	*) set -- "$@" "$arg" ;;
+	esac
+done
+
+# Parse args:
+# Catch and replace wrapper arguments, make queries
+# Separate output from other args (last, not following arguments expecting values)
+OUTPUT=
+reset=true
+not_output=false
+fallback_region=true
+for arg in "$@" __END__; do
+	# preprocess the first arg
+	# init prev_arg which will actually be prarsed in the next iteration
+	case "$reset" in
+	true)
+		set --
+		reset=false
+		prev_arg="$arg"
+		continue
+		;;
+	esac
+
+	: prev_arg $prev_arg
+
+	# unmark custom argument value requiement
+	custom_ask=''
+
+	case "$prev_arg" in
+	# silently ignore -S and ask
+	-S | --stream | ask)
+		prev_arg="$arg"
+		continue
+		;;
+	# show help and exit
+	help | -h | --help)
+		usage
+		exit 0
+		;;
+	# ask and inject custom argument
+	custom)
+		# replace with argument
+		prev_arg=$(ask_custom) || exit_with_msg 1 "Did not get custom parameter selection!"
+		# mark to ask for value
+		case "$prev_arg" in
+		-s | --scaling | --fullscreen-output | -b | --backend | -t | --transform | -r | --region) custom_ask=CUSTOM_ASK ;;
+		esac
+		;;
+	esac
+
+	# mark region or strict output for fallback output query (the last one wins)
+	case "$prev_arg" in
+	-r | --region) fallback_region=true ;;
+	--no-region) fallback_region=false ;;
+	esac
+
+	case "$prev_arg" in
+	# these require a value in next arg
+	-s | --scaling | --fullscreen-output | -b | --backend | -t | --transform | -r | --region)
+		case "${arg}${custom_ask}" in
+		# $arg is not a value for $prev_arg, ask user input
+		-* | __END__ | ask | *CUSTOM_ASK)
+			query='false'
+			case "$prev_arg" in
+			-s | --scaling) query=ask_scaling ;;
+			-b | --backend) query=ask_backend ;;
+			-t | --transform) query=ask_transform ;;
+			--fullscreen-output) query=slurp_output_only ;;
+			esac
+			case "$prev_arg" in
+			-r | --region)
+				SLURP=$(slurp_region) || exit_with_msg 1 "Did not receive value for $prev_arg!"
+				# this will set output along the way
+				parse_slurp "$SLURP"
+				value="$REGION"
+				;;
+			*)
+				value=$("$query") || exit_with_msg 1 "Did not receive value for $prev_arg!"
+				;;
+			esac
+			# reappend prev_arg and inject received value
+			set -- "$@" "$prev_arg"
+			prev_arg="$value"
+			# this is not an output
+			not_output=true
+			;;
+		esac
+		;;
+	esac
+
+	case "$arg" in
+	# __END__ means prev_arg is the last arg
+	__END__)
+		# dashed arg is not an output
+		case "$prev_arg" in
+		-*) not_output=true ;;
+		esac
+
+		# reappend arg or capture as output
+		case "$not_output" in
+		true) set -- "$@" "$prev_arg" ;;
+		false) OUTPUT="$prev_arg" ;;
+		esac
+		;;
+	# prev_arg is not the last argument
+	*)
+		# reappend arg
+		set -- "$@" "$prev_arg"
+
+		case "$prev_arg" in
+		# these require a value in next arg
+		-s | --scaling | --fullscreen-output | -b | --backend | -t | --transform | -r | --region) not_output=true ;;
+		*) not_output=false ;;
+		esac
+		;;
+	esac
+	# shift arg to prev_arg for next iteration
+	prev_arg="$arg"
+done
+
+# if no output/region was given and daemon is not running, ask for it
+if [ -z "$OUTPUT" ] && ! manage_daemon check; then
+	case "$fallback_region" in
+	false)
+		OUTPUT="$(slurp_output_only)"
+		;;
+	*)
+		SLURP=$(slurp_output_or_region)
+		parse_slurp "$SLURP"
+		set -- "$@" -r "$REGION"
+		;;
+	esac
+fi
+
+send_args "$@"
