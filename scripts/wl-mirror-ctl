@@ -18,7 +18,7 @@ usage() {
 		Refer to wl-mirror help below.
 
 		Wrapper arguments:
-		  custom             select and inject an argument
+		  suggest            suggest, select, and inject an argument
 		  ask                explicitly query for a value
 		                     (for argument disambiguation), i.e.:
 		                       $SELF -rvs ask DP-1
@@ -361,17 +361,20 @@ dmenu_wrapper() {
 }
 
 ask_scaling() {
-	dmenu_wrapper "wl-mirror scaling" <<- EOF
-		fit
-		cover
-		exact
-		linear
-		nearest
-	EOF
+	dmenu_scale=$(
+		dmenu_wrapper "wl-mirror scaling: " <<- EOF
+			fit      (size)
+			cover    (size)
+			exact    (size)
+			linear   (filter)
+			nearest  (filter)
+		EOF
+	) || return 1
+	echo "${dmenu_scale%% *}"
 }
 
 ask_transform() {
-	dmenu_wrapper "wl-mirror transform" <<- EOF
+	dmenu_wrapper "wl-mirror transform: " <<- EOF
 		normal
 		flipX
 		flipY
@@ -382,15 +385,30 @@ ask_transform() {
 }
 
 ask_backend() {
-	dmenu_wrapper "wl-mirror backend" <<- EOF
+	dmenu_wrapper "wl-mirror backend: " <<- EOF
 		auto
 		dmabuf
 		screencopy
 	EOF
 }
 
-ask_custom() {
-	dmenu_wrapper "wl-mirror custom" <<- EOF
+ask_suggest() {
+	# exclude existing args or inversions
+	s_args=''
+	while read -r s_arg; do
+		case "$s_arg" in
+		# these can go multiple times
+		--scaling | -s | --transform | t) true ;;
+		*)
+			for e_arg in "$@"; do
+				case "$e_arg" in
+				"$s_arg" | "--${s_arg#--no-}" | "--no-${s_arg#--}" | "--${s_arg#--toggle-}" | "--toggle-${s_arg#--}" | "--${s_arg#--un}" | "--un${s_arg#--}") continue 2 ;;
+				esac
+			done
+			;;
+		esac
+		s_args="${s_args}${N}${s_arg}"
+	done <<- EOF
 		--region
 		--no-region
 		--show-cursor
@@ -409,6 +427,10 @@ ask_custom() {
 		--transform
 		--verbose
 		--no-verbose
+	EOF
+	s_args="${s_args#"${N}"}"
+	dmenu_wrapper "wl-mirror custom: " <<- EOF
+		$s_args
 	EOF
 }
 
@@ -449,13 +471,16 @@ for arg in "$@"; do
 		arg=${arg#-}
 		# reappend as is, probably will be rejected by wl-mirror
 		case "$arg" in
-		*[!a-zA-Z]*) set -- "$@" "-$arg" ; continue ;;
+		*[!a-zA-Z]*)
+			set -- "$@" "-$arg"
+			continue
+			;;
 		esac
 		# reappend one by one
-		while [ -n "$arg" ] ; do
+		while [ -n "$arg" ]; do
 			right=${arg#?}
-			first=${arg%$right}
-			arg=${arg#$first}
+			first=${arg%"$right"}
+			arg=${arg#"$first"}
 			set -- "$@" "-$first"
 		done
 		;;
@@ -483,14 +508,12 @@ for arg in "$@" __END__; do
 		;;
 	esac
 
-	: prev_arg $prev_arg
-
-	# unmark custom argument value requiement
-	custom_ask=''
+	# unmark suggested argument value requiement
+	suggest_ask=''
 
 	case "$prev_arg" in
 	# silently ignore -S and ask
-	-S | --stream | ask)
+	-S | --stream)
 		prev_arg="$arg"
 		continue
 		;;
@@ -499,13 +522,13 @@ for arg in "$@" __END__; do
 		usage
 		exit 0
 		;;
-	# ask and inject custom argument
-	custom)
+	# suggest, select, and inject argument
+	suggest)
 		# replace with argument
-		prev_arg=$(ask_custom) || exit_with_msg 1 "Did not get custom parameter selection!"
+		prev_arg=$(ask_suggest "$@") || exit_with_msg 1 "Did not get custom argument selection!"
 		# mark to ask for value
 		case "$prev_arg" in
-		-s | --scaling | --fullscreen-output | -b | --backend | -t | --transform | -r | --region) custom_ask=CUSTOM_ASK ;;
+		-s | --scaling | --fullscreen-output | -b | --backend | -t | --transform | -r | --region) suggest_ask=SUGGEST_ASK ;;
 		esac
 		;;
 	esac
@@ -519,9 +542,9 @@ for arg in "$@" __END__; do
 	case "$prev_arg" in
 	# these require a value in next arg
 	-s | --scaling | --fullscreen-output | -b | --backend | -t | --transform | -r | --region)
-		case "${arg}${custom_ask}" in
+		case "${arg}${suggest_ask}" in
 		# $arg is not a value for $prev_arg, ask user input
-		-* | __END__ | ask | *CUSTOM_ASK)
+		-* | __END__ | ask | suggest | *SUGGEST_ASK)
 			query='false'
 			case "$prev_arg" in
 			-s | --scaling) query=ask_scaling ;;
@@ -561,13 +584,21 @@ for arg in "$@" __END__; do
 		# reappend arg or capture as output
 		case "$not_output" in
 		true) set -- "$@" "$prev_arg" ;;
-		false) OUTPUT="$prev_arg" ;;
+		false)
+			case "$prev_arg" in
+			ask) OUTPUT="$(slurp_output_only)" || exit_with_msg 1 "Did not get output!" ;;
+			*) OUTPUT="$prev_arg" ;;
+			esac
+			;;
 		esac
 		;;
 	# prev_arg is not the last argument
 	*)
-		# reappend arg
-		set -- "$@" "$prev_arg"
+		# reappend arg or ignore 'ask'
+		case "$prev_arg" in
+		ask) true ;;
+		*) set -- "$@" "$prev_arg" ;;
+		esac
 
 		case "$prev_arg" in
 		# these require a value in next arg
