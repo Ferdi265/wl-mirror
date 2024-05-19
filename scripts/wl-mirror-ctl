@@ -445,7 +445,7 @@ PIDFILE_PATH="$STATE_DIR/$PIDFILE_NAME"
 PIPE_PATH="$STATE_DIR/$PIPE_NAME"
 
 DAEMON_MGMT="${WL_PRESENT_DAEMON_MGMT:-}"
-DMENU_CANDIDATES='fuzzel wofi rofi tofi bemenu dmenu wmenu'
+DMENU_CANDIDATES='fuzzel wofi rofi tofi bemenu wmenu dmenu'
 DMENU_CMD="${WL_PRESENT_DMENU_CMD:-}"
 
 N='
