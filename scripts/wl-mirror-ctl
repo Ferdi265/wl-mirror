@@ -515,7 +515,7 @@ for arg in "$@" __END__; do
 	suggest_ask=''
 
 	case "$prev_arg" in
-	# silently ignore -S and ask
+	# silently ignore -S
 	-S | --stream)
 		prev_arg="$arg"
 		continue
