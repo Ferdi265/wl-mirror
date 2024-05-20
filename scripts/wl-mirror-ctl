@@ -437,7 +437,7 @@ ask_suggest() {
 SELF="${0##*/}"
 
 STATE_DIR="${XDG_RUNTIME_DIR:-"${TMPDIR:-/tmp}"}"
-#"
+
 PIDFILE_NAME="${SELF}.$(id -u).pid"
 PIPE_NAME="${SELF}.$(id -u).pipe"
 
@@ -450,6 +450,9 @@ DMENU_CMD="${WL_PRESENT_DMENU_CMD:-}"
 
 N='
 '
+
+# slurp is a dependency
+command -v slurp >/dev/null || exit_with_msg 1 "slurp not found!"
 
 # Preparse and expand args
 reset=true
