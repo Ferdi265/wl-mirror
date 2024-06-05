@@ -28,20 +28,25 @@ typedef struct output_list_node {
     enum wl_output_transform transform;
 } output_list_node_t;
 
+typedef struct seat_list_node {
+    struct seat_list_node * next;
+    struct ctx * ctx;
+    struct wl_seat * seat;
+    uint32_t seat_id;
+} seat_list_node_t;
+
 typedef struct ctx_wl {
     struct wl_display * display;
     struct wl_registry * registry;
 
     // registry objects
     struct wl_compositor * compositor;
-    struct wl_seat * seat;
     struct wp_viewporter * viewporter;
     struct wp_fractional_scale_manager_v1 * fractional_scale_manager;
     struct xdg_wm_base * wm_base;
     struct zxdg_output_manager_v1 * output_manager;
     // registry ids
     uint32_t compositor_id;
-    uint32_t seat_id;
     uint32_t viewporter_id;
     uint32_t fractional_scale_manager_id;
     uint32_t wm_base_id;
@@ -59,6 +64,7 @@ typedef struct ctx_wl {
 
     // output list
     output_list_node_t * outputs;
+    seat_list_node_t * seats;
 
     // surface objects
     struct wl_surface * surface;

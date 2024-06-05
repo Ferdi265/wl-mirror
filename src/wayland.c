@@ -221,16 +221,6 @@ static void on_registry_add(
             registry, id, &wl_compositor_interface, 4
         );
         ctx->wl.compositor_id = id;
-    } else if (strcmp(interface, wl_seat_interface.name) == 0) {
-        if (ctx->wl.seat != NULL) {
-            log_error("wayland::on_registry_add(): duplicate wl_seat\n");
-            exit_fail(ctx);
-        }
-
-        // bind wl_seat object
-        ctx->wl.seat = (struct wl_seat *)wl_registry_bind(
-            registry, id, &wl_seat_interface, 1
-        );
     } else if (strcmp(interface, wp_viewporter_interface.name) == 0) {
         if (ctx->wl.viewporter != NULL) {
             log_error("wayland::on_registry_add(): duplicate wp_viewporter\n");
@@ -365,6 +355,26 @@ static void on_registry_add(
         // - for logical_size event
         // - for name event
         zxdg_output_v1_add_listener(node->xdg_output, &xdg_output_listener, (void *)node);
+    } else if (strcmp(interface, wl_seat_interface.name) == 0) {
+        // allocate seat node
+        seat_list_node_t * node = malloc(sizeof (seat_list_node_t));
+        if (node == NULL) {
+            log_error("wayland::on_registry_add(): failed to allocate seat node\n");
+            exit_fail(ctx);
+        }
+
+        // initialize seat node
+        node->ctx = ctx;
+
+        // prepend seat node to seat list
+        node->next = ctx->wl.seats;
+        ctx->wl.seats = node;
+
+        // bind wl_seat
+        node->seat = (struct wl_seat *)wl_registry_bind(
+            registry, id, &wl_seat_interface, 1
+        );
+        node->seat_id = id;
     }
 
     (void)version;
@@ -380,9 +390,6 @@ static void on_registry_remove(
     // remove removed outputs from the output list
     if (id == ctx->wl.compositor_id) {
         log_error("wayland::on_registry_remove(): compositor disappeared\n");
-        exit_fail(ctx);
-    } else if (id == ctx->wl.seat_id) {
-        log_error("wayland::on_registry_remove(): seat disappeared\n");
         exit_fail(ctx);
     } else if (id == ctx->wl.viewporter_id) {
         log_error("wayland::on_registry_remove(): viewporter disappeared\n");
@@ -400,33 +407,63 @@ static void on_registry_remove(
         log_error("wayland::on_registry_remove(): dmabuf_manager disappeared\n");
         exit_fail(ctx);
     } else {
-        output_list_node_t ** link = &ctx->wl.outputs;
-        output_list_node_t * cur = ctx->wl.outputs;
-        output_list_node_t * prev = NULL;
-        while (cur != NULL) {
-            if (id == cur->output_id) {
-                log_debug(ctx, "wayland::on_registry_remove(): output %s removed (id = %d)\n", cur->name, id);
+        {
+            output_list_node_t ** link = &ctx->wl.outputs;
+            output_list_node_t * cur = ctx->wl.outputs;
+            output_list_node_t * prev = NULL;
+            while (cur != NULL) {
+                if (id == cur->output_id) {
+                    log_debug(ctx, "wayland::on_registry_remove(): output %s removed (id = %d)\n", cur->name, id);
 
-                // notify mirror code of removed outputs
-                // - triggers exit if the target output disappears
-                output_removed(ctx, cur);
+                    // notify mirror code of removed outputs
+                    // - triggers exit if the target output disappears
+                    output_removed(ctx, cur);
 
-                // remove output node from linked list
-                *link = cur->next;
-                prev = cur;
-                cur = cur->next;
+                    // remove output node from linked list
+                    *link = cur->next;
+                    prev = cur;
+                    cur = cur->next;
 
-                // deallocate output node
-                zxdg_output_v1_destroy(prev->xdg_output);
-                wl_output_destroy(prev->output);
-                free(prev->name);
-                free(prev);
+                    // deallocate output node
+                    zxdg_output_v1_destroy(prev->xdg_output);
+                    wl_output_destroy(prev->output);
+                    free(prev->name);
+                    free(prev);
 
-                // break when the removed output was found
-                break;
-            } else {
-                link = &cur->next;
-                cur = cur->next;
+                    // return because the removed object was found
+                    return;
+                } else {
+                    link = &cur->next;
+                    cur = cur->next;
+                }
+            }
+        }
+
+        // output not found
+        // id must have been a seat
+        {
+            seat_list_node_t ** link = &ctx->wl.seats;
+            seat_list_node_t * cur = ctx->wl.seats;
+            seat_list_node_t * prev = NULL;
+            while (cur != NULL) {
+                if (id == cur->seat_id) {
+                    log_debug(ctx, "wayland::on_registry_remove(): seat removed (id = %d)\n", id);
+
+                    // remove seat node from linked list
+                    *link = cur->next;
+                    prev = cur;
+                    cur = cur->next;
+
+                    // deallocate seat node
+                    wl_seat_destroy(prev->seat);
+                    free(prev);
+
+                    // return because the removed object was found
+                    return;
+                } else {
+                    link = &cur->next;
+                    cur = cur->next;
+                }
             }
         }
     }
@@ -672,8 +709,6 @@ void init_wl(ctx_t * ctx) {
 
     ctx->wl.compositor = NULL;
     ctx->wl.compositor_id = 0;
-    ctx->wl.seat = NULL;
-    ctx->wl.seat_id = 0;
     ctx->wl.viewporter = NULL;
     ctx->wl.viewporter_id = 0;
     ctx->wl.fractional_scale_manager = NULL;
@@ -691,6 +726,7 @@ void init_wl(ctx_t * ctx) {
     ctx->wl.screencopy_manager_id = 0;
 
     ctx->wl.outputs = NULL;
+    ctx->wl.seats = NULL;
 
     ctx->wl.surface = NULL;
     ctx->wl.viewport = NULL;
@@ -889,20 +925,37 @@ void cleanup_wl(ctx_t *ctx) {
     // deregister event handler
     event_remove_fd(ctx, &ctx->wl.event_handler);
 
-    // free every output in output list
-    output_list_node_t * cur = ctx->wl.outputs;
-    output_list_node_t * prev = NULL;
-    while (cur != NULL) {
-        prev = cur;
-        cur = cur->next;
+    {
+        // free every output in output list
+        output_list_node_t * cur = ctx->wl.outputs;
+        output_list_node_t * prev = NULL;
+        while (cur != NULL) {
+            prev = cur;
+            cur = cur->next;
 
-        // deallocate output node
-        zxdg_output_v1_destroy(prev->xdg_output);
-        wl_output_destroy(prev->output);
-        free(prev->name);
-        free(prev);
+            // deallocate output node
+            zxdg_output_v1_destroy(prev->xdg_output);
+            wl_output_destroy(prev->output);
+            free(prev->name);
+            free(prev);
+        }
+        ctx->wl.outputs = NULL;
     }
-    ctx->wl.outputs = NULL;
+
+    {
+        // free every seat in seat list
+        seat_list_node_t * cur = ctx->wl.seats;
+        seat_list_node_t * prev = NULL;
+        while (cur != NULL) {
+            prev = cur;
+            cur = cur->next;
+
+            // deallocate seat node
+            wl_seat_destroy(prev->seat);
+            free(prev);
+        }
+        ctx->wl.seats = NULL;
+    }
 
     if (ctx->wl.dmabuf_manager != NULL) zwlr_export_dmabuf_manager_v1_destroy(ctx->wl.dmabuf_manager);
     if (ctx->wl.screencopy_manager != NULL) zwlr_screencopy_manager_v1_destroy(ctx->wl.screencopy_manager);
@@ -916,7 +969,6 @@ void cleanup_wl(ctx_t *ctx) {
     if (ctx->wl.wm_base != NULL) xdg_wm_base_destroy(ctx->wl.wm_base);
     if (ctx->wl.fractional_scale_manager != NULL) wp_fractional_scale_manager_v1_destroy(ctx->wl.fractional_scale_manager);
     if (ctx->wl.viewporter != NULL) wp_viewporter_destroy(ctx->wl.viewporter);
-    if (ctx->wl.seat != NULL) wl_seat_destroy(ctx->wl.seat);
     if (ctx->wl.compositor != NULL) wl_compositor_destroy(ctx->wl.compositor);
     if (ctx->wl.registry != NULL) wl_registry_destroy(ctx->wl.registry);
     if (ctx->wl.display != NULL) wl_display_disconnect(ctx->wl.display);
