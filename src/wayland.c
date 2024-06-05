@@ -8,6 +8,7 @@ void wlm_wayland_zero(ctx_t * ctx) {
     wlm_wayland_core_zero(ctx);
     wlm_wayland_registry_zero(ctx);
     wlm_wayland_output_zero(ctx);
+    wlm_wayland_seat_zero(ctx);
     wlm_wayland_window_zero(ctx);
 }
 
@@ -27,6 +28,7 @@ void wlm_wayland_cleanup(ctx_t * ctx) {
 
     // cleanup components
     wlm_wayland_window_cleanup(ctx);
+    wlm_wayland_seat_cleanup(ctx);
     wlm_wayland_output_cleanup(ctx);
 
     // cleanup core components last so everything that needs it is cleaned up

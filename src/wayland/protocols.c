@@ -5,6 +5,7 @@
 const wlm_wayland_registry_bind_multiple_t wlm_wayland_registry_bind_multiple[] = {
     // need wl_output::done from v2
     WLM_WAYLAND_REGISTRY_BIND_MULTIPLE(wl_output_interface,                         2, 4, true, wlm_wayland_output_on_add, wlm_wayland_output_on_remove),
+    WLM_WAYLAND_REGISTRY_BIND_MULTIPLE(wl_seat_interface,                           1, 1, true, wlm_wayland_seat_on_add, wlm_wayland_seat_on_remove),
     WLM_WAYLAND_REGISTRY_BIND_MULTIPLE_END
 };
 

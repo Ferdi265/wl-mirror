@@ -11,6 +11,7 @@ void wlm_event_emit_before_poll(ctx_t * ctx) {
 void wlm_event_emit_registry_init_done(ctx_t * ctx) {
     wlm_log(ctx, WLM_TRACE, "event emitted");
     wlm_wayland_output_init(ctx);
+    wlm_wayland_seat_init(ctx);
     wlm_wayland_window_init(ctx);
 }
 
