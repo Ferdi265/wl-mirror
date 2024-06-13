@@ -85,13 +85,11 @@ slurp-output-or-region() {
 }
 
 mirror() {
-    if [ -n "$1" ]; then
+    if [ "$#" -eq 1 ]; then
         $PIPECTL -n wl-present -o | wl-mirror -S "$1"
     else
         OUTPUT_REGION=$(ask-output-or-region)
-        IFS='|' read -r OUTPUT REGION <<EOF
-$OUTPUT_REGION
-EOF
+        IFS='|' read -r OUTPUT REGION <<< "$OUTPUT_REGION"
         $PIPECTL -n wl-present -o | wl-mirror -S -r "$REGION" "$OUTPUT"
     fi
 }
@@ -170,7 +168,7 @@ fi
 
 case "$1" in
     help) usage;;
-    mirror) mirror "${2:-}";;
+    mirror) shift; mirror "$@";;
     set-output) set-output "${2:-$(ask-output)}";;
     set-region) set-region "${2:-$(ask-region)}";;
     unset-region|no-region) mirror-cmd --no-region;;
