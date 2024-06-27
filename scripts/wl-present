@@ -7,7 +7,7 @@ usage() {
     echo
     echo "commands:"
     echo "  help                        show this help"
-    echo "  mirror [output]             start wl-mirror on output [output] (default asks via slurp)"
+    echo "  mirror [output] [options]   start wl-mirror on output [output] (default asks via slurp)"
     echo "  set-output [output]         set the recorded output (default asks via slurp)"
     echo "  set-region [region]         set the recorded region (default asks via slurp)"
     echo "  unset-region                unset the recorded region"
