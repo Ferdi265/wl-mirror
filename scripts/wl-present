@@ -85,13 +85,18 @@ slurp-output-or-region() {
 }
 
 mirror() {
-    if [ "$#" -eq 1 ]; then
-        $PIPECTL -n wl-present -o | wl-mirror -S "$1"
-    else
+    if [[ "$#" -eq 0 || "$1" =~ ^- ]]; then
         OUTPUT_REGION=$(ask-output-or-region)
         IFS='|' read -r OUTPUT REGION <<< "$OUTPUT_REGION"
-        $PIPECTL -n wl-present -o | wl-mirror -S -r "$REGION" "$OUTPUT"
+
+        mirror "$OUTPUT" -r "$REGION" "$@"
+        return
     fi
+
+    OUTPUT="$1"
+    shift
+
+    $PIPECTL -n wl-present -o | wl-mirror -S "$@" "$OUTPUT"
 }
 
 mirror-cmd() {
@@ -162,7 +167,7 @@ EOF
     [[ $? -ne 0 ]] && exit 1
 }
 
-if [[ $# -eq 0 || $# -gt 2 ]]; then
+if [[ $# -eq 0 ]]; then
     usage
 fi
 
