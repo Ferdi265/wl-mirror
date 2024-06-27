@@ -27,6 +27,7 @@ usage() {
     echo "environment variables":
     echo "  WL_PRESENT_DMENU            overrides the used dmenu implementation"
     echo "  WL_PRESENT_PIPECTL          overrides the used pipectl implementation"
+    echo "  WL_PRESENT_SLURP            overrides the used slurp implementation"
     exit 0
 }
 
@@ -48,6 +49,12 @@ elif type -p pipectl >/dev/null; then
     PIPECTL=pipectl
 else
     PIPECTL=pipectl-shim
+fi
+
+if [[ -n "$WL_PRESENT_SLURP" ]]; then
+    SLURP="$WL_PRESENT_SLURP"
+else
+    SLURP=slurp
 fi
 
 pipectl-shim() {
@@ -73,15 +80,15 @@ pipectl-shim() {
 }
 
 slurp-output() {
-    slurp -b \#00000000 -B \#00000000 -c \#859900 -w 4 -f %o -or 2>/dev/null
+    $SLURP -or -f '%o' 2>/dev/null
 }
 
 slurp-region() {
-    slurp -b \#00000000 -c \#859900 -w 2 2>/dev/null
+    $SLURP 2>/dev/null
 }
 
 slurp-output-or-region() {
-    slurp -b \#00000000 -c \#859900 -w 2 -o -f '%o|%x,%y %wx%h' 2>/dev/null
+    $SLURP -o -f '%o|%x,%y %wx%h' 2>/dev/null
 }
 
 mirror() {
