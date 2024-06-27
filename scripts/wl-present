@@ -22,7 +22,7 @@ usage() {
     echo "  custom [options]            send custom options to wl-mirror (default asks via rofi)"
     echo
     echo "dependencies:"
-    echo "  wl-mirror, bash, slurp, pipectl (optional), and either wofi, wmenu, rofi, or dmenu"
+    echo "  wl-mirror, bash, slurp, pipectl (optional), and either wofi, wmenu, rofi, fuzzel, or dmenu"
     echo
     echo "environment variables":
     echo "  WL_PRESENT_DMENU            overrides the used dmenu implementation"
@@ -39,6 +39,8 @@ elif type -p wmenu >/dev/null; then
     DMENU=wmenu
 elif type -p rofi >/dev/null; then
     DMENU="rofi -dmenu"
+elif type -p fuzzel >/dev/null; then
+    DMENU="fuzzel -d"
 else
     DMENU=dmenu
 fi
