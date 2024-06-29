@@ -19,13 +19,14 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 *help*
 	Show help message and exit.
 
-*mirror* [OUTPUT]
-	Start *wl-mirror*(1) capturing OUTPUT. If no output is given, *slurp*(1) is used to select the output to capture.
+*mirror* [OUTPUT] [OPTIONS]
+	Start *wl-mirror*(1) capturing OUTPUT. If no output is given, *slurp*(1) is used to select the output or region  to capture. If any additional OPTIONS are specified, they are passed on to *wl-mirror*.
 
 *set-output* [OUTPUT]
 	Set the captured output of a running *wl-present* session. If no output is given, *slurp*(1) is used to select the output to capture.
 
 *set-region* [REGION]
+*unset-region*
 	Set the captured region of a running *wl-present* session. If no region is given, *slurp*(1) us used to select a region to capture.
 
 *set-scaling* [SCALING]
@@ -37,7 +38,7 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 	Set the freeze state of a running *wl-present* session.
 
 *fullscreen*
-*no-fullscreen*
+*unfullscreen*
 	Set the fullscreen state of a running *wl-present* session.
 
 *fullscreen-output* [OUTPUT]
@@ -46,6 +47,28 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 
 *custom* [OPTIONS]
 	Send custom options to a running *wl-present* session. If no options are given, *rofi*(1) or *dmenu*(1) are used to select an option.
+
+# ENVIRONMENT VARIABLES
+
+*WL_PRESENT_DMENU*
+	Overrides the used dmenu implementation. When set, this command is used to
+	select options instead of the default. When unset, *wl-present* attempts to
+	use *wofi*(1), *wmenu*(1), *rofi*(1), and *dmenu*(1), in this order.
+
+	Example: WL_PRESENT_DMENU="rofi -dmenu -p present"
+
+*WL_PRESENT_PIPECTL*
+	Overrides the used pipectl implementation. When set, this command is used to
+	pipe options to *wl-mirror*(1) instead of the default. When unset,
+	*wl-present* attempts to use *pipectl*(1) or an included pipectl shim
+	written in bash if pipectl is not available.
+
+*WL_PRESENT_SLURP*
+	Overrides the used slurp implementation and options. When set, this command
+	is used to select regions and outputs instead of the default. When unset,
+	*wl-present* attempts to use *slurp*(1) without any additional options.
+
+	Example: WL_PRESENT_SLURP="slurp -c #859900 -w 2"
 
 # AUTHORS
 
