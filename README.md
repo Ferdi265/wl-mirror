@@ -115,6 +115,24 @@ bindsym $mod+p mode "present"
 This requires `wl-mirror`, the `wl-present` script, `pipectl` (optional),
 slurp, and one of `wofi`, `wmenu`, `rofi`, or `dmenu`. 
 
+### Kanshi Configuration Example
+
+The following [kanshi](https://git.sr.ht/~emersion/kanshi) profile will launch
+wl-mirror in fullscreen on an external output mirroring your internal output
+when switched to with `kanshictl switch mirror-hdmi` or when selected
+automatically.
+
+```
+profile mirror-hdmi {
+    output eDP-1 enable mode 1920x1080 position 0,0
+    output HDMI-A-1 enable mode 1920x1080 position 1920,0
+    exec wl-present mirror eDP-1 --fullscreen-output HDMI-A-1 --fullscreen
+
+    # alternatively, for wl-mirror < 0.16.4
+    # exec wl-present mirror eDP-1 & sleep .5; wl-present fullscreen-output HDMI-A-1; wl-present fullscreen
+}
+```
+
 ## Installation
 
 `wl-mirror` is already packaged in many distros and can be installed via the
