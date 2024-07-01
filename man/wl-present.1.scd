@@ -10,9 +10,11 @@ wl-present - an interactive client for *wl-mirror*(1)
 
 # DESCRIPTION
 
-*wl-present* is an wrapper around *wl-mirror*(1) that uses its streaming mode together with *pipectl*(1) to interactively control what is being captured.
+*wl-present* is an wrapper around *wl-mirror*(1) that uses its streaming mode
+together with *pipectl*(1) to interactively control what is being captured.
 
-The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts in your wayland compositor for easy access.
+The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts
+in your wayland compositor for easy access.
 
 # COMMANDS
 
@@ -20,17 +22,23 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 	Show help message and exit.
 
 *mirror* [OUTPUT] [OPTIONS]
-	Start *wl-mirror*(1) capturing OUTPUT. If no output is given, *slurp*(1) is used to select the output or region  to capture. If any additional OPTIONS are specified, they are passed on to *wl-mirror*.
+	Start *wl-mirror*(1) capturing OUTPUT. If no output is given, *slurp*(1) is
+	used to select the output or region to capture. If any additional OPTIONS
+	are specified, they are passed on to *wl-mirror*.
 
 *set-output* [OUTPUT]
-	Set the captured output of a running *wl-present* session. If no output is given, *slurp*(1) is used to select the output to capture.
+	Set the captured output of a running *wl-present* session. If no output is
+	given, *slurp*(1) is used to select the output to capture.
 
 *set-region* [REGION]
 *unset-region*
-	Set the captured region of a running *wl-present* session. If no region is given, *slurp*(1) us used to select a region to capture.
+	Set the captured region of a running *wl-present* session. If no region is
+	given, *slurp*(1) us used to select a region to capture.
 
 *set-scaling* [SCALING]
-	Set the scaling mode of a running *wl-present* session. If no region is given, *rofi*(1) or *dmenu*(1) is used to select a scaling mode.
+	Set the scaling mode of a running *wl-present* session. If no region is
+	given, *dmenu*(1) (or a compatible replacement) is used to select a scaling
+	mode.
 
 *freeze*,
 *unfreeze*,
@@ -46,7 +54,9 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 	Set the fullscreen target output of a running *wl-present* session.
 
 *custom* [OPTIONS]
-	Send custom options to a running *wl-present* session. If no options are given, *rofi*(1) or *dmenu*(1) are used to select an option.
+	Send custom options to a running *wl-present* session. If no options are
+	given, *dmenu*(1) (or a compatible replacement) are used to select an
+	option.
 
 # ENVIRONMENT VARIABLES
 
@@ -73,7 +83,8 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 
 # AUTHORS
 
-Maintained by Ferdinand Bachmann <theferdi265@gmail.com>. More information on *wl-mirror* can be found at <https://github.com/Ferdi265/wl-mirror>.
+Maintained by Ferdinand Bachmann <theferdi265@gmail.com>. More information on
+*wl-mirror* can be found at <https://github.com/Ferdi265/wl-mirror>.
 
 # SEE ALSO
 
