@@ -37,10 +37,10 @@ elif type -p wofi >/dev/null; then
     DMENU="wofi -d"
 elif type -p wmenu >/dev/null; then
     DMENU=wmenu
-elif type -p rofi >/dev/null; then
-    DMENU="rofi -dmenu"
 elif type -p fuzzel >/dev/null; then
     DMENU="fuzzel -d"
+elif type -p rofi >/dev/null; then
+    DMENU="rofi -dmenu"
 else
     DMENU=dmenu
 fi
