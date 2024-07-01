@@ -53,7 +53,8 @@ The subcommands of *wl-present* are intended to be mapped to keyboard shortcuts 
 *WL_PRESENT_DMENU*
 	Overrides the used dmenu implementation. When set, this command is used to
 	select options instead of the default. When unset, *wl-present* attempts to
-	use *wofi*(1), *wmenu*(1), *rofi*(1), and *dmenu*(1), in this order.
+	use *wofi*(1), *wmenu*(1), *fuzzel*(1), *rofi*(1), and *dmenu*(1), in this
+	order.
 
 	Example: WL_PRESENT_DMENU="rofi -dmenu -p present"
 
@@ -76,4 +77,5 @@ Maintained by Ferdinand Bachmann <theferdi265@gmail.com>. More information on *w
 
 # SEE ALSO
 
-*wl-mirror*(1) *pipectl*(1) *slurp*(1) *rofi*(1) *dmenu*(1)
+*wl-mirror*(1) *pipectl*(1) *slurp*(1) *wofi*(1) *wmenu*(1) *fuzzel*(1)
+*rofi*(1) *dmenu*(1)
