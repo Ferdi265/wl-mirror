@@ -164,6 +164,7 @@ void init_stream(ctx_t * ctx) {
     ctx->stream.event_handler.on_event = on_stream_data;
     ctx->stream.event_handler.on_each = NULL;
     ctx->stream.event_handler.next = NULL;
+    ctx->stream.event_handler.timeout_ms = -1;
 
     if (ctx->opt.stream) {
         int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
