@@ -83,7 +83,7 @@ in your wayland compositor for easy access.
 
 # AUTHORS
 
-Maintained by Ferdinand Bachmann <theferdi265@gmail.com>. More information on
+Maintained by Ferdinand Bachmann <ferdinand.bachmann@yrlf.at>. More information on
 *wl-mirror* can be found at <https://github.com/Ferdi265/wl-mirror>.
 
 # SEE ALSO

@@ -130,7 +130,7 @@ Stream mode is used by *wl-present*(1) to add interactive controls to *wl-mirror
 
 # AUTHORS
 
-Maintained by Ferdinand Bachmann <theferdi265@gmail.com>. More information on *wl-mirror* can be found at <https://github.com/Ferdi265/wl-mirror>.
+Maintained by Ferdinand Bachmann <ferdinand.bachmann@yrlf.at>. More information on *wl-mirror* can be found at <https://github.com/Ferdi265/wl-mirror>.
 
 # SEE ALSO
 
