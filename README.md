@@ -173,7 +173,7 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - Install Dependencies
 - Clone Submodules (`git submodule update --init`)
 - Run `cmake -B build`
-- Run `make -C build`
+- Run `cmake --build build`
 
 ## CMake Options
 
