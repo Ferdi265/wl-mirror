@@ -22,7 +22,7 @@ noreturn void exit_fail(ctx_t * ctx) {
 }
 
 int main(int argc, char ** argv) {
-    ctx_t ctx;
+    ctx_t ctx = { 0 };
 
     ctx.event.initialized = false;
     ctx.stream.initialized = false;
