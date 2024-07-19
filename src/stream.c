@@ -159,12 +159,12 @@ void init_stream(ctx_t * ctx) {
     ctx->stream.args_len = 0;
     ctx->stream.args_cap = 0;
 
+    ctx->stream.event_handler.next = NULL;
     ctx->stream.event_handler.fd = STDIN_FILENO;
     ctx->stream.event_handler.events = EPOLLIN;
+    ctx->stream.event_handler.timeout_ms = -1;
     ctx->stream.event_handler.on_event = on_stream_data;
     ctx->stream.event_handler.on_each = NULL;
-    ctx->stream.event_handler.next = NULL;
-    ctx->stream.event_handler.timeout_ms = -1;
 
     if (ctx->opt.stream) {
         int flags = fcntl(STDIN_FILENO, F_GETFL, 0);

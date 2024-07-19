@@ -739,8 +739,10 @@ void init_wl(ctx_t * ctx) {
     ctx->wl.height = 0;
     ctx->wl.scale = 1.0;
 
+    ctx->wl.event_handler.next = NULL;
     ctx->wl.event_handler.fd = -1;
     ctx->wl.event_handler.events = EPOLLIN;
+    ctx->wl.event_handler.timeout_ms = -1;
     ctx->wl.event_handler.on_event = on_loop_event;
     ctx->wl.event_handler.on_each = on_loop_each;
 

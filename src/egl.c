@@ -48,6 +48,7 @@ void init_egl(ctx_t * ctx) {
     // initialize context structure
     ctx->egl.display = EGL_NO_DISPLAY;
     ctx->egl.context = EGL_NO_CONTEXT;
+    ctx->egl.config = EGL_NO_CONFIG_KHR;
     ctx->egl.surface = EGL_NO_SURFACE;
     ctx->egl.window = EGL_NO_SURFACE;
 
