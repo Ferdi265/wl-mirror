@@ -302,7 +302,7 @@ void init_mirror_dmabuf(ctx_t * ctx) {
     }
 
     // allocate backend context structure
-    dmabuf_mirror_backend_t * backend = malloc(sizeof (dmabuf_mirror_backend_t));
+    dmabuf_mirror_backend_t * backend = calloc(1, sizeof (dmabuf_mirror_backend_t));
     if (backend == NULL) {
         log_error("mirror-dmabuf::init(): failed to allocate backend state\n");
         return;

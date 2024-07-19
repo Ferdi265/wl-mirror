@@ -433,7 +433,7 @@ void init_mirror_screencopy(ctx_t * ctx) {
     }
 
     // allocate backend context structure
-    screencopy_mirror_backend_t * backend = malloc(sizeof (screencopy_mirror_backend_t));
+    screencopy_mirror_backend_t * backend = calloc(1, sizeof (screencopy_mirror_backend_t));
     if (backend == NULL) {
         log_error("mirror-screencopy::init(): failed to allocate backend state\n");
         return;
