@@ -179,6 +179,7 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 
 - `INSTALL_EXAMPLE_SCRIPTS`: also install example scripts (default `OFF`)
 - `INSTALL_DOCUMENTATION`: also build and install manual pages (default `OFF`)
+- `FORCE_WAYLAND_SCANNER_PATH`: always use the provided path for wayland-scanner, do not use pkg-config (default empty)
 - `FORCE_SYSTEM_WL_PROTOCOLS`: always use system-installed wayland-protocols, do not use submodules (default `OFF`)
 - `FORCE_SYSTEM_WLR_PROTOCOLS`: always use system-installed wlr-protocols, do not use submodules (default `OFF`)
 - `WL_PROTOCOL_DIR`: directory where system-installed wayland-protocols are located (default `/usr/share/wayland-protocols`)

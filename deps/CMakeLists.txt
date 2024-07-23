@@ -18,9 +18,14 @@ pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET "wayland-client")
 pkg_check_modules(WaylandEGL REQUIRED IMPORTED_TARGET "wayland-egl")
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET "egl")
 pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET "glesv2")
-pkg_check_modules(WaylandScanner REQUIRED "wayland-scanner")
-pkg_get_variable(WAYLAND_SCANNER "wayland-scanner" "wayland_scanner")
-set(WAYLAND_SCANNER "${WAYLAND_SCANNER}" PARENT_SCOPE)
+
+if ("${FORCE_WAYLAND_SCANNER_PATH}" STREQUAL "")
+    pkg_check_modules(WaylandScanner REQUIRED "wayland-scanner")
+    pkg_get_variable(WAYLAND_SCANNER "wayland-scanner" "wayland_scanner")
+    set(WAYLAND_SCANNER "${WAYLAND_SCANNER}" PARENT_SCOPE)
+else()
+    set(WAYLAND_SCANNER "${FORCE_WAYLAND_SCANNER_PATH}" PARENT_SCOPE)
+endif()
 
 # man dependencies
 if (${INSTALL_DOCUMENTATION})
