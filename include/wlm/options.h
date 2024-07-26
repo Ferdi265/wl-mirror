@@ -40,6 +40,7 @@ typedef struct ctx_opt {
     region_t region;
     char * output;
     char * fullscreen_output;
+    char * window_title;
 } ctx_opt_t;
 
 void wlm_opt_init(struct ctx * ctx);
