@@ -48,6 +48,7 @@ options:
   -r R, --region R              capture custom region R
         --no-region             capture the entire output (default)
   -S,   --stream                accept a stream of additional options on stdin
+        --title N               specify a custom title N for the mirror window
 
 backends:
   - auto        automatically try the backends in order and use the first that works (default)
@@ -78,6 +79,17 @@ stream mode:
     quoted or fully unquoted
   - unquoted arguments are split on whitespace
   - no escape sequences are implemented
+
+title placeholders:
+  the title string supports the following placeholders:
+  - {width}, {height}:               size of the mirrored area
+  - {x}, {y}:                        offsets on the screen
+  - {target_width}, {target_height}\n");
+    {target_output}:                 info about the mirrored device
+  a few perhaps useful examples:
+    --title='Wayland Mirror Output {target_output}'
+    --title='{target_output}:{width}x{height}+{x}+{y}'
+    --title='resize set {width} {height} move position {x} {y}'
 ```
 
 The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be used.
