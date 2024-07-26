@@ -19,6 +19,7 @@ void init_opt(ctx_t * ctx) {
     ctx->opt.region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
     ctx->opt.output = NULL;
     ctx->opt.fullscreen_output = NULL;
+    ctx->opt.window_title = NULL;
 }
 
 void cleanup_opt(ctx_t * ctx) {
@@ -365,6 +366,7 @@ void usage_opt(ctx_t * ctx) {
     printf("  -r R, --region R              capture custom region R\n");
     printf("        --no-region             capture the entire output (default)\n");
     printf("  -S,   --stream                accept a stream of additional options on stdin\n");
+    printf("        --title N               specify a custom title N for the mirror window\n");
     printf("\n");
     printf("backends:\n");
     printf("  - auto        automatically try the backends in order and use the first that works (default)\n");
@@ -526,6 +528,21 @@ void parse_opt(ctx_t * ctx, int argc, char ** argv) {
             ctx->opt.region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
         } else if (strcmp(argv[0], "-S") == 0 || strcmp(argv[0], "--stream") == 0) {
             ctx->opt.stream = true;
+        } else if (strcmp(argv[0], "--title") == 0) {
+            if (argc < 2) {
+                log_error("options::parse(): option %s requires an argument\n", argv[0]);
+                if (is_cli_args) exit_fail(ctx);
+            } else {
+                if (strlen(argv[1]) <= 0) {
+                    log_error("options::parse(): invalid empty title\n");
+                    if (is_cli_args) exit_fail(ctx);
+                } else {
+                    ctx->opt.window_title = argv[1];
+                }
+
+                argv++;
+                argc--;
+            }
         } else if (strcmp(argv[0], "--") == 0) {
             argv++;
             argc--;
