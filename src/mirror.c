@@ -170,9 +170,87 @@ void wlm_mirror_output_removed(ctx_t * ctx, output_list_node_t * node) {
 
 // --- update_options_mirror ---
 
+typedef struct {
+    const char *specifier;
+    const char *format;
+    union { int d; const char *s; };
+} specifier_t;
+
+static size_t specifier_str(ctx_t * ctx, char *dst, int n, specifier_t specifier) {
+    switch (specifier.format[1]) {
+        case 'd':
+            return snprintf(dst, n, specifier.format, specifier.d);
+        case 's':
+            return snprintf(dst, n, specifier.format, specifier.s);
+        default:
+            wlm_log_error("mirror::specifier_str(): unrecognized format %s", specifier.format);
+            wlm_exit_fail(ctx);
+    }
+}
+
+static int format_title(ctx_t * ctx, char ** dst, char * fmt) {
+    specifier_t replacements[] = {
+        {"{x}", "%d", {.d = ctx->mirror.current_region.x}},
+        {"{y}", "%d", {.d = ctx->mirror.current_region.y}},
+        {"{width}", "%d", {.d = ctx->mirror.current_region.width}},
+        {"{height}", "%d", {.d = ctx->mirror.current_region.height}},
+        {"{target_width}", "%d", {.d = ctx->mirror.current_target->width}},
+        {"{target_height}", "%d", {.d = ctx->mirror.current_target->height}},
+        {"{target_output}", "%s", {.s = ctx->mirror.current_target->name}}
+    };
+    size_t n_specifiers = sizeof(replacements)/sizeof(replacements[0]);
+
+    size_t length = strlen(fmt);
+    for (size_t f = 0; f < n_specifiers; f++) {
+        const char *fmt_cursor = fmt;
+        size_t spec_len = strlen(replacements[f].specifier);
+
+        while ((fmt_cursor = strstr(fmt_cursor, replacements[f].specifier))) {
+            length += specifier_str(ctx, NULL, 0, replacements[f]) - spec_len;
+            fmt_cursor += spec_len;
+        }
+    }
+
+    *dst = (char *) calloc(++length, sizeof(char));
+    if (*dst == NULL) {
+        wlm_log_error("mirror::format_title(): failed to allocate memory\n");
+        wlm_exit_fail(ctx);
+    }
+
+    char *dst_cursor = *dst;
+    const char *fmt_cursor = fmt;
+    while (*fmt_cursor) {
+        bool replaced = false;
+        for (size_t f = 0; f < n_specifiers; f++) {
+            size_t spec_len = strlen(replacements[f].specifier);
+            if (strncmp(fmt_cursor, replacements[f].specifier, spec_len) == 0) {
+                size_t written = specifier_str(ctx, dst_cursor, length, replacements[f]);
+                dst_cursor += written;
+                fmt_cursor += spec_len;
+                length -= written;
+                replaced = true;
+                break;
+            }
+        }
+        if (!replaced) {
+            *dst_cursor++ = *fmt_cursor++;
+            length--;
+        }
+    }
+    *dst_cursor = '\0';
+
+
+    return 0;
+}
+
 void wlm_mirror_update_title(ctx_t * ctx) {
     char * title = NULL;
-    int status = asprintf(&title, "Wayland Output Mirror for %s", ctx->mirror.current_target->name);
+    char * title_fmt = "Wayland Output Mirror for {target_output}";
+    if (ctx->opt.window_title != NULL) {
+        title_fmt = ctx->opt.window_title;
+    }
+
+    int status = format_title(ctx, &title, title_fmt);
     if (status == -1) {
         wlm_log_error("mirror::update_title(): failed to format window title\n");
         wlm_exit_fail(ctx);
