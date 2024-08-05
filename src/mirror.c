@@ -6,6 +6,7 @@
 #include <wlm/context.h>
 #include <EGL/eglext.h>
 #include <wlm/mirror-backends.h>
+#include <wlm/util.h>
 #include <wlm/proto/linux-dmabuf-unstable-v1.h>
 
 // --- frame_callback event handlers ---
@@ -168,40 +169,39 @@ void wlm_mirror_output_removed(ctx_t * ctx, output_list_node_t * node) {
     wlm_exit_fail(ctx);
 }
 
-// --- update_options_mirror ---
+// --- update_title ---
 
 typedef struct {
     const char *specifier;
-    const char *format;
+    char type;
     union { int d; const char *s; };
 } specifier_t;
 
 static size_t specifier_str(ctx_t * ctx, char *dst, int n, specifier_t specifier) {
-    switch (specifier.format[1]) {
+    switch (specifier.type) {
         case 'd':
-            return snprintf(dst, n, specifier.format, specifier.d);
+            return snprintf(dst, n, "%d", specifier.d);
         case 's':
-            return snprintf(dst, n, specifier.format, specifier.s);
+            return snprintf(dst, n, "%s", specifier.s);
         default:
-            wlm_log_error("mirror::specifier_str(): unrecognized format %s", specifier.format);
+            wlm_log_error("mirror::specifier_str(): unrecognized format type '%d'", specifier.type);
             wlm_exit_fail(ctx);
     }
 }
 
 static int format_title(ctx_t * ctx, char ** dst, char * fmt) {
     specifier_t replacements[] = {
-        {"{x}", "%d", {.d = ctx->mirror.current_region.x}},
-        {"{y}", "%d", {.d = ctx->mirror.current_region.y}},
-        {"{width}", "%d", {.d = ctx->mirror.current_region.width}},
-        {"{height}", "%d", {.d = ctx->mirror.current_region.height}},
-        {"{target_width}", "%d", {.d = ctx->mirror.current_target->width}},
-        {"{target_height}", "%d", {.d = ctx->mirror.current_target->height}},
-        {"{target_output}", "%s", {.s = ctx->mirror.current_target->name}}
+        {"{x}", 'd', {.d = ctx->mirror.current_region.x}},
+        {"{y}", 'd', {.d = ctx->mirror.current_region.y}},
+        {"{width}", 'd', {.d = ctx->mirror.current_region.width}},
+        {"{height}", 'd', {.d = ctx->mirror.current_region.height}},
+        {"{target_width}", 'd', {.d = ctx->mirror.current_target->width}},
+        {"{target_height}", 'd', {.d = ctx->mirror.current_target->height}},
+        {"{target_output}", 's', {.s = ctx->mirror.current_target->name}}
     };
-    size_t n_specifiers = sizeof(replacements)/sizeof(replacements[0]);
 
     size_t length = strlen(fmt);
-    for (size_t f = 0; f < n_specifiers; f++) {
+    for (size_t f = 0; f < ARRAY_LENGTH(replacements); f++) {
         const char *fmt_cursor = fmt;
         size_t spec_len = strlen(replacements[f].specifier);
 
@@ -221,7 +221,7 @@ static int format_title(ctx_t * ctx, char ** dst, char * fmt) {
     const char *fmt_cursor = fmt;
     while (*fmt_cursor) {
         bool replaced = false;
-        for (size_t f = 0; f < n_specifiers; f++) {
+        for (size_t f = 0; f < ARRAY_LENGTH(replacements); f++) {
             size_t spec_len = strlen(replacements[f].specifier);
             if (strncmp(fmt_cursor, replacements[f].specifier, spec_len) == 0) {
                 size_t written = specifier_str(ctx, dst_cursor, length, replacements[f]);
