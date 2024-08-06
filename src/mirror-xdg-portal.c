@@ -1315,11 +1315,6 @@ static void on_loop_pw_event(ctx_t * ctx) {
 // --- init_mirror_xdg_portal ---
 
 void wlm_mirror_xdg_portal_init(ctx_t * ctx) {
-    // check for required protocols
-    if (ctx->wl.xdg_exporter == NULL) {
-        wlm_log_warn("mirror-xdg-portal::init(): missing xdg_foreign protocol\n");
-    }
-
     // allocate backend context structure
     xdg_portal_mirror_backend_t * backend = malloc(sizeof (xdg_portal_mirror_backend_t));
     if (backend == NULL) {
