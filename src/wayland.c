@@ -264,6 +264,31 @@ static void on_registry_add(
             registry, id, &zxdg_output_manager_v1_interface, 2
         );
         ctx->wl.output_manager_id = id;
+
+        // check for outputs that still need an xdg_output
+        // - sway sends outputs after protocol extensions
+        // - gnome sends outputs before protocol extensions
+        output_list_node_t * cur = ctx->wl.outputs;
+        while (cur != NULL) {
+            if (cur->xdg_output != NULL) continue;
+
+            // create xdg_output object
+            cur->xdg_output = (struct zxdg_output_v1 *)zxdg_output_manager_v1_get_xdg_output(
+                ctx->wl.output_manager, cur->output
+            );
+            if (cur->xdg_output == NULL) {
+                wlm_log_error("wayland::on_registry_add(): failed to create xdg_output\n");
+                wlm_exit_fail(ctx);
+            }
+
+            // add xdg_output event listener
+            // - for logical_position event
+            // - for logical_size event
+            // - for name event
+            zxdg_output_v1_add_listener(cur->xdg_output, &xdg_output_listener, (void *)cur);
+
+            cur = cur->next;
+        }
     } else if (strcmp(interface, zwlr_export_dmabuf_manager_v1_interface.name) == 0) {
         if (ctx->wl.dmabuf_manager != NULL) {
             wlm_log_error("wayland::on_registry_add(): duplicate dmabuf_manager\n");
@@ -383,27 +408,24 @@ static void on_registry_add(
         wl_output_add_listener(node->output, &output_listener, (void *)node);
 
         // check for xdg_output_manager
-        // - sway always sends outputs after protocol extensions
-        // - for simplicity, only this event order is supported
-        if (ctx->wl.output_manager == NULL) {
-            wlm_log_error("wayland::on_registry_add(): wl_output received before xdg_output_manager\n");
-            wlm_exit_fail(ctx);
-        }
+        // - sway sends outputs after protocol extensions
+        // - gnome sends outputs before protocol extensions
+        if (ctx->wl.output_manager != NULL) {
+            // create xdg_output object
+            node->xdg_output = (struct zxdg_output_v1 *)zxdg_output_manager_v1_get_xdg_output(
+                ctx->wl.output_manager, node->output
+            );
+            if (node->xdg_output == NULL) {
+                wlm_log_error("wayland::on_registry_add(): failed to create xdg_output\n");
+                wlm_exit_fail(ctx);
+            }
 
-        // create xdg_output object
-        node->xdg_output = (struct zxdg_output_v1 *)zxdg_output_manager_v1_get_xdg_output(
-            ctx->wl.output_manager, node->output
-        );
-        if (node->xdg_output == NULL) {
-            wlm_log_error("wayland::on_registry_add(): failed to create xdg_output\n");
-            wlm_exit_fail(ctx);
+            // add xdg_output event listener
+            // - for logical_position event
+            // - for logical_size event
+            // - for name event
+            zxdg_output_v1_add_listener(node->xdg_output, &xdg_output_listener, (void *)node);
         }
-
-        // add xdg_output event listener
-        // - for logical_position event
-        // - for logical_size event
-        // - for name event
-        zxdg_output_v1_add_listener(node->xdg_output, &xdg_output_listener, (void *)node);
     } else if (strcmp(interface, wl_seat_interface.name) == 0) {
         // allocate seat node
         seat_list_node_t * node = malloc(sizeof (seat_list_node_t));
