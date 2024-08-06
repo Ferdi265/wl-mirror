@@ -355,6 +355,7 @@ void resize_viewport(ctx_t * ctx) {
     log_debug(ctx, "egl::resize_viewport(): view_width = %d, view_height = %d\n", view_width, view_height);
 
     // updating GL viewport
+    log_debug(ctx, "egl::resize_viewport(): win = %dx%d, view = %dx%d, tex = %dx%d\n", win_width, win_height, view_width, view_height, tex_width, tex_height);
     log_debug(ctx, "egl::resize_viewport(): viewport %d, %d, %d, %d\n",
         (int32_t)(win_width - view_width) / 2, (int32_t)(win_height - view_height) / 2, view_width, view_height
     );
@@ -504,6 +505,13 @@ bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
     image_attribs[i++] = dmabuf->height;
     image_attribs[i++] = EGL_LINUX_DRM_FOURCC_EXT;
     image_attribs[i++] = dmabuf->drm_format;
+    log_debug(ctx, "egl::dmabuf_to_texture(): w=%d h=%d drm_format=%c%c%c%c\n",
+        dmabuf->width, dmabuf->height,
+        ((dmabuf->drm_format >> 0) & 0xFF),
+        ((dmabuf->drm_format >> 8) & 0xFF),
+        ((dmabuf->drm_format >> 16) & 0xFF),
+        ((dmabuf->drm_format >> 24) & 0xFF)
+    );
 
     for (size_t j = 0; j < dmabuf->planes; j++) {
         image_attribs[i++] = fd_attribs[j];
@@ -516,9 +524,19 @@ bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
         image_attribs[i++] = (uint32_t)dmabuf->modifier;
         image_attribs[i++] = modifier_high_attribs[j];
         image_attribs[i++] = (uint32_t)(dmabuf->modifier >> 32);
+        log_debug(ctx, "egl::dmabuf_to_texture(): fd=% 3d offset=% 10d stride=% 10d modifier=%016lx\n",
+            dmabuf->fds[j], dmabuf->offsets[j], dmabuf->strides[j], dmabuf->modifier
+        );
     }
 
     image_attribs[i++] = EGL_NONE;
+
+    log_debug(ctx, "egl::dmabuf_to_texture(): image_attribs=");
+    if (ctx->opt.verbose) {
+        for (i = 0; image_attribs[i] != EGL_NONE; i++) {
+            fprintf(stderr, "%08lx%s", image_attribs[i], image_attribs[i + 1] != EGL_NONE ? "_" : "\n");
+        }
+    }
 
     // create EGLImage from dmabuf with attribute array
     EGLImage frame_image = eglCreateImage(ctx->egl.display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
@@ -532,9 +550,17 @@ bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
     // convert EGLImage to GL texture
     glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
     ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, frame_image);
+    ctx->egl.texture_initialized = true;
 
     // destroy temporary image
     eglDestroyImage(ctx->egl.display, frame_image);
+
+    // set texture size and aspect ratio only if changed
+    if (dmabuf->width != ctx->egl.width || dmabuf->height != ctx->egl.height) {
+        ctx->egl.width = dmabuf->width;
+        ctx->egl.height = dmabuf->height;
+        resize_viewport(ctx);
+    }
 
     return true;
 }

@@ -292,10 +292,10 @@ static void on_ready(
         log_debug(ctx, "mirror-screencopy::on_ready(): received ready event with width: %d, height: %d, stride: %d, format: %c%c%c%c\n",
             backend->frame_width, backend->frame_height,
             backend->frame_stride,
-            (backend->frame_format >> 24) & 0xff,
-            (backend->frame_format >> 16) & 0xff,
+            (backend->frame_format >> 0) & 0xff,
             (backend->frame_format >> 8) & 0xff,
-            (backend->frame_format >> 0) & 0xff
+            (backend->frame_format >> 16) & 0xff,
+            (backend->frame_format >> 24) & 0xff
         );
     }
 
