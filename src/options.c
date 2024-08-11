@@ -397,6 +397,17 @@ void wlm_opt_usage(ctx_t * ctx) {
     printf("    quoted or fully unquoted\n");
     printf("  - unquoted arguments are split on whitespace\n");
     printf("  - no escape sequences are implemented\n");
+    printf("\n");
+    printf("title placeholders:\n");
+    printf("  the title string supports the following placeholders:\n");
+    printf("  - {width}, {height}:               size of the mirrored area\n");
+    printf("  - {x}, {y}:                        offsets on the screen\n");
+    printf("  - {target_width}, {target_height}\n");
+    printf("    {target_output}:                 info about the mirrored device\n");
+    printf("  a few perhaps useful examples:\n");
+    printf("    --title='Wayland Mirror Output {target_output}'\n");
+    printf("    --title='{target_output}:{width}x{height}+{x}+{y}'\n");
+    printf("    --title='resize set {width} {height} move position {x} {y}'\n");
     wlm_cleanup(ctx);
     exit(0);
 }
