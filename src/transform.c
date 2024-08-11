@@ -1,6 +1,6 @@
 #include <string.h>
 #include <wayland-client-protocol.h>
-#include "transform.h"
+#include <wlm/transform.h>
 
 static const mat3_t mat_identity = { .data = {
     {  1,  0,  0 },
@@ -38,11 +38,11 @@ static const mat3_t mat_flip_y = { .data = {
     {  0,  0,  1 }
 }};
 
-void mat3_identity(mat3_t * mat) {
+void wlm_util_mat3_identity(mat3_t * mat) {
     *mat = mat_identity;
 }
 
-void mat3_transpose(mat3_t * mat) {
+void wlm_util_mat3_transpose(mat3_t * mat) {
     for (size_t row = 0; row < 3; row++) {
         for (size_t col = row + 1; col < 3; col++) {
             float temp = mat->data[row][col];
@@ -52,7 +52,7 @@ void mat3_transpose(mat3_t * mat) {
     }
 }
 
-void mat3_mul(const mat3_t * mul, mat3_t * dest) {
+void wlm_util_mat3_mul(const mat3_t * mul, mat3_t * dest) {
     mat3_t src = *dest;
 
     for (size_t row = 0; row < 3; row++) {
@@ -65,7 +65,7 @@ void mat3_mul(const mat3_t * mul, mat3_t * dest) {
     }
 }
 
-void mat3_apply_transform(mat3_t * mat, transform_t transform) {
+void wlm_util_mat3_apply_transform(mat3_t * mat, transform_t transform) {
     // apply inverse transformation matrix as we need to transform
     // from OpenGL space to dmabuf space
 
@@ -73,72 +73,72 @@ void mat3_apply_transform(mat3_t * mat, transform_t transform) {
         case ROT_NORMAL:
             break;
         case ROT_CW_90:
-            mat3_mul(&mat_rot_ccw_90, mat);
+            wlm_util_mat3_mul(&mat_rot_ccw_90, mat);
             break;
         case ROT_CW_180:
-            mat3_mul(&mat_rot_ccw_180, mat);
+            wlm_util_mat3_mul(&mat_rot_ccw_180, mat);
             break;
         case ROT_CW_270:
-            mat3_mul(&mat_rot_ccw_270, mat);
+            wlm_util_mat3_mul(&mat_rot_ccw_270, mat);
             break;
     }
 
-    if (transform.flip_x) mat3_mul(&mat_flip_x, mat);
-    if (transform.flip_y) mat3_mul(&mat_flip_y, mat);
+    if (transform.flip_x) wlm_util_mat3_mul(&mat_flip_x, mat);
+    if (transform.flip_y) wlm_util_mat3_mul(&mat_flip_y, mat);
 }
 
-void mat3_apply_region_transform(mat3_t * mat, const region_t * region, const region_t * output) {
+void wlm_util_mat3_apply_region_transform(mat3_t * mat, const region_t * region, const region_t * output) {
     mat3_t region_transform;
-    mat3_identity(&region_transform);
+    wlm_util_mat3_identity(&region_transform);
 
     region_transform.data[0][2] = (float)region->x / output->width;
     region_transform.data[1][2] = (float)region->y / output->height;
     region_transform.data[0][0] = (float)region->width / output->width;
     region_transform.data[1][1] = (float)region->height / output->height;
 
-    mat3_mul(&region_transform, mat);
+    wlm_util_mat3_mul(&region_transform, mat);
 }
 
-void mat3_apply_output_transform(mat3_t * mat, enum wl_output_transform transform) {
+void wlm_util_mat3_apply_output_transform(mat3_t * mat, enum wl_output_transform transform) {
     // wl_output transform is already inverted
 
     switch (transform) {
         case WL_OUTPUT_TRANSFORM_NORMAL:
             break;
         case WL_OUTPUT_TRANSFORM_90:
-            mat3_mul(&mat_rot_ccw_90, mat);
+            wlm_util_mat3_mul(&mat_rot_ccw_90, mat);
             break;
         case WL_OUTPUT_TRANSFORM_180:
-            mat3_mul(&mat_rot_ccw_180, mat);
+            wlm_util_mat3_mul(&mat_rot_ccw_180, mat);
             break;
         case WL_OUTPUT_TRANSFORM_270:
-            mat3_mul(&mat_rot_ccw_270, mat);
+            wlm_util_mat3_mul(&mat_rot_ccw_270, mat);
             break;
         case WL_OUTPUT_TRANSFORM_FLIPPED:
-            mat3_mul(&mat_flip_x, mat);
+            wlm_util_mat3_mul(&mat_flip_x, mat);
             break;
         case WL_OUTPUT_TRANSFORM_FLIPPED_90:
-            mat3_mul(&mat_flip_x, mat);
-            mat3_mul(&mat_rot_ccw_90, mat);
+            wlm_util_mat3_mul(&mat_flip_x, mat);
+            wlm_util_mat3_mul(&mat_rot_ccw_90, mat);
             break;
         case WL_OUTPUT_TRANSFORM_FLIPPED_180:
-            mat3_mul(&mat_flip_x, mat);
-            mat3_mul(&mat_rot_ccw_180, mat);
+            wlm_util_mat3_mul(&mat_flip_x, mat);
+            wlm_util_mat3_mul(&mat_rot_ccw_180, mat);
             break;
         case WL_OUTPUT_TRANSFORM_FLIPPED_270:
-            mat3_mul(&mat_flip_x, mat);
-            mat3_mul(&mat_rot_ccw_270, mat);
+            wlm_util_mat3_mul(&mat_flip_x, mat);
+            wlm_util_mat3_mul(&mat_rot_ccw_270, mat);
             break;
     }
 }
 
-void mat3_apply_invert_y(mat3_t * mat, bool invert_y) {
+void wlm_util_mat3_apply_invert_y(mat3_t * mat, bool invert_y) {
     if (invert_y) {
-        mat3_mul(&mat_flip_y, mat);
+        wlm_util_mat3_mul(&mat_flip_y, mat);
     }
 }
 
-void viewport_apply_transform(uint32_t * width, uint32_t * height, transform_t transform) {
+void wlm_util_viewport_apply_transform(uint32_t * width, uint32_t * height, transform_t transform) {
     uint32_t w = *width;
     uint32_t h = *height;
 
@@ -153,7 +153,7 @@ void viewport_apply_transform(uint32_t * width, uint32_t * height, transform_t t
     }
 }
 
-void viewport_apply_output_transform(uint32_t * width, uint32_t * height, enum wl_output_transform transform) {
+void wlm_util_viewport_apply_output_transform(uint32_t * width, uint32_t * height, enum wl_output_transform transform) {
     uint32_t w = *width;
     uint32_t h = *height;
 
@@ -170,7 +170,7 @@ void viewport_apply_output_transform(uint32_t * width, uint32_t * height, enum w
     }
 }
 
-bool region_contains(const region_t * region, const region_t * output) {
+bool wlm_util_region_contains(const region_t * region, const region_t * output) {
     if (region->x + region->width <= output->x) return false;
     if (region->x >= output->x + output->width) return false;
     if (region->y + region->height <= output->y) return false;
@@ -178,14 +178,14 @@ bool region_contains(const region_t * region, const region_t * output) {
     return true;
 }
 
-void region_scale(region_t * region, double scale) {
+void wlm_util_region_scale(region_t * region, double scale) {
     region->x *= scale;
     region->y *= scale;
     region->width *= scale;
     region->height *= scale;
 }
 
-void region_clamp(region_t * region, const region_t * output) {
+void wlm_util_region_clamp(region_t * region, const region_t * output) {
     if (region->x < output->x) {
         region->width -= output->x - region->x;
         region->x = 0;

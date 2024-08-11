@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include "event.h"
+#include <wlm/event.h>
 
 struct ctx;
 
@@ -21,7 +21,7 @@ typedef struct ctx_stream {
     bool initialized;
 } ctx_stream_t;
 
-void init_stream(struct ctx * ctx);
-void cleanup_stream(struct ctx * ctx);
+void wlm_stream_init(struct ctx * ctx);
+void wlm_stream_cleanup(struct ctx * ctx);
 
 #endif

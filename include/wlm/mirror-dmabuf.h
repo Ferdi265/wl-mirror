@@ -2,9 +2,9 @@
 #define WL_MIRROR_MIRROR_DMABUF_H_
 
 #include <stdint.h>
-#include "wlr-export-dmabuf-unstable-v1.h"
-#include "mirror.h"
-#include "egl.h"
+#include <wlm/proto/wlr-export-dmabuf-unstable-v1.h>
+#include <wlm/mirror.h>
+#include <wlm/egl.h>
 
 typedef enum {
     STATE_WAIT_FRAME,

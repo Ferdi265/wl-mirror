@@ -53,15 +53,15 @@ typedef struct ctx_egl {
     bool initialized;
 } ctx_egl_t;
 
-void init_egl(struct ctx * ctx);
+void wlm_egl_init(struct ctx * ctx);
 
-void draw_texture(struct ctx * ctx);
-void resize_viewport(struct ctx * ctx);
-void resize_window(struct ctx * ctx);
-void update_uniforms(struct ctx * ctx);
-void freeze_framebuffer(struct ctx * ctx);
-bool dmabuf_to_texture(struct ctx * ctx, dmabuf_t * dmabuf);
+void wlm_egl_draw_texture(struct ctx * ctx);
+void wlm_egl_resize_viewport(struct ctx * ctx);
+void wlm_egl_resize_window(struct ctx * ctx);
+void wlm_egl_update_uniforms(struct ctx * ctx);
+void wlm_egl_freeze_framebuffer(struct ctx * ctx);
+bool wlm_egl_dmabuf_to_texture(struct ctx * ctx, dmabuf_t * dmabuf);
 
-void cleanup_egl(struct ctx * ctx);
+void wlm_egl_cleanup(struct ctx * ctx);
 
 #endif

@@ -13,7 +13,7 @@ typedef struct mirror_backend {
     size_t fail_count;
 } mirror_backend_t;
 
-void init_mirror_dmabuf(struct ctx * ctx);
-void init_mirror_screencopy(struct ctx * ctx);
+void wlm_mirror_dmabuf_init(struct ctx * ctx);
+void wlm_mirror_screencopy_init(struct ctx * ctx);
 
 #endif

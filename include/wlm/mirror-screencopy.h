@@ -2,8 +2,8 @@
 #define WL_MIRROR_MIRROR_SCREENCOPY_H_
 
 #include <stdint.h>
-#include "mirror.h"
-#include "wlr-screencopy-unstable-v1.h"
+#include <wlm/mirror.h>
+#include <wlm/proto/wlr-screencopy-unstable-v1.h>
 #include <wayland-client.h>
 
 typedef enum {

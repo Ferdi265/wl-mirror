@@ -4,7 +4,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include "context.h"
+#include <wlm/context.h>
 
 #define ARGS_MIN_CAP 8
 static void args_push(ctx_t * ctx, char * arg) {
@@ -14,8 +14,8 @@ static void args_push(ctx_t * ctx, char * arg) {
 
         char ** new_args = realloc(ctx->stream.args, sizeof (char *) * new_cap);
         if (new_args == NULL) {
-            log_error("event::args_push(): failed to grow args array for option stream line\n");
-            exit_fail(ctx);
+            wlm_log_error("event::args_push(): failed to grow args array for option stream line\n");
+            wlm_exit_fail(ctx);
         }
 
         ctx->stream.args = new_args;
@@ -33,8 +33,8 @@ static void line_reserve(ctx_t * ctx) {
 
         char * new_line = realloc(ctx->stream.line, sizeof (char) * new_cap);
         if (new_line == NULL) {
-            log_error("event::line_reserve(): failed to grow line buffer for option stream line\n");
-            exit_fail(ctx);
+            wlm_log_error("event::line_reserve(): failed to grow line buffer for option stream line\n");
+            wlm_exit_fail(ctx);
         }
 
         ctx->stream.line = new_line;
@@ -52,7 +52,7 @@ static void on_line(ctx_t * ctx, char * line) {
     char * arg_start = NULL;
     char quote_char = '\0';
 
-    log_debug(ctx, "event::on_line(): got line '%s'\n", line);
+    wlm_log_debug(ctx, "event::on_line(): got line '%s'\n", line);
 
     ctx->stream.args_len = 0;
 
@@ -105,16 +105,16 @@ static void on_line(ctx_t * ctx, char * line) {
     }
 
     if (state == QUOTED_ARG) {
-        log_error("event::on_line(): unmatched quote in argument\n");
+        wlm_log_error("event::on_line(): unmatched quote in argument\n");
     }
 
     if (state == QUOTED_ARG || state == UNQUOTED_ARG) {
         args_push(ctx, arg_start);
     }
 
-    log_debug(ctx, "event::on_line(): parsed %zd arguments\n", ctx->stream.args_len);
+    wlm_log_debug(ctx, "event::on_line(): parsed %zd arguments\n", ctx->stream.args_len);
 
-    parse_opt(ctx, ctx->stream.args_len, ctx->stream.args);
+    wlm_opt_parse(ctx, ctx->stream.args_len, ctx->stream.args);
 }
 
 static void on_stream_data(ctx_t * ctx) {
@@ -127,8 +127,8 @@ static void on_stream_data(ctx_t * ctx) {
         if (num == -1 && errno == EWOULDBLOCK) {
             break;
         } else if (num == -1) {
-            log_error("event::on_data(): failed to read data from stdin\n");
-            exit_fail(ctx);
+            wlm_log_error("event::on_data(): failed to read data from stdin\n");
+            wlm_exit_fail(ctx);
         } else {
             ctx->stream.line_len += num;
         }
@@ -149,7 +149,7 @@ static void on_stream_data(ctx_t * ctx) {
     }
 }
 
-void init_stream(ctx_t * ctx) {
+void wlm_stream_init(ctx_t * ctx) {
     // initialize context structure
     ctx->stream.line = NULL;
     ctx->stream.line_len = 0;
@@ -171,17 +171,17 @@ void init_stream(ctx_t * ctx) {
         flags |= O_NONBLOCK;
         fcntl(STDIN_FILENO, F_SETFL, flags);
 
-        event_add_fd(ctx, &ctx->stream.event_handler);
+        wlm_event_add_fd(ctx, &ctx->stream.event_handler);
     }
 
     ctx->stream.initialized = true;
 }
 
-void cleanup_stream(ctx_t * ctx) {
+void wlm_stream_cleanup(ctx_t * ctx) {
     free(ctx->stream.line);
     free(ctx->stream.args);
 
     if (ctx->opt.stream) {
-        event_remove_fd(ctx, &ctx->stream.event_handler);
+        wlm_event_remove_fd(ctx, &ctx->stream.event_handler);
     }
 }

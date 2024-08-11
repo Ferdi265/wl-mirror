@@ -57,7 +57,8 @@ foreach(proto ${PROTOCOLS})
         set(protocols-found FALSE)
     endif()
 
-    set(proto-header "${CMAKE_CURRENT_BINARY_DIR}/include/${proto-base}.h")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/wlm/proto")
+    set(proto-header "${CMAKE_CURRENT_BINARY_DIR}/include/wlm/proto/${proto-base}.h")
     set(proto-source "${CMAKE_CURRENT_BINARY_DIR}/src/${proto-base}.c")
 
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/")

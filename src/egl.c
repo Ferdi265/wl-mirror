@@ -5,16 +5,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "context.h"
-#include "egl.h"
-#include "transform.h"
-#include "glsl_vertex_shader.h"
-#include "glsl_fragment_shader.h"
-#include "util.h"
+#include <wlm/context.h>
+#include <wlm/egl.h>
+#include <wlm/transform.h>
+#include <wlm/util.h>
+#include <wlm/glsl/vertex_shader.h>
+#include <wlm/glsl/fragment_shader.h>
 
 // --- buffers ---
 
-const float vertex_array[] = {
+static const float vertex_array[] = {
     -1.0, -1.0, 0.0, 0.0,
      1.0, -1.0, 1.0, 0.0,
     -1.0,  1.0, 0.0, 1.0,
@@ -44,7 +44,7 @@ static bool has_extension(const char * extension) {
 
 // --- init_egl ---
 
-void init_egl(ctx_t * ctx) {
+void wlm_egl_init(ctx_t * ctx) {
     // initialize context structure
     ctx->egl.display = EGL_NO_DISPLAY;
     ctx->egl.context = EGL_NO_CONTEXT;
@@ -73,17 +73,17 @@ void init_egl(ctx_t * ctx) {
     // create egl display
     ctx->egl.display = eglGetDisplay((EGLNativeDisplayType)ctx->wl.display);
     if (ctx->egl.display == EGL_NO_DISPLAY) {
-        log_error("egl::init(): failed to create EGL display\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::init(): failed to create EGL display\n");
+        wlm_exit_fail(ctx);
     }
 
     // initialize egl display and check egl version
     EGLint major, minor;
     if (eglInitialize(ctx->egl.display, &major, &minor) != EGL_TRUE) {
-        log_error("egl::init(): failed to initialize EGL display\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::init(): failed to initialize EGL display\n");
+        wlm_exit_fail(ctx);
     }
-    log_debug(ctx, "egl::init(): initialized EGL %d.%d\n", major, minor);
+    wlm_log_debug(ctx, "egl::init(): initialized EGL %d.%d\n", major, minor);
 
     // find an egl config with
     // - window support
@@ -99,8 +99,8 @@ void init_egl(ctx_t * ctx) {
         EGL_NONE
     };
     if (eglChooseConfig(ctx->egl.display, config_attribs, &ctx->egl.config, 1, &num_configs) != EGL_TRUE) {
-        log_error("egl::init(): failed to get EGL config\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::init(): failed to get EGL config\n");
+        wlm_exit_fail(ctx);
     }
 
     // default window size to 100x100 if not set
@@ -110,8 +110,8 @@ void init_egl(ctx_t * ctx) {
     // create egl window
     ctx->egl.window = wl_egl_window_create(ctx->wl.surface, ctx->wl.width, ctx->wl.height);
     if (ctx->egl.window == EGL_NO_SURFACE) {
-        log_error("egl::init(): failed to create EGL window\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::init(): failed to create EGL window\n");
+        wlm_exit_fail(ctx);
     }
 
     // create egl surface
@@ -125,29 +125,29 @@ void init_egl(ctx_t * ctx) {
     };
     ctx->egl.context = eglCreateContext(ctx->egl.display, ctx->egl.config, EGL_NO_CONTEXT, context_attribs);
     if (ctx->egl.context == EGL_NO_CONTEXT) {
-        log_error("egl::init(): failed to create EGL context\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::init(): failed to create EGL context\n");
+        wlm_exit_fail(ctx);
     }
 
     // activate egl context
     if (eglMakeCurrent(ctx->egl.display, ctx->egl.surface, ctx->egl.surface, ctx->egl.context) != EGL_TRUE) {
-        log_error("egl::init(): failed to activate EGL context\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::init(): failed to activate EGL context\n");
+        wlm_exit_fail(ctx);
     }
 
     // check for needed extensions
     // - GL_OES_EGL_image: for converting EGLImages to GL textures
     if (!has_extension("GL_OES_EGL_image")) {
-        log_error("egl::init(): missing EGL extension GL_OES_EGL_image\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::init(): missing EGL extension GL_OES_EGL_image\n");
+        wlm_exit_fail(ctx);
     }
 
     // get pointers to functions provided by extensions
     // - glEGLImageTargetTexture2DOES: for converting EGLImages to GL textures
     ctx->egl.glEGLImageTargetTexture2DOES = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)eglGetProcAddress("glEGLImageTargetTexture2DOES");
     if (ctx->egl.glEGLImageTargetTexture2DOES == NULL) {
-        log_error("egl::init(): failed to get pointer to glEGLImageTargetTexture2DOES\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::init(): failed to get pointer to glEGLImageTargetTexture2DOES\n");
+        wlm_exit_fail(ctx);
     }
 
     // create vertex buffer object
@@ -190,7 +190,7 @@ void init_egl(ctx_t * ctx) {
     char errorLog[1024] = { 0 };
 
     // compile vertex shader
-    shader_source = glsl_vertex_shader;
+    shader_source = wlm_glsl_vertex_shader;
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &shader_source, NULL);
     glCompileShader(vertex_shader);
@@ -198,13 +198,13 @@ void init_egl(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(vertex_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        log_error("egl::init(): failed to compile vertex shader: %s\n", errorLog);
+        wlm_log_error("egl::init(): failed to compile vertex shader: %s\n", errorLog);
         glDeleteShader(vertex_shader);
-        exit_fail(ctx);
+        wlm_exit_fail(ctx);
     }
 
     // compile fragment shader
-    shader_source = glsl_fragment_shader;
+    shader_source = wlm_glsl_fragment_shader;
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment_shader, 1, &shader_source, NULL);
     glCompileShader(fragment_shader);
@@ -212,10 +212,10 @@ void init_egl(ctx_t * ctx) {
     if (success != GL_TRUE) {
         glGetShaderInfoLog(fragment_shader, sizeof errorLog, NULL, errorLog);
         errorLog[strcspn(errorLog, "\n")] = '\0';
-        log_error("egl::init(): failed to compile fragment shader: %s\n", errorLog);
+        wlm_log_error("egl::init(): failed to compile fragment shader: %s\n", errorLog);
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
-        exit_fail(ctx);
+        wlm_exit_fail(ctx);
     }
 
     // create shader program and get pointers to shader uniforms
@@ -225,11 +225,11 @@ void init_egl(ctx_t * ctx) {
     glLinkProgram(ctx->egl.shader_program);
     glGetProgramiv(ctx->egl.shader_program, GL_LINK_STATUS, &success);
     if (success != GL_TRUE) {
-        log_error("egl::init(): failed to link shader program\n");
+        wlm_log_error("egl::init(): failed to link shader program\n");
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
         glDeleteProgram(ctx->egl.shader_program);
-        exit_fail(ctx);
+        wlm_exit_fail(ctx);
     }
     ctx->egl.texture_transform_uniform = glGetUniformLocation(ctx->egl.shader_program, "uTexTransform");
     ctx->egl.invert_colors_uniform = glGetUniformLocation(ctx->egl.shader_program, "uInvertColors");
@@ -239,7 +239,7 @@ void init_egl(ctx_t * ctx) {
 
     // set initial texture transform matrix
     mat3_t texture_transform;
-    mat3_identity(&texture_transform);
+    wlm_util_mat3_identity(&texture_transform);
     glUniformMatrix3fv(ctx->egl.texture_transform_uniform, 1, false, (float *)texture_transform.data);
 
     // set invert colors uniform
@@ -254,16 +254,16 @@ void init_egl(ctx_t * ctx) {
     glEnableVertexAttribArray(1);
 
     // draw initial frame
-    draw_texture(ctx);
+    wlm_egl_draw_texture(ctx);
     if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        log_error("egl::init(): failed to swap buffers\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::init(): failed to swap buffers\n");
+        wlm_exit_fail(ctx);
     }
 }
 
 // --- draw_texture ---
 
-void draw_texture(ctx_t *ctx) {
+void wlm_egl_draw_texture(ctx_t *ctx) {
     glBindTexture(GL_TEXTURE_2D, ctx->opt.freeze ? ctx->egl.freeze_texture : ctx->egl.texture);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -274,8 +274,8 @@ void draw_texture(ctx_t *ctx) {
 
 // --- resize_viewport
 
-void resize_viewport(ctx_t * ctx) {
-    log_debug(ctx, "egl::resize_viewport(): resizing viewport\n");
+void wlm_egl_resize_viewport(ctx_t * ctx) {
+    wlm_log_debug(ctx, "egl::resize_viewport(): resizing viewport\n");
 
     uint32_t win_width = round(ctx->wl.width * ctx->wl.scale);
     uint32_t win_height = round(ctx->wl.height * ctx->wl.scale);
@@ -286,7 +286,7 @@ void resize_viewport(ctx_t * ctx) {
 
     // rotate texture dimensions by output transform
     if (ctx->egl.texture_initialized) {
-        viewport_apply_output_transform(&tex_width, &tex_height, ctx->mirror.current_target->transform);
+        wlm_util_viewport_apply_output_transform(&tex_width, &tex_height, ctx->mirror.current_target->transform);
     }
 
     // clamp texture dimensions to specified region
@@ -302,15 +302,15 @@ void resize_viewport(ctx_t * ctx) {
         // HACK: calculate effective output fractional scale
         // wayland doesn't provide this information
         double output_scale = (double)tex_width / ctx->mirror.current_target->width;
-        region_scale(&clamp_region, output_scale);
-        region_clamp(&clamp_region, &output_region);
+        wlm_util_region_scale(&clamp_region, output_scale);
+        wlm_util_region_clamp(&clamp_region, &output_region);
 
         tex_width = clamp_region.width;
         tex_height = clamp_region.height;
     }
 
     // rotate texture dimensions by user transform
-    viewport_apply_transform(&tex_width, &tex_height, ctx->opt.transform);
+    wlm_util_viewport_apply_transform(&tex_width, &tex_height, ctx->opt.transform);
 
     // calculate aspect ratio
     double win_aspect = (double)win_width / win_height;
@@ -338,11 +338,11 @@ void resize_viewport(ctx_t * ctx) {
         uint32_t downscale_factor = ceilf(fmaxf(1 / width_scale, 1 / height_scale));
 
         if (upscale_factor > 1) {
-            log_debug(ctx, "egl::resize_viewport(): upscaling by factor = %d\n", upscale_factor);
+            wlm_log_debug(ctx, "egl::resize_viewport(): upscaling by factor = %d\n", upscale_factor);
             view_width = tex_width * upscale_factor;
             view_height = tex_height * upscale_factor;
         } else if (downscale_factor > 1) {
-            log_debug(ctx, "egl::resize_viewport(): downscaling by factor = %d\n", downscale_factor);
+            wlm_log_debug(ctx, "egl::resize_viewport(): downscaling by factor = %d\n", downscale_factor);
             view_width = tex_width / downscale_factor;
             view_height = tex_height / downscale_factor;
         } else {
@@ -351,64 +351,64 @@ void resize_viewport(ctx_t * ctx) {
         }
     }
 
-    log_debug(ctx, "egl::resize_viewport(): win_width = %d, win_height = %d\n", win_width, win_height);
-    log_debug(ctx, "egl::resize_viewport(): view_width = %d, view_height = %d\n", view_width, view_height);
+    wlm_log_debug(ctx, "egl::resize_viewport(): win_width = %d, win_height = %d\n", win_width, win_height);
+    wlm_log_debug(ctx, "egl::resize_viewport(): view_width = %d, view_height = %d\n", view_width, view_height);
 
     // updating GL viewport
-    log_debug(ctx, "egl::resize_viewport(): viewport %d, %d, %d, %d\n",
+    wlm_log_debug(ctx, "egl::resize_viewport(): viewport %d, %d, %d, %d\n",
         (int32_t)(win_width - view_width) / 2, (int32_t)(win_height - view_height) / 2, view_width, view_height
     );
     glViewport((int32_t)(win_width - view_width) / 2, (int32_t)(win_height - view_height) / 2, view_width, view_height);
 
     // recalculate texture transform
     mat3_t texture_transform;
-    mat3_identity(&texture_transform);
+    wlm_util_mat3_identity(&texture_transform);
     if (ctx->egl.texture_initialized) {
         // apply transformations in reverse order as we need to transform
         // from OpenGL space to texture space
 
-        mat3_apply_invert_y(&texture_transform, true);
-        mat3_apply_transform(&texture_transform, ctx->opt.transform);
+        wlm_util_mat3_apply_invert_y(&texture_transform, true);
+        wlm_util_mat3_apply_transform(&texture_transform, ctx->opt.transform);
 
         if (ctx->opt.has_region && !ctx->egl.texture_region_aware) {
-            mat3_apply_region_transform(&texture_transform, &clamp_region, &output_region);
+            wlm_util_mat3_apply_region_transform(&texture_transform, &clamp_region, &output_region);
         }
 
-        mat3_apply_output_transform(&texture_transform, ctx->mirror.current_target->transform);
-        mat3_apply_invert_y(&texture_transform, ctx->mirror.invert_y);
+        wlm_util_mat3_apply_output_transform(&texture_transform, ctx->mirror.current_target->transform);
+        wlm_util_mat3_apply_invert_y(&texture_transform, ctx->mirror.invert_y);
     }
 
     // set texture transform matrix uniform
     // - GL matrices are stored in column-major order, so transpose the matrix
-    mat3_transpose(&texture_transform);
+    wlm_util_mat3_transpose(&texture_transform);
     glUniformMatrix3fv(ctx->egl.texture_transform_uniform, 1, false, (float *)texture_transform.data);
 }
 
 // --- resize_window ---
 
-void resize_window(ctx_t * ctx) {
+void wlm_egl_resize_window(ctx_t * ctx) {
     uint32_t width = round(ctx->wl.width * ctx->wl.scale);
     uint32_t height = round(ctx->wl.height * ctx->wl.scale);
-    log_debug(ctx, "egl::resize_window(): resizing EGL window to %dx%d\n", width, height);
+    wlm_log_debug(ctx, "egl::resize_window(): resizing EGL window to %dx%d\n", width, height);
 
     // resize window, then trigger viewport recalculation
     wl_egl_window_resize(ctx->egl.window, width, height, 0, 0);
     wp_viewport_set_source(ctx->wl.viewport, 0, 0, wl_fixed_from_int(width), wl_fixed_from_int(height));
-    resize_viewport(ctx);
+    wlm_egl_resize_viewport(ctx);
 
     // redraw frame
-    draw_texture(ctx);
+    wlm_egl_draw_texture(ctx);
     if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        log_error("egl::resize_window(): failed to swap buffers\n");
-        exit_fail(ctx);
+        wlm_log_error("egl::resize_window(): failed to swap buffers\n");
+        wlm_exit_fail(ctx);
     }
 }
 
 // --- update_uniforms ---
 
-void update_uniforms(ctx_t * ctx) {
+void wlm_egl_update_uniforms(ctx_t * ctx) {
     // trigger viewport recalculation
-    resize_viewport(ctx);
+    wlm_egl_resize_viewport(ctx);
 
     // set invert colors uniform
     bool invert_colors = ctx->opt.invert_colors;
@@ -436,7 +436,7 @@ void update_uniforms(ctx_t * ctx) {
 
 // --- freeze_framebuffer ---
 
-void freeze_framebuffer(struct ctx * ctx) {
+void wlm_egl_freeze_framebuffer(struct ctx * ctx) {
     glBindFramebuffer(GL_FRAMEBUFFER, ctx->egl.freeze_framebuffer);
     glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
     glCopyTexImage2D(GL_TEXTURE_2D, 0, ctx->egl.format, 0, 0, ctx->egl.width, ctx->egl.height, 0);
@@ -485,16 +485,16 @@ static const EGLAttrib modifier_high_attribs[] = {
 };
 _Static_assert(ARRAY_LENGTH(modifier_high_attribs) == MAX_PLANES, "modifier_high_attribs has incorrect length");
 
-bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
+bool wlm_egl_dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
     if (dmabuf->planes > MAX_PLANES) {
-        log_error("egl::dmabuf_to_texture(): too many planes, got %zd, can support at most %d\n", dmabuf->planes, MAX_PLANES);
+        wlm_log_error("egl::dmabuf_to_texture(): too many planes, got %zd, can support at most %d\n", dmabuf->planes, MAX_PLANES);
         return false;
     }
 
     int i = 0;
     EGLAttrib * image_attribs = malloc((6 + 10 * dmabuf->planes + 1) * sizeof (EGLAttrib));
     if (image_attribs == NULL) {
-        log_error("egl::dmabuf_to_texture(): failed to allocate EGL image attribs\n");
+        wlm_log_error("egl::dmabuf_to_texture(): failed to allocate EGL image attribs\n");
         return false;
     }
 
@@ -525,7 +525,7 @@ bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
     free(image_attribs);
 
     if (frame_image == EGL_NO_IMAGE) {
-        log_error("egl::dmabuf_to_texture(): failed to create EGL image from dmabuf: error = %x\n", eglGetError());
+        wlm_log_error("egl::dmabuf_to_texture(): failed to create EGL image from dmabuf: error = %x\n", eglGetError());
         return false;
     }
 
@@ -541,10 +541,10 @@ bool dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
 
 // --- cleanup_egl ---
 
-void cleanup_egl(ctx_t *ctx) {
+void wlm_egl_cleanup(ctx_t *ctx) {
     if (!ctx->egl.initialized) return;
 
-    log_debug(ctx, "egl::cleanup(): destroying EGL objects\n");
+    wlm_log_debug(ctx, "egl::cleanup(): destroying EGL objects\n");
 
     if (ctx->egl.shader_program != 0) glDeleteProgram(ctx->egl.shader_program);
     if (ctx->egl.freeze_framebuffer != 0) glDeleteFramebuffers(1, &ctx->egl.freeze_framebuffer);

@@ -1,4 +1,6 @@
-const char glsl_@FILENAME@[] = {
+#include <wlm/glsl/@FILENAME@.h>
+
+const char wlm_glsl_@FILENAME@[] = {
     @DATA@
     0
 };

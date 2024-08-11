@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "transform.h"
+#include <wlm/transform.h>
 
 struct ctx;
 struct output_list_node;
@@ -42,17 +42,18 @@ typedef struct ctx_opt {
     char * fullscreen_output;
 } ctx_opt_t;
 
-void init_opt(struct ctx * ctx);
-void cleanup_opt(struct ctx * ctx);
+void wlm_opt_init(struct ctx * ctx);
+void wlm_cleanup_opt(struct ctx * ctx);
 
-bool parse_scaling_opt(scale_t * scaling, scale_filter_t * scaling_filter, const char * scaling_arg);
-bool parse_transform_opt(transform_t * transform, const char * transform_arg);
-bool parse_region_opt(region_t * region, char ** output, const char * region_arg);
-bool find_output_opt(struct ctx * ctx, struct output_list_node ** output_handle, region_t * region_handle);
+bool wlm_opt_parse_scaling(scale_t * scaling, scale_filter_t * scaling_filter, const char * scaling_arg);
+bool wlm_opt_parse_backend(backend_t * backend, const char * backend_arg);
+bool wlm_opt_parse_transform(transform_t * transform, const char * transform_arg);
+bool wlm_opt_parse_region(region_t * region, char ** output, const char * region_arg);
+bool wlm_opt_find_output(struct ctx * ctx, struct output_list_node ** output_handle, region_t * region_handle);
 
-void usage_opt(struct ctx * ctx);
-void version_opt(struct ctx * ctx);
+void wlm_opt_usage(struct ctx * ctx);
+void wlm_opt_version(struct ctx * ctx);
 
-void parse_opt(struct ctx * ctx, int argc, char ** argv);
+void wlm_opt_parse(struct ctx * ctx, int argc, char ** argv);
 
 #endif

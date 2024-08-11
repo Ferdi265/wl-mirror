@@ -3,13 +3,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "event.h"
-#include "viewporter.h"
-#include "fractional-scale-v1.h"
-#include "xdg-shell.h"
-#include "xdg-output-unstable-v1.h"
-#include "wlr-export-dmabuf-unstable-v1.h"
-#include "wlr-screencopy-unstable-v1.h"
+#include <wlm/event.h>
+#include <wlm/proto/viewporter.h>
+#include <wlm/proto/fractional-scale-v1.h>
+#include <wlm/proto/xdg-shell.h>
+#include <wlm/proto/xdg-output-unstable-v1.h>
+#include <wlm/proto/wlr-export-dmabuf-unstable-v1.h>
+#include <wlm/proto/wlr-screencopy-unstable-v1.h>
 
 #ifdef WITH_LIBDECOR
 #include <libdecor.h>
@@ -102,11 +102,11 @@ typedef struct ctx_wl {
     bool initialized;
 } ctx_wl_t;
 
-void init_wl(struct ctx * ctx);
-void set_window_title(struct ctx * ctx, const char * title);
-void set_window_fullscreen(struct ctx * ctx);
-void unset_window_fullscreen(struct ctx * ctx);
-void update_window_scale(struct ctx * ctx, double scale, bool is_fractional);
-void cleanup_wl(struct ctx * ctx);
+void wlm_wayland_init(struct ctx * ctx);
+void wlm_wayland_window_set_title(struct ctx * ctx, const char * title);
+void wlm_wayland_window_set_fullscreen(struct ctx * ctx);
+void wlm_wayland_window_unset_fullscreen(struct ctx * ctx);
+void wlm_wayland_window_update_scale(struct ctx * ctx, double scale, bool is_fractional);
+void wlm_wayland_cleanup(struct ctx * ctx);
 
 #endif

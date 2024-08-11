@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "context.h"
+#include <wlm/context.h>
 
 // --- output event handlers ---
 
@@ -16,7 +16,7 @@ static void on_output_geometry(
     // update transform only if changed
     if (node->transform != (uint32_t)transform) {
         if (ctx->opt.verbose) {
-            log_debug(ctx, "wayland::on_output_geometry(): updating output %s (transform = ", node->name);
+            wlm_log_debug(ctx, "wayland::on_output_geometry(): updating output %s (transform = ", node->name);
             switch (transform) {
                 case WL_OUTPUT_TRANSFORM_NORMAL:
                     fprintf(stderr, "normal");
@@ -53,7 +53,7 @@ static void on_output_geometry(
 
         // update egl viewport only if this is the target output
         if (ctx->mirror.initialized && ctx->mirror.current_target->output == output) {
-            resize_viewport(ctx);
+            wlm_egl_resize_viewport(ctx);
         }
     }
 
@@ -88,13 +88,13 @@ static void on_output_scale(
 
     // update scale only if changed
     if (node->scale != scale) {
-        log_debug(ctx, "wayland::on_output_scale(): updating output %s (scale = %d, id = %d)\n", node->name, scale, node->output_id);
+        wlm_log_debug(ctx, "wayland::on_output_scale(): updating output %s (scale = %d, id = %d)\n", node->name, scale, node->output_id);
         node->scale = scale;
 
         // update buffer scale only if this is the current output
         if (ctx->wl.current_output != NULL && ctx->wl.current_output->output == output) {
-            log_debug(ctx, "wayland::on_output_scale(): updating window scale\n");
-            update_window_scale(ctx, scale, false);
+            wlm_log_debug(ctx, "wayland::on_output_scale(): updating window scale\n");
+            wlm_wayland_window_update_scale(ctx, scale, false);
         }
     }
 }
@@ -133,7 +133,7 @@ static void on_xdg_output_logical_position(
 
     // update position only if changed
     if (node->x != x || node->y != y) {
-        log_debug(ctx, "wayland::on_xdg_output_logical_position(): updating output %s (position = %d,%d, id = %d)\n", node->name, x, y, node->output_id);
+        wlm_log_debug(ctx, "wayland::on_xdg_output_logical_position(): updating output %s (position = %d,%d, id = %d)\n", node->name, x, y, node->output_id);
 
         node->x = x;
         node->y = y;
@@ -151,7 +151,7 @@ static void on_xdg_output_logical_size(
 
     // update size only if changed
     if (node->width != width || node->height != height) {
-        log_debug(ctx, "wayland::on_xdg_output_logical_size(): updating output %s (size = %dx%d, id = %d)\n", node->name, width, height, node->output_id);
+        wlm_log_debug(ctx, "wayland::on_xdg_output_logical_size(): updating output %s (size = %dx%d, id = %d)\n", node->name, width, height, node->output_id);
 
         node->width = width;
         node->height = height;
@@ -169,14 +169,14 @@ static void on_xdg_output_name(
 
     // update name only if changed
     if (node->name == NULL || strcmp(node->name, name) != 0) {
-        log_debug(ctx, "wayland::on_xdg_output_name(): updating output %s (id = %d)\n", name, node->output_id);
+        wlm_log_debug(ctx, "wayland::on_xdg_output_name(): updating output %s (id = %d)\n", name, node->output_id);
 
         // allocate copy of name since name is owned by libwayland
         free(node->name);
         node->name = strdup(name);
         if (node->name == NULL) {
-            log_error("wayland::on_xdg_output_name(): failed to allocate output name\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_xdg_output_name(): failed to allocate output name\n");
+            wlm_exit_fail(ctx);
         }
     }
 
@@ -206,14 +206,14 @@ static void on_registry_add(
 ) {
     ctx_t * ctx = (ctx_t *)data;
 
-    log_debug(ctx, "wayland::on_registry_add(): %s (version = %d, id = %d)\n", interface, version, id);
+    wlm_log_debug(ctx, "wayland::on_registry_add(): %s (version = %d, id = %d)\n", interface, version, id);
 
     // bind proxy object for each protocol we need
     // bind proxy object for each output
     if (strcmp(interface, wl_compositor_interface.name) == 0) {
         if (ctx->wl.compositor != NULL) {
-            log_error("wayland::on_registry_add(): duplicate compositor\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): duplicate compositor\n");
+            wlm_exit_fail(ctx);
         }
 
         // bind compositor object
@@ -223,8 +223,8 @@ static void on_registry_add(
         ctx->wl.compositor_id = id;
     } else if (strcmp(interface, wp_viewporter_interface.name) == 0) {
         if (ctx->wl.viewporter != NULL) {
-            log_error("wayland::on_registry_add(): duplicate wp_viewporter\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): duplicate wp_viewporter\n");
+            wlm_exit_fail(ctx);
         }
 
         // bind wp_viewporter object
@@ -233,8 +233,8 @@ static void on_registry_add(
         );
     } else if (strcmp(interface, wp_fractional_scale_manager_v1_interface.name) == 0) {
         if (ctx->wl.fractional_scale_manager != NULL) {
-            log_error("wayland::on_registry_add(): duplicate wp_fractional_scale_manager\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): duplicate wp_fractional_scale_manager\n");
+            wlm_exit_fail(ctx);
         }
 
         // bind wp_fractional_scale_manager_v1 object
@@ -243,8 +243,8 @@ static void on_registry_add(
         );
     } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
         if (ctx->wl.wm_base != NULL) {
-            log_error("wayland::on_registry_add(): duplicate wm_base\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): duplicate wm_base\n");
+            wlm_exit_fail(ctx);
         }
 
         // bind wm_base object
@@ -254,8 +254,8 @@ static void on_registry_add(
         ctx->wl.wm_base_id = id;
     } else if (strcmp(interface, zxdg_output_manager_v1_interface.name) == 0) {
         if (ctx->wl.output_manager != NULL) {
-            log_error("wayland::on_registry_add(): duplicate output_manager\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): duplicate output_manager\n");
+            wlm_exit_fail(ctx);
         }
 
         // bind output_manager object
@@ -265,8 +265,8 @@ static void on_registry_add(
         ctx->wl.output_manager_id = id;
     } else if (strcmp(interface, zwlr_export_dmabuf_manager_v1_interface.name) == 0) {
         if (ctx->wl.dmabuf_manager != NULL) {
-            log_error("wayland::on_registry_add(): duplicate dmabuf_manager\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): duplicate dmabuf_manager\n");
+            wlm_exit_fail(ctx);
         }
 
         // bind dmabuf manager object
@@ -277,8 +277,8 @@ static void on_registry_add(
         ctx->wl.dmabuf_manager_id = id;
     } else if (strcmp(interface, zwlr_screencopy_manager_v1_interface.name) == 0) {
         if (ctx->wl.screencopy_manager != NULL) {
-            log_error("wayland::on_registry_add(): duplicate screencopy_manager\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): duplicate screencopy_manager\n");
+            wlm_exit_fail(ctx);
         }
 
         // bind screencopy manager object
@@ -289,8 +289,8 @@ static void on_registry_add(
         ctx->wl.screencopy_manager_id = id;
     } else if (strcmp(interface, wl_shm_interface.name) == 0) {
         if (ctx->wl.shm != NULL) {
-            log_error("wayland::on_registry_add(): duplicate shm\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): duplicate shm\n");
+            wlm_exit_fail(ctx);
         }
 
         // bind shm object
@@ -303,8 +303,8 @@ static void on_registry_add(
         // allocate output node
         output_list_node_t * node = malloc(sizeof (output_list_node_t));
         if (node == NULL) {
-            log_error("wayland::on_registry_add(): failed to allocate output node\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): failed to allocate output node\n");
+            wlm_exit_fail(ctx);
         }
 
         // initialize output node
@@ -337,8 +337,8 @@ static void on_registry_add(
         // - sway always sends outputs after protocol extensions
         // - for simplicity, only this event order is supported
         if (ctx->wl.output_manager == NULL) {
-            log_error("wayland::on_registry_add(): wl_output received before xdg_output_manager\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): wl_output received before xdg_output_manager\n");
+            wlm_exit_fail(ctx);
         }
 
         // create xdg_output object
@@ -346,8 +346,8 @@ static void on_registry_add(
             ctx->wl.output_manager, node->output
         );
         if (node->xdg_output == NULL) {
-            log_error("wayland::on_registry_add(): failed to create xdg_output\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): failed to create xdg_output\n");
+            wlm_exit_fail(ctx);
         }
 
         // add xdg_output event listener
@@ -359,8 +359,8 @@ static void on_registry_add(
         // allocate seat node
         seat_list_node_t * node = malloc(sizeof (seat_list_node_t));
         if (node == NULL) {
-            log_error("wayland::on_registry_add(): failed to allocate seat node\n");
-            exit_fail(ctx);
+            wlm_log_error("wayland::on_registry_add(): failed to allocate seat node\n");
+            wlm_exit_fail(ctx);
         }
 
         // initialize seat node
@@ -389,23 +389,23 @@ static void on_registry_remove(
     // ensure protocols we need aren't removed
     // remove removed outputs from the output list
     if (id == ctx->wl.compositor_id) {
-        log_error("wayland::on_registry_remove(): compositor disappeared\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::on_registry_remove(): compositor disappeared\n");
+        wlm_exit_fail(ctx);
     } else if (id == ctx->wl.viewporter_id) {
-        log_error("wayland::on_registry_remove(): viewporter disappeared\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::on_registry_remove(): viewporter disappeared\n");
+        wlm_exit_fail(ctx);
     } else if (id == ctx->wl.fractional_scale_manager_id) {
-        log_error("wayland::on_registry_remove(): fractional_scale_manager disappeared\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::on_registry_remove(): fractional_scale_manager disappeared\n");
+        wlm_exit_fail(ctx);
     } else if (id == ctx->wl.wm_base_id) {
-        log_error("wayland::on_registry_remove(): wm_base disappeared\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::on_registry_remove(): wm_base disappeared\n");
+        wlm_exit_fail(ctx);
     } else if (id == ctx->wl.output_manager_id) {
-        log_error("wayland::on_registry_remove(): output_manager disappeared\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::on_registry_remove(): output_manager disappeared\n");
+        wlm_exit_fail(ctx);
     } else if (id == ctx->wl.dmabuf_manager_id) {
-        log_error("wayland::on_registry_remove(): dmabuf_manager disappeared\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::on_registry_remove(): dmabuf_manager disappeared\n");
+        wlm_exit_fail(ctx);
     } else {
         {
             output_list_node_t ** link = &ctx->wl.outputs;
@@ -413,11 +413,11 @@ static void on_registry_remove(
             output_list_node_t * prev = NULL;
             while (cur != NULL) {
                 if (id == cur->output_id) {
-                    log_debug(ctx, "wayland::on_registry_remove(): output %s removed (id = %d)\n", cur->name, id);
+                    wlm_log_debug(ctx, "wayland::on_registry_remove(): output %s removed (id = %d)\n", cur->name, id);
 
                     // notify mirror code of removed outputs
                     // - triggers exit if the target output disappears
-                    output_removed(ctx, cur);
+                    wlm_mirror_output_removed(ctx, cur);
 
                     // remove output node from linked list
                     *link = cur->next;
@@ -447,7 +447,7 @@ static void on_registry_remove(
             seat_list_node_t * prev = NULL;
             while (cur != NULL) {
                 if (id == cur->seat_id) {
-                    log_debug(ctx, "wayland::on_registry_remove(): seat removed (id = %d)\n", id);
+                    wlm_log_debug(ctx, "wayland::on_registry_remove(): seat removed (id = %d)\n", id);
 
                     // remove seat node from linked list
                     *link = cur->next;
@@ -517,7 +517,7 @@ static void on_surface_enter(
         //
         // only one of those calls will give us an output in our list of outputs.
         // we should ignore all other calls, instead of bailing completely
-        log_debug(ctx, "wayland::on_surface_enter(): entered output not in output list, possibly bound from another registry?\n");
+        wlm_log_debug(ctx, "wayland::on_surface_enter(): entered output not in output list, possibly bound from another registry?\n");
         return;
     }
 
@@ -527,11 +527,11 @@ static void on_surface_enter(
 
     // set window fullscreen now if no specific output requested
     if (first_output && ctx->opt.fullscreen) {
-        set_window_fullscreen(ctx);
+        wlm_wayland_window_set_fullscreen(ctx);
     }
 
-    log_debug(ctx, "wayland::on_surface_enter(): updating window scale\n");
-    update_window_scale(ctx, node->scale, false);
+    wlm_log_debug(ctx, "wayland::on_surface_enter(): updating window scale\n");
+    wlm_wayland_window_update_scale(ctx, node->scale, false);
 
     (void)surface;
 }
@@ -553,7 +553,7 @@ static const struct wl_surface_listener surface_listener = {
 
 static void on_surface_configure_finished(ctx_t * ctx) {
     // acknowledge configure and commit surface to finish configure sequence
-    log_debug(ctx, "wayland::on_surface_configure_finished(): window configured\n");
+    wlm_log_debug(ctx, "wayland::on_surface_configure_finished(): window configured\n");
 #ifdef WITH_LIBDECOR
 
 #else
@@ -581,8 +581,8 @@ static void on_libdecor_error(
 ) {
     ctx_t * ctx = libdecor_error_context;
 
-    log_error("wayland::on_libdecor_error(): error %d, %s\n", error, message);
-    exit_fail(ctx);
+    wlm_log_error("wayland::on_libdecor_error(): error %d, %s\n", error, message);
+    wlm_exit_fail(ctx);
 
     (void)libdecor_context;
 }
@@ -603,11 +603,11 @@ static void on_libdecor_frame_configure(
     int height = 0;
     if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
         if (ctx->wl.width == 0 || ctx->wl.height == 0) {
-            log_debug(ctx, "wayland::on_libdecor_frame_configure(): falling back to default width\n");
+            wlm_log_debug(ctx, "wayland::on_libdecor_frame_configure(): falling back to default width\n");
             width = 100;
             height = 100;
         } else {
-            log_debug(ctx, "wayland::on_libdecor_frame_configure(): falling back to previous width\n");
+            wlm_log_debug(ctx, "wayland::on_libdecor_frame_configure(): falling back to previous width\n");
             width = ctx->wl.width;
             height = ctx->wl.height;
         }
@@ -634,7 +634,7 @@ static void on_libdecor_frame_configure(
 
     // update size only if changed
     if (ctx->wl.width != (uint32_t)width || ctx->wl.height != (uint32_t)height) {
-        log_debug(ctx, "wayland::on_libdecor_frame_configure(): window resized to %dx%d\n", width, height);
+        wlm_log_debug(ctx, "wayland::on_libdecor_frame_configure(): window resized to %dx%d\n", width, height);
         ctx->wl.width = width;
         ctx->wl.height = height;
 
@@ -643,7 +643,7 @@ static void on_libdecor_frame_configure(
 
         // resize window to reflect new surface size
         if (ctx->egl.initialized) {
-            resize_window(ctx);
+            wlm_egl_resize_window(ctx);
         }
     }
 
@@ -665,7 +665,7 @@ static void on_libdecor_frame_close(
 ) {
     ctx_t * ctx = (ctx_t *)data;
 
-    log_debug(ctx, "wayland::on_libdecor_frame_close(): close request received\n");
+    wlm_log_debug(ctx, "wayland::on_libdecor_frame_close(): close request received\n");
     ctx->wl.closing = true;
 
     (void)frame;
@@ -730,7 +730,7 @@ static void on_xdg_toplevel_configure(
 
     // update size only if changed
     if (ctx->wl.width != (uint32_t)width || ctx->wl.height != (uint32_t)height) {
-        log_debug(ctx, "wayland::on_xdg_toplevel_configure(): window resized to %dx%d\n", width, height);
+        wlm_log_debug(ctx, "wayland::on_xdg_toplevel_configure(): window resized to %dx%d\n", width, height);
         ctx->wl.width = width;
         ctx->wl.height = height;
 
@@ -739,7 +739,7 @@ static void on_xdg_toplevel_configure(
 
         // resize window to reflect new surface size
         if (ctx->egl.initialized) {
-            resize_window(ctx);
+            wlm_egl_resize_window(ctx);
         }
     }
 
@@ -758,7 +758,7 @@ static void on_xdg_toplevel_close(
 ) {
     ctx_t * ctx = (ctx_t *)data;
 
-    log_debug(ctx, "wayland::on_xdg_toplevel_close(): close request received\n");
+    wlm_log_debug(ctx, "wayland::on_xdg_toplevel_close(): close request received\n");
     ctx->wl.closing = true;
 
     (void)xdg_toplevel;
@@ -793,10 +793,10 @@ static void on_wayland_each(ctx_t * ctx) {
 static void on_fractional_scale_preferred_scale(void * data, struct wp_fractional_scale_v1 * fractional_scale, uint32_t scale_times_120) {
     ctx_t * ctx = (ctx_t *)data;
     double scale = scale_times_120 / 120.0;
-    log_debug(ctx, "wayland::on_fractional_scale_preferred_scale(): scale = %.4f\n", scale);
+    wlm_log_debug(ctx, "wayland::on_fractional_scale_preferred_scale(): scale = %.4f\n", scale);
 
     // fractionally scaled surfaces have buffer scale of 1
-    update_window_scale(ctx, scale, true);
+    wlm_wayland_window_update_scale(ctx, scale, true);
 
     (void)fractional_scale;
 }
@@ -807,7 +807,7 @@ static const struct wp_fractional_scale_v1_listener fractional_scale_listener = 
 
 // --- find_output ---
 
-bool find_wl_output(ctx_t * ctx, char * output_name, struct wl_output ** output) {
+bool wlm_wayland_find_output(ctx_t * ctx, char * output_name, struct wl_output ** output) {
     bool found = false;
     output_list_node_t * cur = ctx->wl.outputs;
     while (cur != NULL) {
@@ -826,7 +826,7 @@ bool find_wl_output(ctx_t * ctx, char * output_name, struct wl_output ** output)
 
 // --- init_wl ---
 
-void init_wl(ctx_t * ctx) {
+void wlm_wayland_init(ctx_t * ctx) {
     // initialize context structure
     ctx->wl.display = NULL;
     ctx->wl.registry = NULL;
@@ -887,19 +887,19 @@ void init_wl(ctx_t * ctx) {
     // connect to display
     ctx->wl.display = wl_display_connect(NULL);
     if (ctx->wl.display == NULL) {
-        log_error("wayland::init(): failed to connect to wayland\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): failed to connect to wayland\n");
+        wlm_exit_fail(ctx);
     }
 
     // register event loop
     ctx->wl.event_handler.fd = wl_display_get_fd(ctx->wl.display);
-    event_add_fd(ctx, &ctx->wl.event_handler);
+    wlm_event_add_fd(ctx, &ctx->wl.event_handler);
 
     // get registry handle
     ctx->wl.registry = wl_display_get_registry(ctx->wl.display);
     if (ctx->wl.registry == NULL) {
-        log_error("wayland::init(): failed to get registry handle\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): failed to get registry handle\n");
+        wlm_exit_fail(ctx);
     }
 
     // add registry event listener
@@ -914,17 +914,17 @@ void init_wl(ctx_t * ctx) {
 
     // check for missing required protocols
     if (ctx->wl.compositor == NULL) {
-        log_error("wayland::init(): compositor missing\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): compositor missing\n");
+        wlm_exit_fail(ctx);
     } else if (ctx->wl.viewporter == NULL) {
-        log_error("wayland::init(): viewporter missing\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): viewporter missing\n");
+        wlm_exit_fail(ctx);
     } else if (ctx->wl.wm_base == NULL) {
-        log_error("wayland::init(): wm_base missing\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): wm_base missing\n");
+        wlm_exit_fail(ctx);
     } else if (ctx->wl.output_manager == NULL) {
-        log_error("wayland::init(): output_manager missing\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): output_manager missing\n");
+        wlm_exit_fail(ctx);
     }
 
     // add wm_base event listener
@@ -934,8 +934,8 @@ void init_wl(ctx_t * ctx) {
     // create surface
     ctx->wl.surface = wl_compositor_create_surface(ctx->wl.compositor);
     if (ctx->wl.surface == NULL) {
-        log_error("wayland::init(): failed to create surface\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): failed to create surface\n");
+        wlm_exit_fail(ctx);
     }
 
     // add surface event listener
@@ -946,8 +946,8 @@ void init_wl(ctx_t * ctx) {
     // create viewport
     ctx->wl.viewport = wp_viewporter_get_viewport(ctx->wl.viewporter, ctx->wl.surface);
     if (ctx->wl.viewport == NULL) {
-        log_error("wayland::init(): failed to create viewport\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): failed to create viewport\n");
+        wlm_exit_fail(ctx);
     }
 
     // create fractional scale if supported
@@ -986,8 +986,8 @@ void init_wl(ctx_t * ctx) {
     // create xdg surface
     ctx->wl.xdg_surface = xdg_wm_base_get_xdg_surface(ctx->wl.wm_base, ctx->wl.surface);
     if (ctx->wl.xdg_surface == NULL) {
-        log_error("wayland::init(): failed to create xdg_surface\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): failed to create xdg_surface\n");
+        wlm_exit_fail(ctx);
     }
 
     // add xdg surface event listener
@@ -997,8 +997,8 @@ void init_wl(ctx_t * ctx) {
     // create xdg toplevel
     ctx->wl.xdg_toplevel = xdg_surface_get_toplevel(ctx->wl.xdg_surface);
     if (ctx->wl.xdg_toplevel == NULL) {
-        log_error("wayland::init(): failed to create xdg_toplevel\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): failed to create xdg_toplevel\n");
+        wlm_exit_fail(ctx);
     }
 
     // add xdg toplevel event listener
@@ -1021,19 +1021,19 @@ void init_wl(ctx_t * ctx) {
 
     // set fullscreen on xdg_toplevel
     if (ctx->opt.fullscreen && ctx->opt.fullscreen_output != NULL) {
-        set_window_fullscreen(ctx);
+        wlm_wayland_window_set_fullscreen(ctx);
     }
     // check if surface is configured
     // - expecting surface to be configured at this point
     if (!ctx->wl.configured) {
-        log_error("wayland::init(): surface not configured\n");
-        exit_fail(ctx);
+        wlm_log_error("wayland::init(): surface not configured\n");
+        wlm_exit_fail(ctx);
     }
 }
 
 // --- set_window_title ---
 
-void set_window_title(ctx_t * ctx, const char * title) {
+void wlm_wayland_window_set_title(ctx_t * ctx, const char * title) {
 #ifdef WITH_LIBDECOR
     libdecor_frame_set_title(ctx->wl.libdecor_frame, title);
 #else
@@ -1043,13 +1043,13 @@ void set_window_title(ctx_t * ctx, const char * title) {
 
 // --- set_window_fullscreen ---
 
-void set_window_fullscreen(ctx_t * ctx) {
+void wlm_wayland_window_set_fullscreen(ctx_t * ctx) {
     struct wl_output * output = NULL;
     if (ctx->opt.fullscreen_output == NULL) {
         output = ctx->wl.current_output->output;
-    } else if (!find_wl_output(ctx, ctx->opt.fullscreen_output, &output)) {
-        log_error("wayland::init(): output %s not found\n", ctx->opt.fullscreen_output);
-        exit_fail(ctx);
+    } else if (!wlm_wayland_find_output(ctx, ctx->opt.fullscreen_output, &output)) {
+        wlm_log_error("wayland::init(): output %s not found\n", ctx->opt.fullscreen_output);
+        wlm_exit_fail(ctx);
     }
 
 #ifdef WITH_LIBDECOR
@@ -1059,7 +1059,7 @@ void set_window_fullscreen(ctx_t * ctx) {
 #endif
 }
 
-void unset_window_fullscreen(ctx_t * ctx) {
+void wlm_wayland_window_unset_fullscreen(ctx_t * ctx) {
 #ifdef WITH_LIBDECOR
     libdecor_frame_unset_fullscreen(ctx->wl.libdecor_frame);
 #else
@@ -1069,33 +1069,33 @@ void unset_window_fullscreen(ctx_t * ctx) {
 
 // --- update_window_scale
 
-void update_window_scale(ctx_t * ctx, double scale, bool is_fractional) {
+void wlm_wayland_window_update_scale(ctx_t * ctx, double scale, bool is_fractional) {
     bool resize = false;
 
     // don't update scale from other sources if fractional scaling supported
     if (ctx->wl.fractional_scale != NULL && !is_fractional) return;
 
     if (ctx->wl.scale != scale) {
-        log_debug(ctx, "wayland::update_window_scale(): setting window scale to %.4f\n", scale);
+        wlm_log_debug(ctx, "wayland::update_window_scale(): setting window scale to %.4f\n", scale);
         ctx->wl.scale = scale;
         resize = true;
     }
 
     // resize egl window to reflect new scale
     if (resize && ctx->egl.initialized) {
-        resize_window(ctx);
+        wlm_egl_resize_window(ctx);
     }
 }
 
 // --- cleanup_wl ---
 
-void cleanup_wl(ctx_t *ctx) {
+void wlm_wayland_cleanup(ctx_t *ctx) {
     if (!ctx->wl.initialized) return;
 
-    log_debug(ctx, "wayland::cleanup(): destroying wayland objects\n");
+    wlm_log_debug(ctx, "wayland::cleanup(): destroying wayland objects\n");
 
     // deregister event handler
-    event_remove_fd(ctx, &ctx->wl.event_handler);
+    wlm_event_remove_fd(ctx, &ctx->wl.event_handler);
 
     {
         // free every output in output list

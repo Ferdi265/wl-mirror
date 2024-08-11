@@ -1,23 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "context.h"
-#include "event.h"
+#include <wlm/context.h>
+#include <wlm/event.h>
 
-void cleanup(ctx_t * ctx) {
-    log_debug(ctx, "main::cleanup(): deallocating resources\n");
+void wlm_cleanup(ctx_t * ctx) {
+    wlm_log_debug(ctx, "main::cleanup(): deallocating resources\n");
 
-    if (ctx->mirror.initialized) cleanup_mirror(ctx);
-    if (ctx->egl.initialized) cleanup_egl(ctx);
-    if (ctx->wl.initialized) cleanup_wl(ctx);
-    if (ctx->stream.initialized) cleanup_stream(ctx);
-    if (ctx->event.initialized) cleanup_event(ctx);
+    if (ctx->mirror.initialized) wlm_mirror_cleanup(ctx);
+    if (ctx->egl.initialized) wlm_egl_cleanup(ctx);
+    if (ctx->wl.initialized) wlm_wayland_cleanup(ctx);
+    if (ctx->stream.initialized) wlm_stream_cleanup(ctx);
+    if (ctx->event.initialized) wlm_event_cleanup(ctx);
 
-    cleanup_opt(ctx);
+    wlm_cleanup_opt(ctx);
 }
 
-noreturn void exit_fail(ctx_t * ctx) {
-    cleanup(ctx);
+noreturn void wlm_exit_fail(ctx_t * ctx) {
+    wlm_cleanup(ctx);
     exit(1);
 }
 
@@ -30,8 +30,8 @@ int main(int argc, char ** argv) {
     ctx.egl.initialized = false;
     ctx.mirror.initialized = false;
 
-    init_opt(&ctx);
-    init_event(&ctx);
+    wlm_opt_init(&ctx);
+    wlm_event_init(&ctx);
 
     if (argc > 0) {
         // skip program name
@@ -39,26 +39,26 @@ int main(int argc, char ** argv) {
         argc--;
     }
 
-    parse_opt(&ctx, argc, argv);
+    wlm_opt_parse(&ctx, argc, argv);
 
-    log_debug(&ctx, "main::main(): initializing stream\n");
-    init_stream(&ctx);
+    wlm_log_debug(&ctx, "main::main(): initializing stream\n");
+    wlm_stream_init(&ctx);
 
-    log_debug(&ctx, "main::main(): initializing wayland\n");
-    init_wl(&ctx);
+    wlm_log_debug(&ctx, "main::main(): initializing wayland\n");
+    wlm_wayland_init(&ctx);
 
-    log_debug(&ctx, "main::main(): initializing EGL\n");
-    init_egl(&ctx);
+    wlm_log_debug(&ctx, "main::main(): initializing EGL\n");
+    wlm_egl_init(&ctx);
 
-    log_debug(&ctx, "main::main(): initializing mirror\n");
-    init_mirror(&ctx);
+    wlm_log_debug(&ctx, "main::main(): initializing mirror\n");
+    wlm_mirror_init(&ctx);
 
-    log_debug(&ctx, "main::main(): initializing mirror backend\n");
-    init_mirror_backend(&ctx);
+    wlm_log_debug(&ctx, "main::main(): initializing mirror backend\n");
+    wlm_mirror_backend_init(&ctx);
 
-    log_debug(&ctx, "main::main(): entering event loop\n");
-    event_loop(&ctx);
-    log_debug(&ctx, "main::main(): exiting event loop\n");
+    wlm_log_debug(&ctx, "main::main(): entering event loop\n");
+    wlm_event_loop(&ctx);
+    wlm_log_debug(&ctx, "main::main(): exiting event loop\n");
 
-    cleanup(&ctx);
+    wlm_cleanup(&ctx);
 }

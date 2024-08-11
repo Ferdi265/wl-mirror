@@ -1,7 +1,8 @@
 add_library(version INTERFACE)
 target_include_directories(version INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include/")
 
-set(version-header "${CMAKE_CURRENT_BINARY_DIR}/include/version.h")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/wlm")
+set(version-header "${CMAKE_CURRENT_BINARY_DIR}/include/wlm/version.h")
 set(version-template "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in")
 
 add_custom_target(gen-version

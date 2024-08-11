@@ -6,8 +6,8 @@
 #include <wayland-client-protocol.h>
 #include <wayland-egl.h>
 #include <EGL/egl.h>
-#include "transform.h"
-#include "mirror-backends.h"
+#include <wlm/transform.h>
+#include <wlm/mirror-backends.h>
 
 struct ctx;
 struct output_list_node;
@@ -26,13 +26,13 @@ typedef struct ctx_mirror {
     bool initialized;
 } ctx_mirror_t;
 
-void init_mirror(struct ctx * ctx);
-void init_mirror_backend(struct ctx * ctx);
+void wlm_mirror_init(struct ctx * ctx);
+void wlm_mirror_backend_init(struct ctx * ctx);
 
-void output_removed(struct ctx * ctx, struct output_list_node * node);
-void update_title(struct ctx * ctx);
+void wlm_mirror_output_removed(struct ctx * ctx, struct output_list_node * node);
+void wlm_mirror_update_title(struct ctx * ctx);
 
-void backend_fail(struct ctx * ctx);
-void cleanup_mirror(struct ctx * ctx);
+void wlm_mirror_backend_fail(struct ctx * ctx);
+void wlm_mirror_cleanup(struct ctx * ctx);
 
 #endif
