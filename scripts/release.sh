@@ -55,10 +55,21 @@ echo "- creating archive"
 mkdir -p "$REPODIR/dist"
 tar caf "$REPODIR/dist/wl-mirror-$VERSION.tar.gz" "wl-mirror-$VERSION/"
 
+echo "- removing bundled wayland-protocols"
+rm -rf "wl-mirror-$VERSION/proto/wayland-protocols"
+
+echo "- creating archive without wayland-protocols"
+mkdir -p "$REPODIR/dist"
+tar caf "$REPODIR/dist/wl-mirror-$VERSION-nowlp.tar.gz" "wl-mirror-$VERSION/"
+
 if [[ ! -z "${SIGKEY+z}" ]]; then
     echo "- signing archive"
     gpg --yes -u "$SIGKEY" -o "$REPODIR/dist/wl-mirror-$VERSION.tar.gz.asc" --armor --detach-sig "$REPODIR/dist/wl-mirror-$VERSION.tar.gz"
     gpg --yes -o "$REPODIR/dist/wl-mirror-$VERSION.tar.gz.sig" --dearmor "$REPODIR/dist/wl-mirror-$VERSION.tar.gz.asc"
+
+    echo "- signing archive without wayland-protocols"
+    gpg --yes -u "$SIGKEY" -o "$REPODIR/dist/wl-mirror-$VERSION-nowlp.tar.gz.asc" --armor --detach-sig "$REPODIR/dist/wl-mirror-$VERSION-nowlp.tar.gz"
+    gpg --yes -o "$REPODIR/dist/wl-mirror-$VERSION-nowlp.tar.gz.sig" --dearmor "$REPODIR/dist/wl-mirror-$VERSION-nowlp.tar.gz.asc"
 else
     echo "- skipping signing archive (SIGKEY not set)"
 fi
