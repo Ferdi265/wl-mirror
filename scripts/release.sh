@@ -52,12 +52,13 @@ echo "- adding version file"
 echo "$TAG" > "wl-mirror-$VERSION/version.txt"
 
 echo "- creating archive"
-tar caf "$REPODIR/wl-mirror-$VERSION.tar.gz" "wl-mirror-$VERSION/"
+mkdir -p "$REPODIR/dist"
+tar caf "$REPODIR/dist/wl-mirror-$VERSION.tar.gz" "wl-mirror-$VERSION/"
 
 if [[ ! -z "${SIGKEY+z}" ]]; then
     echo "- signing archive"
-    gpg --yes -u "$SIGKEY" -o "$REPODIR/wl-mirror-$VERSION.tar.gz.asc" --armor --detach-sig "$REPODIR/wl-mirror-$VERSION.tar.gz"
-    gpg --yes -o "$REPODIR/wl-mirror-$VERSION.tar.gz.sig" --dearmor "$REPODIR/wl-mirror-$VERSION.tar.gz.asc"
+    gpg --yes -u "$SIGKEY" -o "$REPODIR/dist/wl-mirror-$VERSION.tar.gz.asc" --armor --detach-sig "$REPODIR/dist/wl-mirror-$VERSION.tar.gz"
+    gpg --yes -o "$REPODIR/dist/wl-mirror-$VERSION.tar.gz.sig" --dearmor "$REPODIR/dist/wl-mirror-$VERSION.tar.gz.asc"
 else
     echo "- skipping signing archive (SIGKEY not set)"
 fi

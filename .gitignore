@@ -1,4 +1,2 @@
 build/
-wl-mirror-*.tar.gz
-wl-mirror-*.tar.gz.sig
-wl-mirror-*.tar.gz.asc
+dist/
