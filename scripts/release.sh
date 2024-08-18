@@ -1,6 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 
+# environment variables for reproducible archive
+SOURCE_EPOCH=$(git show --no-patch --format=%ct)
+TARFLAGS="
+--sort=name
+--mtime=@$SOURCE_EPOCH
+--owner=0 --group=0 --numeric-owner
+--pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime
+"
+# wrapper function for reproducible archive
+tar() {
+    LC_ALL="C.UTF-8" command tar $TARFLAGS "$@"
+}
+
 SCRIPTDIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 REPODIR=$(realpath "$SCRIPTDIR/..")
 
@@ -53,14 +66,14 @@ echo "$TAG" > "wl-mirror-$VERSION/version.txt"
 
 echo "- creating archive"
 mkdir -p "$REPODIR/dist"
-tar caf "$REPODIR/dist/wl-mirror-$VERSION.tar.gz" "wl-mirror-$VERSION/"
+tar -caf "$REPODIR/dist/wl-mirror-$VERSION.tar.gz" "wl-mirror-$VERSION/"
 
 echo "- removing bundled wayland-protocols"
 rm -rf "wl-mirror-$VERSION/proto/wayland-protocols"
 
 echo "- creating archive without wayland-protocols"
 mkdir -p "$REPODIR/dist"
-tar caf "$REPODIR/dist/wl-mirror-$VERSION-nowlp.tar.gz" "wl-mirror-$VERSION/"
+tar -caf "$REPODIR/dist/wl-mirror-$VERSION-nowlp.tar.gz" "wl-mirror-$VERSION/"
 
 if [[ ! -z "${SIGKEY+z}" ]]; then
     echo "- signing archive"
