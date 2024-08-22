@@ -7,6 +7,8 @@ project(wl-mirror C)
 option(INSTALL_EXAMPLE_SCRIPTS "install wl-mirror example scripts" OFF)
 option(INSTALL_DOCUMENTATION "install wl-mirror manual pages" OFF)
 option(WITH_LIBDECOR "use libdecor for window decoration" OFF)
+option(WITH_XDG_PORTAL_BACKEND "enable the xdg-desktop-portal / pipewire backend" OFF)
+set(SD_BUS_PROVIDER AUTO CACHE STRING "provider library for sd-bus")
 set(FORCE_WAYLAND_SCANNER_PATH "" CACHE STRING "provide a custom path for wayland-scanner")
 
 # wayland protocols needed by wl-mirror
@@ -19,6 +21,7 @@ set(PROTOCOLS
     "stable/viewporter/viewporter.xml"
     "staging/fractional-scale/fractional-scale-v1.xml"
     "unstable/xdg-output/xdg-output-unstable-v1.xml"
+    "unstable/xdg-foreign/xdg-foreign-unstable-v2.xml"
     "unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
     "unstable/wlr-export-dmabuf-unstable-v1.xml"
     "unstable/wlr-screencopy-unstable-v1.xml"
