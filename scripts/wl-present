@@ -74,6 +74,7 @@ pipectl-shim() {
     PIPEPATH="${XDG_RUNTIME_DIR:-"${TMPDIR:-/tmp}"}"
     PIPENAME="pipectl.$(id -u).pipe"
     MODE=
+    FORCE=0
 
     while [[ $# -gt 0 && "${1:0:1}" == "-" ]]; do
         opt="$1"
@@ -82,11 +83,13 @@ pipectl-shim() {
             -n|--name) arg="$1"; shift; PIPENAME="pipectl.$(id -u).$arg.pipe";;
             -i) MODE=in;;
             -o) MODE=out;;
+            -f) FORCE=1;;
             --) break;;
         esac
     done
 
     PIPE="$PIPEPATH/$PIPENAME"
+
     case "$MODE" in
         "in") if [[ ! -p "$PIPE" ]]; then
                 echo "error: could not open pipe at '$PIPE': No such file or directory" >&2
@@ -94,10 +97,11 @@ pipectl-shim() {
             else
                 cat > "$PIPE"
             fi;;
-        "out") if [[ -p "$PIPE" ]]; then
+        "out") if [[ "$FORCE" -eq 0 && -p "$PIPE" ]]; then
                 echo "error: cannot create pipe at '$PIPE': File exists" >&2
                 return 1
             else
+                [[ "$FORCE" -eq 1 ]] && rm -f "$PIPE"
                 mkfifo "$PIPE"; (tail -f "$PIPE" & echo > "$PIPE"; wait); rm -f "$PIPE"
             fi;;
     esac
