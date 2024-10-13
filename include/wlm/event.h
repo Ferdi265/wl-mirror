@@ -12,7 +12,7 @@ typedef struct event_handler {
     int fd;
     int events;
     int timeout_ms;
-    void (*on_event)(struct ctx * ctx);
+    void (*on_event)(struct ctx * ctx, uint32_t events);
     void (*on_each)(struct ctx * ctx);
 } event_handler_t;
 

@@ -96,11 +96,11 @@ void wlm_event_loop(ctx_t * ctx) {
     while ((num_events = epoll_wait(ctx->event.pollfd, events, MAX_EVENTS, timeout_ms)) != -1 && !ctx->wl.closing) {
         for (int i = 0; i < num_events; i++) {
             event_handler_t * handler = (event_handler_t *)events[i].data.ptr;
-            handler->on_event(ctx);
+            handler->on_event(ctx, events[i].events);
         }
 
         if (num_events == 0 && timeout_handler != NULL) {
-            timeout_handler->on_event(ctx);
+            timeout_handler->on_event(ctx, 0);
         }
 
         timeout_handler = min_timeout(ctx);

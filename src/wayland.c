@@ -772,7 +772,9 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener = {
 
 // --- wayland event loop handlers ---
 
-static void on_wayland_event(ctx_t * ctx) {
+static void on_wayland_event(ctx_t * ctx, uint32_t events) {
+    (void)events;
+
     if (wl_display_dispatch(ctx->wl.display) == -1) {
         ctx->wl.closing = true;
     }

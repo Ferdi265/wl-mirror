@@ -117,7 +117,9 @@ static void on_line(ctx_t * ctx, char * line) {
     wlm_opt_parse(ctx, ctx->stream.args_len, ctx->stream.args);
 }
 
-static void on_stream_data(ctx_t * ctx) {
+static void on_stream_data(ctx_t * ctx, uint32_t events) {
+    (void)events;
+
     while (true) {
         line_reserve(ctx);
 
