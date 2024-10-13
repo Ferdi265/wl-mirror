@@ -81,9 +81,9 @@ pipectl-shim() {
         shift
         case "$opt" in
             -n|--name) arg="$1"; shift; PIPENAME="pipectl.$(id -u).$arg.pipe";;
-            -i) MODE=in;;
-            -o) MODE=out;;
-            -f) FORCE=1;;
+            -i|--in) MODE=in;;
+            -o|--out) MODE=out;;
+            -f|--force) FORCE=1;;
             --) break;;
         esac
     done
