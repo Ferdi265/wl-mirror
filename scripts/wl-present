@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-    echo "usage: wl-present <command> [argument]"
+    echo "usage: wl-present [options] <command> [argument]"
     echo
     echo "start wl-mirror and control the mirrored output and region in a convenient way"
     echo
@@ -21,6 +21,10 @@ usage() {
     echo "  no-fullscreen-output        set the output to fullscreen to the current output"
     echo "  custom [options]            send custom options to wl-mirror (default asks via rofi)"
     echo
+    echo "options:"
+    echo "  -n, --name                  use an alternative pipe name (default is wl-present)"
+    echo "                              this allows multiple instances of wl-present to run"
+    echo "                              at the same time."
     echo "dependencies:"
     echo "  wl-mirror, bash, slurp, pipectl (optional), and either wofi, wmenu, rofi, fuzzel, or dmenu"
     echo
@@ -28,6 +32,7 @@ usage() {
     echo "  WL_PRESENT_DMENU            overrides the used dmenu implementation"
     echo "  WL_PRESENT_PIPECTL          overrides the used pipectl implementation"
     echo "  WL_PRESENT_SLURP            overrides the used slurp implementation"
+    echo "  WL_PRESENT_PIPE_NAME        overrides the default pipe name (default is wl-present)"
     exit 0
 }
 
@@ -59,6 +64,12 @@ else
     SLURP=slurp
 fi
 
+if [[ -n "$WL_PRESENT_PIPE_NAME" ]]; then
+    PRESENT_PIPE_NAME="$WL_PRESENT_PIPE_NAME"
+else
+    PRESENT_PIPE_NAME=wl-present
+fi
+
 pipectl-shim() {
     PIPEPATH="${XDG_RUNTIME_DIR:-"${TMPDIR:-/tmp}"}"
     PIPENAME="pipectl.$(id -u).pipe"
@@ -71,6 +82,7 @@ pipectl-shim() {
             -n|--name) arg="$1"; shift; PIPENAME="pipectl.$(id -u).$arg.pipe";;
             -i) MODE=in;;
             -o) MODE=out;;
+            --) break;;
         esac
     done
 
@@ -115,11 +127,11 @@ mirror() {
     OUTPUT="$1"
     shift
 
-    $PIPECTL -n wl-present -o | wl-mirror -S "$@" "$OUTPUT"
+    $PIPECTL -n "$PRESENT_PIPE_NAME" -o | wl-mirror -S "$@" "$OUTPUT"
 }
 
 mirror-cmd() {
-    $PIPECTL -n wl-present -i <<< "$1"
+    $PIPECTL -n "$PRESENT_PIPE_NAME" -i <<< "$1"
 }
 
 set-output() {
@@ -185,6 +197,16 @@ ask-custom() {
 EOF
     [[ $? -ne 0 ]] && exit 1
 }
+
+while [[ $# -gt 0 && "${1:0:1}" == "-" ]]; do
+    opt="$1"
+    shift
+    case "$opt" in
+        -n|--name) arg="$1"; shift; PRESENT_PIPE_NAME="$arg";;
+        -h|--help) usage;;
+        --) break;;
+    esac
+done
 
 if [[ $# -eq 0 ]]; then
     usage
