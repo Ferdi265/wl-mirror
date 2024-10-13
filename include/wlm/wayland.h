@@ -103,6 +103,7 @@ typedef struct ctx_wl {
 } ctx_wl_t;
 
 void wlm_wayland_init(struct ctx * ctx);
+void wlm_wayland_window_close(struct ctx * ctx);
 void wlm_wayland_window_set_title(struct ctx * ctx, const char * title);
 void wlm_wayland_window_set_fullscreen(struct ctx * ctx);
 void wlm_wayland_window_unset_fullscreen(struct ctx * ctx);

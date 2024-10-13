@@ -1031,6 +1031,12 @@ void wlm_wayland_init(ctx_t * ctx) {
     }
 }
 
+// --- close_window ---
+
+void wlm_wayland_window_close(struct ctx * ctx) {
+    ctx->wl.closing = true;
+}
+
 // --- set_window_title ---
 
 void wlm_wayland_window_set_title(ctx_t * ctx, const char * title) {
