@@ -118,7 +118,11 @@ static void on_line(ctx_t * ctx, char * line) {
 }
 
 static void on_stream_data(ctx_t * ctx, uint32_t events) {
-    (void)events;
+    // close the window if the input option stream closed
+    if ((events & EPOLLHUP) != 0) wlm_wayland_window_close(ctx);
+
+    // return early if there is nothing to read
+    if ((events & EPOLLIN) == 0) return;
 
     while (true) {
         line_reserve(ctx);
