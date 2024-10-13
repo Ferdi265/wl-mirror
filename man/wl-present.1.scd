@@ -6,7 +6,7 @@ wl-present - an interactive client for *wl-mirror*(1)
 
 # SYNOPSIS
 
-*wl-present* <COMMAND> [args...]
+*wl-present* [OPTIONS] <COMMAND> [args...]
 
 # DESCRIPTION
 
@@ -58,6 +58,12 @@ in your wayland compositor for easy access.
 	given, *dmenu*(1) (or a compatible replacement) are used to select an
 	option.
 
+# OPTIONS
+
+*-n*, *--name*
+	Use an alternative pipe name (default is wl-present).
+	This allows multiple instances of wl-present to run at the same time.
+
 # ENVIRONMENT VARIABLES
 
 *WL_PRESENT_DMENU*
@@ -80,6 +86,12 @@ in your wayland compositor for easy access.
 	*wl-present* attempts to use *slurp*(1) without any additional options.
 
 	Example: WL_PRESENT_SLURP="slurp -c #859900 -w 2"
+
+*WL_PRESENT_PIPE_NAME*
+	Overrides the default pipe name (default is wl-present). This is equivalent
+	to the *--name* option above.
+
+	Example: WL_PRESENT_PIPE_NAME=monitor2 wl-present mirror HDMI-A-1
 
 # AUTHORS
 

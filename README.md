@@ -97,7 +97,7 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 - [`wl-present`](scripts/wl-present) is a small script to demonstrate the use
   of the `-S` option to interactively present on Sway.  
   This script is especially useful when binding the `wl-present` subcommands to
-  keyboard shortcuts. See example below
+  keyboard shortcuts. See example below.
 - [`release.sh`](scripts/release.sh) Generates a release tar ball for the
   currently checked out commit if there's a release tag on it.
 
@@ -126,6 +126,10 @@ bindsym $mod+p mode "present"
 
 This requires `wl-mirror`, the `wl-present` script, `pipectl` (optional),
 slurp, and one of `wofi`, `wmenu`, `rofi`, or `dmenu`. 
+
+Note that wl-present only allows one instance by default, but multiple
+instances can be used at the same time using the `--name` option or
+`WL_PRESENT_PIPE_NAME` environment variable.
 
 ### Kanshi Configuration Example
 
