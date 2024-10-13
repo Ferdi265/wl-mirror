@@ -76,8 +76,18 @@ pipectl-shim() {
 
     PIPE="$PIPEPATH/$PIPENAME"
     case "$MODE" in
-        "in") test -p "$PIPE" && cat > "$PIPE";;
-        "out") rm -f "$PIPE"; mkfifo "$PIPE"; tail -f "$PIPE"; rm -f "$PIPE";;
+        "in") if [[ ! -p "$PIPE" ]]; then
+                echo "error: could not open pipe at '$PIPE': No such file or directory" >&2
+                return 1
+            else
+                cat > "$PIPE"
+            fi;;
+        "out") if [[ -p "$PIPE" ]]; then
+                echo "error: cannot create pipe at '$PIPE': File exists" >&2
+                return 1
+            else
+                mkfifo "$PIPE"; (tail -f "$PIPE" & echo > "$PIPE"; wait); rm -f "$PIPE"
+            fi;;
     esac
 }
 
