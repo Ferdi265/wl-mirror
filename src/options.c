@@ -24,7 +24,7 @@ void wlm_opt_init(ctx_t * ctx) {
 
 void wlm_cleanup_opt(ctx_t * ctx) {
     free(ctx->opt.output);
-    free(ctx ->opt.fullscreen_output);
+    free(ctx->opt.fullscreen_output);
     free(ctx->opt.window_title);
 }
 
