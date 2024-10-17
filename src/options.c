@@ -548,6 +548,7 @@ void wlm_opt_parse(ctx_t * ctx, int argc, char ** argv) {
                     wlm_log_error("options::parse(): invalid empty title\n");
                     if (is_cli_args) wlm_exit_fail(ctx);
                 } else {
+                    free(ctx->opt.window_title);
                     ctx->opt.window_title = strdup(argv[1]);
                 }
 
