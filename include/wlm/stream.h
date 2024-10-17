@@ -9,10 +9,12 @@
 struct ctx;
 
 typedef struct ctx_stream {
+    // lifetime: written in stream::on_stream_data, overwritten at the end of the function
     char * line;
     size_t line_len;
     size_t line_cap;
 
+    // lifetime: written in stream::on_line, overwritten at the end of the function
     char ** args;
     size_t args_len;
     size_t args_cap;
