@@ -23,8 +23,9 @@ void wlm_opt_init(ctx_t * ctx) {
 }
 
 void wlm_cleanup_opt(ctx_t * ctx) {
-    if (ctx->opt.output != NULL) free(ctx->opt.output);
-    if (ctx->opt.fullscreen_output != NULL) free(ctx ->opt.fullscreen_output);
+    free(ctx->opt.output);
+    free(ctx ->opt.fullscreen_output);
+    free(ctx->opt.window_title);
 }
 
 bool wlm_opt_parse_scaling(scale_t * scaling, scale_filter_t * scaling_filter, const char * scaling_arg) {
