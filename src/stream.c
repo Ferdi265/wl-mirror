@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <strings.h>
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
@@ -17,6 +18,8 @@ static void args_push(ctx_t * ctx, char * arg) {
             wlm_log_error("event::args_push(): failed to grow args array for option stream line\n");
             wlm_exit_fail(ctx);
         }
+        // Ensure that additionally allocated space is zeroed.
+        bzero(new_args + sizeof(*new_args) * ctx->stream.args_cap, sizeof(*new_args) * (new_cap - ctx->stream.args_cap));
 
         ctx->stream.args = new_args;
         ctx->stream.args_cap = new_cap;
@@ -36,6 +39,8 @@ static void line_reserve(ctx_t * ctx) {
             wlm_log_error("event::line_reserve(): failed to grow line buffer for option stream line\n");
             wlm_exit_fail(ctx);
         }
+        // Ensure that additionally allocated space is zeroed.
+        bzero(new_line + sizeof(*new_line) * ctx->stream.line_cap, sizeof(*new_line) * (new_cap - ctx->stream.line_cap));
 
         ctx->stream.line = new_line;
         ctx->stream.line_cap = new_cap;
@@ -115,6 +120,9 @@ static void on_line(ctx_t * ctx, char * line) {
     wlm_log_debug(ctx, "event::on_line(): parsed %zd arguments\n", ctx->stream.args_len);
 
     wlm_opt_parse(ctx, ctx->stream.args_len, ctx->stream.args);
+
+    bzero(ctx->stream.args, sizeof(*ctx->stream.args) * ctx->stream.args_cap);
+    ctx->stream.args_len = 0;
 }
 
 static void on_stream_data(ctx_t * ctx, uint32_t events) {
@@ -129,7 +137,8 @@ static void on_stream_data(ctx_t * ctx, uint32_t events) {
 
         size_t cap = ctx->stream.line_cap;
         size_t len = ctx->stream.line_len;
-        ssize_t num = read(STDIN_FILENO, ctx->stream.line + len, cap - len);
+        // ensure that last byte is never overwritten to guarantee a 0 terminator
+        ssize_t num = read(STDIN_FILENO, ctx->stream.line + len, cap - len - 1);
         if (num == -1 && errno == EWOULDBLOCK) {
             break;
         } else if (num == -1) {
@@ -140,19 +149,24 @@ static void on_stream_data(ctx_t * ctx, uint32_t events) {
         }
     }
 
-    char * line = ctx->stream.line;
-    size_t len = ctx->stream.line_len;
+    // The "line" contains what was read from stdin, which might contain multiple '\n' chars.
+    // TODO: rename?
+    char * const line = ctx->stream.line;
+    const size_t len = ctx->stream.line_len;
+    // used to track the start of the next substring to handle
+    char * current_line_start = line;
     for (size_t i = 0; i < len; i++) {
         if (line[i] == '\0') {
             line[i] = ' ';
         } else if (line[i] == '\n') {
+            // Handle each newline-separated part of the input separately.
             line[i] = '\0';
-            on_line(ctx, line);
-            memmove(line, line + (i + 1), len - (i + 1));
-            ctx->stream.line_len -= i + 1;
-            break;
+            on_line(ctx, current_line_start);
+            current_line_start = line + i + 1;
         }
     }
+    bzero(ctx->stream.line, sizeof(*ctx->stream.line) * ctx->stream.line_cap);
+    ctx->stream.line_len = 0;
 }
 
 void wlm_stream_init(ctx_t * ctx) {
