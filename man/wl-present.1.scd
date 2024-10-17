@@ -50,8 +50,12 @@ in your wayland compositor for easy access.
 	Set the fullscreen state of a running *wl-present* session.
 
 *fullscreen-output* [OUTPUT]
+	Set the fullscreen target output of a running *wl-present* session, implies
+	*fullscreen*.
+
 *no-fullscreen-output*
-	Set the fullscreen target output of a running *wl-present* session.
+	Unset a previously set fullscreen target output of a running *wl-present*
+	session, implies *unfullscreen*.
 
 *custom* [OPTIONS]
 	Send custom options to a running *wl-present* session. If no options are

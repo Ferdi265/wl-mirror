@@ -353,10 +353,10 @@ void wlm_opt_usage(ctx_t * ctx) {
     printf("  -f,   --freeze                freeze the current image on the screen\n");
     printf("        --unfreeze              resume the screen capture after a freeze\n");
     printf("        --toggle-freeze         toggle freeze state of screen capture\n");
-    printf("  -F,   --fullscreen            open wl-mirror as fullscreen\n");
-    printf("        --no-fullscreen         open wl-mirror as a window (default)\n");
-    printf("        --fullscreen-output O   open wl-mirror as fullscreen on output O\n");
-    printf("        --no-fullscreen-output  open wl-mirror as fullscreen on the current output (default)\n");
+    printf("  -F,   --fullscreen            display wl-mirror as fullscreen\n");
+    printf("        --no-fullscreen         display wl-mirror as a window (default)\n");
+    printf("        --fullscreen-output O   set fullscreen target output to output O, implies --fullscreen\n");
+    printf("        --no-fullscreen-output  unset fullscreen target output, implies --no-fullscreen (default)\n");
     printf("  -s f, --scaling fit           scale to fit (default)\n");
     printf("  -s c, --scaling cover         scale to cover, cropping if needed\n");
     printf("  -s e, --scaling exact         only scale to exact multiples of the output size\n");
@@ -474,6 +474,7 @@ void wlm_opt_parse(ctx_t * ctx, int argc, char ** argv) {
             }
         } else if (strcmp(argv[0], "--no-fullscreen-output") == 0) {
             free(ctx->opt.fullscreen_output);
+            ctx->opt.fullscreen = false;
             ctx->opt.fullscreen_output = NULL;
             new_fullscreen_output = true;
         } else if (strcmp(argv[0], "-s") == 0 || strcmp(argv[0], "--scaling") == 0) {

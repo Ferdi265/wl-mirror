@@ -17,8 +17,8 @@ usage() {
     echo "  toggle-freeze               toggle freeze state of screen capture"
     echo "  fullscreen                  fullscreen the wl-mirror window"
     echo "  unfullscreen                unfullscreen the wl-mirror window"
-    echo "  fullscreen-output [output]  set the output to fullscreen to (default asks via slurp)"
-    echo "  no-fullscreen-output        set the output to fullscreen to the current output"
+    echo "  fullscreen-output [output]  set fullscreen target output, implies fullscreen (default asks via slurp)"
+    echo "  no-fullscreen-output        unset fullscreen target output, implies unfullscreen"
     echo "  custom [options]            send custom options to wl-mirror (default asks via rofi)"
     echo
     echo "options:"

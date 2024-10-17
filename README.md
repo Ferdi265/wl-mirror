@@ -34,10 +34,10 @@ options:
   -f,   --freeze                freeze the current image on the screen
         --unfreeze              resume the screen capture after a freeze
         --toggle-freeze         toggle freeze state of screen capture
-  -F,   --fullscreen            open wl-mirror as fullscreen
-        --no-fullscreen         open wl-mirror as a window (default)
-        --fullscreen-output O   open wl-mirror as fullscreen on output O
-        --no-fullscreen-output  open wl-mirror as fullscreen on the current output (default)
+  -F,   --fullscreen            display wl-mirror as fullscreen
+        --no-fullscreen         display wl-mirror as a window (default)
+        --fullscreen-output O   set fullscreen target output to output O, implies --fullscreen
+        --no-fullscreen-output  unset fullscreen target output, implies --no-fullscreen (default)
   -s f, --scaling fit           scale to fit (default)
   -s c, --scaling cover         scale to cover, cropping if needed
   -s e, --scaling exact         only scale to exact multiples of the output size
@@ -84,7 +84,7 @@ title placeholders:
   the title string supports the following placeholders:
   - {width}, {height}:               size of the mirrored area
   - {x}, {y}:                        offsets on the screen
-  - {target_width}, {target_height}\n");
+  - {target_width}, {target_height}
     {target_output}:                 info about the mirrored device
   a few perhaps useful examples:
     --title='Wayland Mirror Output {target_output}'
