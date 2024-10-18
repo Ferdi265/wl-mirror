@@ -156,17 +156,26 @@ static void on_stream_data(ctx_t * ctx, uint32_t events) {
     // used to track the start of the next substring to handle
     char * current_line_start = line;
     for (size_t i = 0; i < len; i++) {
-        if (line[i] == '\0') {
-            line[i] = ' ';
-        } else if (line[i] == '\n') {
+        if (line[i] == '\n') {
             // Handle each newline-separated part of the input separately.
             line[i] = '\0';
             on_line(ctx, current_line_start);
             current_line_start = line + i + 1;
         }
     }
+    // Preserve all non-zero bytes after the last newline in the buffer.
+    // These are considered part of a line which has not been read fully yet.
+    const size_t remaining_partial_line_len = strlen(current_line_start);
+    char * const remaining_line_copy = strdup(current_line_start);
     bzero(ctx->stream.line, sizeof(*ctx->stream.line) * ctx->stream.line_cap);
-    ctx->stream.line_len = 0;
+    if (remaining_line_copy == NULL) {
+        wlm_log_error("stream::on_stream_data(): failed to allocate copy of the remaining incomplete line. discarding corresponding data\n");
+        ctx->stream.line_len = 0;
+    } else {
+        strcpy(ctx->stream.line, remaining_line_copy);
+        ctx->stream.line_len = remaining_partial_line_len;
+        free(remaining_line_copy);
+    }
 }
 
 void wlm_stream_init(ctx_t * ctx) {
