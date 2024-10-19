@@ -28,23 +28,23 @@ static void args_push(ctx_t * ctx, char * arg) {
     ctx->stream.args[ctx->stream.args_len++] = arg;
 }
 
-#define LINE_MIN_RESERVE 1024
-static void line_reserve(ctx_t * ctx) {
-    if (ctx->stream.line_cap - ctx->stream.line_len < LINE_MIN_RESERVE) {
-        size_t new_cap = ctx->stream.line_cap * 2;
-        if (new_cap == 0) new_cap = LINE_MIN_RESERVE;
+#define INPUT_MIN_RESERVE 1024
+static void input_reserve(ctx_t * ctx) {
+    if (ctx->stream.input_cap - ctx->stream.input_len < INPUT_MIN_RESERVE) {
+        size_t new_cap = ctx->stream.input_cap * 2;
+        if (new_cap == 0) new_cap = INPUT_MIN_RESERVE;
 
-        char * new_line = realloc(ctx->stream.line, sizeof (char) * new_cap);
-        if (new_line == NULL) {
-            wlm_log_error("event::line_reserve(): failed to grow line buffer for option stream line\n");
+        char * new_input_buf = realloc(ctx->stream.input, sizeof (char) * new_cap);
+        if (new_input_buf == NULL) {
+            wlm_log_error("event::input_reserve(): failed to grow input buffer for option stream input\n");
             wlm_exit_fail(ctx);
         }
 
         // ensure that additionally allocated space is zeroed.
-        memset(new_line + sizeof (char) * ctx->stream.line_cap, 0, sizeof (char) * (new_cap - ctx->stream.line_cap));
+        memset(new_input_buf + sizeof (char) * ctx->stream.input_cap, 0, sizeof (char) * (new_cap - ctx->stream.input_cap));
 
-        ctx->stream.line = new_line;
-        ctx->stream.line_cap = new_cap;
+        ctx->stream.input = new_input_buf;
+        ctx->stream.input_cap = new_cap;
     }
 }
 
@@ -134,20 +134,20 @@ static void on_stream_data(ctx_t * ctx, uint32_t events) {
     if ((events & EPOLLIN) == 0) return;
 
     while (true) {
-        line_reserve(ctx);
+        input_reserve(ctx);
 
-        size_t cap = ctx->stream.line_cap;
-        size_t len = ctx->stream.line_len;
+        size_t cap = ctx->stream.input_cap;
+        size_t len = ctx->stream.input_len;
 
         // ensure that last byte is never overwritten to guarantee a 0 terminator
-        ssize_t num = read(STDIN_FILENO, ctx->stream.line + len, cap - len - 1);
+        ssize_t num = read(STDIN_FILENO, ctx->stream.input + len, cap - len - 1);
         if (num == -1 && errno == EWOULDBLOCK) {
             break;
         } else if (num == -1) {
             wlm_log_error("event::on_data(): failed to read data from stdin\n");
             wlm_exit_fail(ctx);
         } else {
-            ctx->stream.line_len += num;
+            ctx->stream.input_len += num;
         }
     }
 
@@ -155,37 +155,37 @@ static void on_stream_data(ctx_t * ctx, uint32_t events) {
     // each full line that ends in a '\n' should be parsed as options
     //
     // input might also contain null bytes that should be treated as spaces
-    char * line = ctx->stream.line;
-    size_t len = ctx->stream.line_len;
+    char * input = ctx->stream.input;
+    size_t len = ctx->stream.input_len;
 
     // used to track the start of the next line to handle
-    char * current_line_start = line;
+    char * current_line_start = input;
     for (size_t i = 0; i < len; i++) {
-        if (line[i] == '\0') {
-            line[i] = ' ';
-        } else if (line[i] == '\n') {
+        if (input[i] == '\0') {
+            input[i] = ' ';
+        } else if (input[i] == '\n') {
             // handle each newline-separated part of the input separately.
-            line[i] = '\0';
+            input[i] = '\0';
             on_line(ctx, current_line_start);
             // remember start of next line
-            current_line_start = line + i + 1;
+            current_line_start = input + i + 1;
         }
     }
 
     // calculate length of remaining partial line
-    size_t current_line_len = (line + len) - current_line_start;
+    size_t current_line_len = (input + len) - current_line_start;
     // move remaining partial line to front
-    memmove(line, current_line_start, current_line_len);
-    ctx->stream.line_len = current_line_len;
+    memmove(input, current_line_start, current_line_len);
+    ctx->stream.input_len = current_line_len;
     // clear remaining capacity
-    memset(line + current_line_len, 0, ctx->stream.line_cap - current_line_len);
+    memset(input + current_line_len, 0, ctx->stream.input_cap - current_line_len);
 }
 
 void wlm_stream_init(ctx_t * ctx) {
     // initialize context structure
-    ctx->stream.line = NULL;
-    ctx->stream.line_len = 0;
-    ctx->stream.line_cap = 0;
+    ctx->stream.input = NULL;
+    ctx->stream.input_len = 0;
+    ctx->stream.input_cap = 0;
 
     ctx->stream.args = NULL;
     ctx->stream.args_len = 0;
