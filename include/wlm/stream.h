@@ -9,10 +9,23 @@
 struct ctx;
 
 typedef struct ctx_stream {
+    // holds stream input lines prior to being parsed as options
+    // holds partial line lines between calls to stream::on_stream_data()
+    //
+    // ownership:
+    // - resized in stream::line_reserve()
+    // - written in stream::on_stream_data()
+    // - written in stream::on_line() (passed line partially overwritten)
     char * line;
     size_t line_len;
     size_t line_cap;
 
+    // holds parsed argv array that will be parsed as options
+    // empty between calls to stream::on_line()
+    //
+    // ownership:
+    // - resized in stream::args_push()
+    // - written in stream::on_line()
     char ** args;
     size_t args_len;
     size_t args_cap;
