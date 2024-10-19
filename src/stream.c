@@ -14,7 +14,7 @@ static void args_push(ctx_t * ctx, char * arg) {
 
         char ** new_args = realloc(ctx->stream.args, sizeof (char *) * new_cap);
         if (new_args == NULL) {
-            wlm_log_error("event::args_push(): failed to grow args array for option stream line\n");
+            wlm_log_error("stream::args_push(): failed to grow args array for option stream line\n");
             wlm_exit_fail(ctx);
         }
 
@@ -36,7 +36,7 @@ static void input_reserve(ctx_t * ctx) {
 
         char * new_input_buf = realloc(ctx->stream.input, sizeof (char) * new_cap);
         if (new_input_buf == NULL) {
-            wlm_log_error("event::input_reserve(): failed to grow input buffer for option stream input\n");
+            wlm_log_error("stream::input_reserve(): failed to grow input buffer for option stream input\n");
             wlm_exit_fail(ctx);
         }
 
@@ -58,7 +58,7 @@ static void on_line(ctx_t * ctx, char * line) {
     char * arg_start = NULL;
     char quote_char = '\0';
 
-    wlm_log_debug(ctx, "event::on_line(): got line '%s'\n", line);
+    wlm_log_debug(ctx, "stream::on_line(): got line '%s'\n", line);
 
     ctx->stream.args_len = 0;
 
@@ -111,14 +111,14 @@ static void on_line(ctx_t * ctx, char * line) {
     }
 
     if (state == QUOTED_ARG) {
-        wlm_log_error("event::on_line(): unmatched quote in argument\n");
+        wlm_log_error("stream::on_line(): unmatched quote in argument\n");
     }
 
     if (state == QUOTED_ARG || state == UNQUOTED_ARG) {
         args_push(ctx, arg_start);
     }
 
-    wlm_log_debug(ctx, "event::on_line(): parsed %zd arguments\n", ctx->stream.args_len);
+    wlm_log_debug(ctx, "stream::on_line(): parsed %zd arguments\n", ctx->stream.args_len);
     wlm_opt_parse(ctx, ctx->stream.args_len, ctx->stream.args);
 
     // clear arguments
@@ -144,7 +144,7 @@ static void on_stream_data(ctx_t * ctx, uint32_t events) {
         if (num == -1 && errno == EWOULDBLOCK) {
             break;
         } else if (num == -1) {
-            wlm_log_error("event::on_data(): failed to read data from stdin\n");
+            wlm_log_error("stream::on_data(): failed to read data from stdin\n");
             wlm_exit_fail(ctx);
         } else {
             ctx->stream.input_len += num;
