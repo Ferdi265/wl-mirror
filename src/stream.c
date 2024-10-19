@@ -141,7 +141,7 @@ static void on_stream_data(ctx_t * ctx, uint32_t events) {
 
         // ensure that last byte is never overwritten to guarantee a 0 terminator
         ssize_t num = read(STDIN_FILENO, ctx->stream.input + len, cap - len - 1);
-        if (num == -1 && errno == EWOULDBLOCK) {
+        if (num <= 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
             break;
         } else if (num == -1) {
             wlm_log_error("stream::on_data(): failed to read data from stdin\n");
