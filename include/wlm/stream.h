@@ -9,17 +9,23 @@
 struct ctx;
 
 typedef struct ctx_stream {
-    // lifetime: written in stream::on_stream_data.
-    // All full lines are overwritten at the end of the function.
-    // Trailing bytes which are not newline-terminated are treated as part of a line
-    // which was not read fully.
-    // These bytes are moved to the beginning of the buffer
-    // in order to continue reading the line once more data becomes available.
+    // holds stream input lines prior to being parsed as options
+    // holds partial line lines between calls to stream::on_stream_data()
+    //
+    // ownership:
+    // - resized in stream::line_reserve()
+    // - written in stream::on_stream_data()
+    // - written in stream::on_line() (passed line partially overwritten)
     char * line;
     size_t line_len;
     size_t line_cap;
 
-    // lifetime: written in stream::on_line, overwritten at the end of the function
+    // holds parsed argv array that will be parsed as options
+    // empty between calls to stream::on_line()
+    //
+    // ownership:
+    // - resized in stream::args_push()
+    // - written in stream::on_line()
     char ** args;
     size_t args_len;
     size_t args_cap;
