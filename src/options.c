@@ -621,7 +621,7 @@ void wlm_opt_parse(ctx_t * ctx, int argc, char ** argv) {
         ctx->opt.output != NULL && ctx->opt.fullscreen_output != NULL &&
         strcmp(ctx->opt.output, ctx->opt.fullscreen_output) == 0
     ) {
-        wlm_log_error("options::parse(): fullscreen_output cannot be same as the output to be mirrored");
+        wlm_log_error("options::parse(): fullscreen_output cannot be same as the output to be mirrored\n");
         wlm_exit_fail(ctx);
     }
 
