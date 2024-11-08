@@ -525,13 +525,14 @@ static void on_surface_enter(
     bool first_output = ctx->wl.current_output == NULL;
     ctx->wl.current_output = node;
 
-    // set window fullscreen now if no specific output requested
-    if (first_output && ctx->opt.fullscreen) {
-        wlm_wayland_window_set_fullscreen(ctx);
-    }
-
     wlm_log_debug(ctx, "wayland::on_surface_enter(): updating window scale\n");
     wlm_wayland_window_update_scale(ctx, node->scale, false);
+
+    // set fullscreen on current output if requested by initial options
+    if (first_output && ctx->opt.fullscreen && ctx->opt.fullscreen_output == NULL) {
+        wlm_log_debug(ctx, "wayland::on_surface_enter(): fullscreening on current output\n");
+        wlm_wayland_window_set_fullscreen(ctx);
+    }
 
     (void)surface;
 }
@@ -1021,15 +1022,17 @@ void wlm_wayland_init(ctx_t * ctx) {
     wl_display_roundtrip(ctx->wl.display);
 #endif
 
-    // set fullscreen on xdg_toplevel
-    if (ctx->opt.fullscreen && ctx->opt.fullscreen_output != NULL) {
-        wlm_wayland_window_set_fullscreen(ctx);
-    }
     // check if surface is configured
     // - expecting surface to be configured at this point
     if (!ctx->wl.configured) {
         wlm_log_error("wayland::init(): surface not configured\n");
         wlm_exit_fail(ctx);
+    }
+
+    // set fullscreen on target output if requested by initial options
+    if (ctx->opt.fullscreen && ctx->opt.fullscreen_output != NULL) {
+        wlm_log_debug(ctx, "wayland::init(): fullscreening on target output\n");
+        wlm_wayland_window_set_fullscreen(ctx);
     }
 }
 
