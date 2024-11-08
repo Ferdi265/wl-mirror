@@ -1269,7 +1269,7 @@ static bool update_bus_events(xdg_portal_mirror_backend_t * backend) {
     return true;
 }
 
-static void on_loop_dbus_event(ctx_t * ctx) {
+static void on_loop_dbus_event(ctx_t * ctx, uint32_t events) {
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
     int ret;
 
@@ -1280,6 +1280,8 @@ static void on_loop_dbus_event(ctx_t * ctx) {
         wlm_log_error("mirror-xdg-portal::on_loop_pw_event(): failed to process dbus events\n");
         wlm_mirror_backend_fail(ctx);
     }
+
+    (void)events;
 }
 
 static void on_loop_dbus_each(ctx_t * ctx) {
@@ -1299,7 +1301,7 @@ static void on_loop_dbus_each(ctx_t * ctx) {
     }
 }
 
-static void on_loop_pw_event(ctx_t * ctx) {
+static void on_loop_pw_event(ctx_t * ctx, uint32_t events) {
     xdg_portal_mirror_backend_t * backend = (xdg_portal_mirror_backend_t *)ctx->mirror.backend;
 
     pw_loop_enter(backend->pw_loop);
@@ -1310,6 +1312,8 @@ static void on_loop_pw_event(ctx_t * ctx) {
         wlm_log_error("mirror-xdg-portal::on_loop_pw_event(): failed to process pipewire events\n");
         wlm_mirror_backend_fail(ctx);
     }
+
+    (void)events;
 }
 
 // --- init_mirror_xdg_portal ---
