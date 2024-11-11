@@ -65,6 +65,19 @@ static const spa_drm_gl_format_t * spa_drm_gl_format_from_spa(uint32_t spa_forma
     return NULL;
 }
 
+static const spa_drm_gl_format_t * spa_drm_gl_format_from_drm(uint32_t drm_format) {
+    const spa_drm_gl_format_t * format = spa_drm_gl_formats;
+    while (format->drm_format != -1U) {
+        if (format->drm_format == drm_format) {
+            return format;
+        }
+
+        format++;
+    }
+
+    return NULL;
+}
+
 static int token_counter;
 static char * generate_token() {
     int pid = getpid();
@@ -819,7 +832,9 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
 
     pw_stream_add_listener(backend->pw_stream, &backend->pw_stream_listener, &pw_stream_events, (void *)ctx);
 
-    struct spa_pod_dynamic_builder pod_builders[8];
+    // TODO: make this dynamic
+#define MAX_FORMATS 8
+    struct spa_pod_dynamic_builder pod_builders[MAX_FORMATS];
     spa_pod_dynamic_builder_init(&pod_builders[0], NULL, 0, 1);
     spa_pod_dynamic_builder_init(&pod_builders[1], NULL, 0, 1);
     spa_pod_dynamic_builder_init(&pod_builders[2], NULL, 0, 1);
@@ -828,60 +843,72 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
     spa_pod_dynamic_builder_init(&pod_builders[5], NULL, 0, 1);
     spa_pod_dynamic_builder_init(&pod_builders[6], NULL, 0, 1);
     spa_pod_dynamic_builder_init(&pod_builders[7], NULL, 0, 1);
+    _Static_assert(MAX_FORMATS == 8, "invalid number of formats");
 
-#define ADD_FORMAT(builder, spa_format, ...) ({ \
-        struct spa_pod_builder * b = builder; \
-        const uint64_t * modifiers = (uint64_t[]){ __VA_ARGS__ }; \
-        size_t num_modifiers = ARRAY_LENGTH(((uint64_t[]){ __VA_ARGS__ })); \
-        \
-        struct spa_pod_frame format_frame; \
-        spa_pod_builder_push_object(b, &format_frame, SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat); \
-        spa_pod_builder_add(b, \
-            SPA_FORMAT_mediaType, SPA_POD_Id(SPA_MEDIA_TYPE_video), \
-            SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw), \
-            SPA_FORMAT_VIDEO_format, SPA_POD_Id(spa_format), \
-            0 \
-        ); \
-        \
-        if (num_modifiers > 0) { \
-            spa_pod_builder_prop(b, SPA_FORMAT_VIDEO_modifier, SPA_POD_PROP_FLAG_MANDATORY | SPA_POD_PROP_FLAG_DONT_FIXATE); \
-            struct spa_pod_frame modifier_frame; \
-            spa_pod_builder_push_choice(b, &modifier_frame, SPA_CHOICE_Enum, 0); \
-            spa_pod_builder_long(b, modifiers[0]); \
-            for (uint32_t i = 0; i < num_modifiers; i++) { \
-                spa_pod_builder_long(b, modifiers[i]); \
-            } \
-            spa_pod_builder_pop(b, &modifier_frame); \
-        } \
-        \
-        spa_pod_builder_add(b, \
-            SPA_FORMAT_VIDEO_size, SPA_POD_CHOICE_RANGE_Rectangle( \
-              &SPA_RECTANGLE(320, 240), /* arbitrary */ \
-              &SPA_RECTANGLE(1, 1), /* min */ \
-              &SPA_RECTANGLE(8192, 4320) /* max */ \
-            ), \
-            SPA_FORMAT_VIDEO_framerate, SPA_POD_CHOICE_RANGE_Fraction( \
-              &SPA_FRACTION(30 /* ovi->fps_num */, 1 /* ovi->fps_den */), \
-              &SPA_FRACTION(0, 1), \
-              &SPA_FRACTION(360, 1) \
-            ), \
-            0 \
-        ); \
-        spa_pod_builder_pop(b, &format_frame); \
-    })
+    size_t cur_format = 0;
+    const struct spa_pod * params[MAX_FORMATS];
+
+    for (size_t i = 0; i < ctx->egl.dmabuf_formats.num_formats && cur_format < MAX_FORMATS; i++) {
+        const spa_drm_gl_format_t * format = spa_drm_gl_format_from_drm(ctx->egl.dmabuf_formats.formats[i].drm_format);
+        if (format == NULL) {
+            wlm_log_warn("mirrox-xdg-portal::screencast_pipewire_create_stream(): no spa format for drm format %x\n", ctx->egl.dmabuf_formats.formats[i].drm_format);
+            continue;
+        }
+
+        struct spa_pod_builder * b = &pod_builders[cur_format].b;
+        const uint64_t * modifiers = ctx->egl.dmabuf_formats.formats[i].modifiers;
+        size_t num_modifiers = ctx->egl.dmabuf_formats.formats[i].num_modifiers;
+
+        struct spa_pod_frame format_frame;
+        spa_pod_builder_push_object(b, &format_frame, SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat);
+        spa_pod_builder_add(b,
+            SPA_FORMAT_mediaType, SPA_POD_Id(SPA_MEDIA_TYPE_video),
+            SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw),
+            SPA_FORMAT_VIDEO_format, SPA_POD_Id(format->spa_format),
+            0
+        );
+
+        if (num_modifiers > 0) {
+            spa_pod_builder_prop(b, SPA_FORMAT_VIDEO_modifier, SPA_POD_PROP_FLAG_MANDATORY | SPA_POD_PROP_FLAG_DONT_FIXATE);
+            struct spa_pod_frame modifier_frame;
+            spa_pod_builder_push_choice(b, &modifier_frame, SPA_CHOICE_Enum, 0);
+            spa_pod_builder_long(b, modifiers[0]);
+            for (uint32_t i = 0; i < num_modifiers; i++) {
+                spa_pod_builder_long(b, modifiers[i]);
+            }
+            spa_pod_builder_pop(b, &modifier_frame);
+        }
+
+        spa_pod_builder_add(b,
+            SPA_FORMAT_VIDEO_size, SPA_POD_CHOICE_RANGE_Rectangle(
+              &SPA_RECTANGLE(320, 240), /* arbitrary */
+              &SPA_RECTANGLE(1, 1), /* min */
+              &SPA_RECTANGLE(8192, 4320) /* max */
+            ),
+            SPA_FORMAT_VIDEO_framerate, SPA_POD_CHOICE_RANGE_Fraction(
+              &SPA_FRACTION(30 /* ovi->fps_num */, 1 /* ovi->fps_den */),
+              &SPA_FRACTION(0, 1),
+              &SPA_FRACTION(360, 1)
+            ),
+            0
+        );
+        params[cur_format] = spa_pod_builder_pop(b, &format_frame);
+
+        cur_format++;
+    }
 
     // TODO: don't hardcode video format options
-    const struct spa_pod * params[] = {
-        ADD_FORMAT(&pod_builders[0].b, SPA_VIDEO_FORMAT_ABGR, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-        ADD_FORMAT(&pod_builders[1].b, SPA_VIDEO_FORMAT_ARGB, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-        ADD_FORMAT(&pod_builders[2].b, SPA_VIDEO_FORMAT_BGRx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-        ADD_FORMAT(&pod_builders[3].b, SPA_VIDEO_FORMAT_RGBx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-        ADD_FORMAT(&pod_builders[4].b, SPA_VIDEO_FORMAT_ABGR),
-        ADD_FORMAT(&pod_builders[5].b, SPA_VIDEO_FORMAT_ARGB),
-        ADD_FORMAT(&pod_builders[6].b, SPA_VIDEO_FORMAT_BGRx),
-        ADD_FORMAT(&pod_builders[7].b, SPA_VIDEO_FORMAT_RGBx)
-    };
-    uint32_t num_params = ARRAY_LENGTH(params);
+//    const struct spa_pod * params[] = {
+//        ADD_FORMAT(&pod_builders[0].b, SPA_VIDEO_FORMAT_ABGR, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
+//        ADD_FORMAT(&pod_builders[1].b, SPA_VIDEO_FORMAT_ARGB, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
+//        ADD_FORMAT(&pod_builders[2].b, SPA_VIDEO_FORMAT_BGRx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
+//        ADD_FORMAT(&pod_builders[3].b, SPA_VIDEO_FORMAT_RGBx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
+//        ADD_FORMAT(&pod_builders[4].b, SPA_VIDEO_FORMAT_ABGR),
+//        ADD_FORMAT(&pod_builders[5].b, SPA_VIDEO_FORMAT_ARGB),
+//        ADD_FORMAT(&pod_builders[6].b, SPA_VIDEO_FORMAT_BGRx),
+//        ADD_FORMAT(&pod_builders[7].b, SPA_VIDEO_FORMAT_RGBx)
+//    };
+    uint32_t num_params = cur_format; //ARRAY_LENGTH(params);
 
     pw_stream_connect(
         backend->pw_stream, PW_DIRECTION_INPUT, backend->pw_node_id,
