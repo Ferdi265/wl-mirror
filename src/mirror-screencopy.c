@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <wlm/context.h>
 #include <wlm/mirror-screencopy.h>
+#include <wlm/egl/formats.h>
 #include <sys/mman.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -18,119 +19,6 @@ static void backend_cancel(screencopy_mirror_backend_t * backend) {
     backend->screencopy_frame = NULL;
     backend->state = STATE_CANCELED;
     backend->header.fail_count++;
-}
-
-typedef struct {
-    uint32_t shm_format;
-    uint32_t bpp;
-    GLint gl_format;
-    GLint gl_type;
-} shm_gl_format_t;
-
-static const shm_gl_format_t shm_gl_formats[] = {
-    {
-        .shm_format = WL_SHM_FORMAT_ARGB8888,
-        .bpp = 32,
-        .gl_format = GL_BGRA_EXT,
-        .gl_type = GL_UNSIGNED_BYTE,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_XRGB8888,
-        .bpp = 32,
-        .gl_format = GL_BGRA_EXT,
-        .gl_type = GL_UNSIGNED_BYTE,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_XBGR8888,
-        .bpp = 32,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_UNSIGNED_BYTE,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_ABGR8888,
-        .bpp = 32,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_UNSIGNED_BYTE,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_BGR888,
-        .bpp = 24,
-        .gl_format = GL_RGB,
-        .gl_type = GL_UNSIGNED_BYTE,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_RGBX4444,
-        .bpp = 16,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_UNSIGNED_SHORT_4_4_4_4,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_RGBA4444,
-        .bpp = 16,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_UNSIGNED_SHORT_4_4_4_4,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_RGBX5551,
-        .bpp = 16,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_UNSIGNED_SHORT_5_5_5_1,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_RGBA5551,
-        .bpp = 16,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_UNSIGNED_SHORT_5_5_5_1,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_RGB565,
-        .bpp = 16,
-        .gl_format = GL_RGB,
-        .gl_type = GL_UNSIGNED_SHORT_5_6_5,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_XBGR2101010,
-        .bpp = 32,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_UNSIGNED_INT_2_10_10_10_REV_EXT,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_ABGR2101010,
-        .bpp = 32,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_UNSIGNED_INT_2_10_10_10_REV_EXT,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_XBGR16161616F,
-        .bpp = 64,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_HALF_FLOAT_OES,
-    },
-    {
-        .shm_format = WL_SHM_FORMAT_ABGR16161616F,
-        .bpp = 64,
-        .gl_format = GL_RGBA,
-        .gl_type = GL_HALF_FLOAT_OES,
-    },
-    {
-        .shm_format = -1U,
-        .bpp = -1U,
-        .gl_format = -1,
-        .gl_type = -1
-    }
-};
-
-static const shm_gl_format_t * shm_gl_format_from_shm(uint32_t shm_format) {
-    const shm_gl_format_t * format = shm_gl_formats;
-    while (format->shm_format != -1U) {
-        if (format->shm_format == shm_format) {
-            return format;
-        }
-
-        format++;
-    }
-
-    return NULL;
 }
 
 // --- screencopy_frame event handlers ---
@@ -300,7 +188,7 @@ static void on_ready(
     }
 
     // find correct texture format
-    const shm_gl_format_t * format = shm_gl_format_from_shm(backend->frame_format);
+    const wlm_egl_format_t * format = wlm_egl_formats_find_shm(backend->frame_format);
     if (format == NULL) {
         wlm_log_error("mirror-screencopy::on_ready(): failed to find GL format for shm format\n");
         wlm_mirror_backend_fail(ctx);
