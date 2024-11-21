@@ -13,69 +13,10 @@
 #include <wlm/context.h>
 #include <wlm/mirror-xdg-portal.h>
 #include <wlm/util.h>
+#include <wlm/egl/formats.h>
 
 static void wlm_mirror_backend_fail_async(xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_BROKEN;
-}
-
-typedef struct {
-    uint32_t spa_format;
-    uint32_t drm_format;
-    GLint gl_format;
-} spa_drm_gl_format_t;
-
-static const spa_drm_gl_format_t spa_drm_gl_formats[] = {
-    {
-        .spa_format = SPA_VIDEO_FORMAT_BGRA,
-        .drm_format = DRM_FORMAT_ARGB8888,
-        .gl_format = GL_BGRA_EXT,
-    },
-    {
-        .spa_format = SPA_VIDEO_FORMAT_RGBA,
-        .drm_format = DRM_FORMAT_ABGR8888,
-        .gl_format = GL_RGBA,
-    },
-    {
-        .spa_format = SPA_VIDEO_FORMAT_BGRx,
-        .drm_format = DRM_FORMAT_XRGB8888,
-        .gl_format = GL_BGR_EXT,
-    },
-    {
-        .spa_format = SPA_VIDEO_FORMAT_RGBx,
-        .drm_format = DRM_FORMAT_XBGR8888,
-        .gl_format = GL_RGB,
-    },
-    {
-        .spa_format = -1U,
-        .drm_format = -1U,
-        .gl_format = -1U
-    }
-};
-
-static const spa_drm_gl_format_t * spa_drm_gl_format_from_spa(uint32_t spa_format) {
-    const spa_drm_gl_format_t * format = spa_drm_gl_formats;
-    while (format->spa_format != -1U) {
-        if (format->spa_format == spa_format) {
-            return format;
-        }
-
-        format++;
-    }
-
-    return NULL;
-}
-
-static const spa_drm_gl_format_t * spa_drm_gl_format_from_drm(uint32_t drm_format) {
-    const spa_drm_gl_format_t * format = spa_drm_gl_formats;
-    while (format->drm_format != -1U) {
-        if (format->drm_format == drm_format) {
-            return format;
-        }
-
-        format++;
-    }
-
-    return NULL;
 }
 
 static int token_counter;
@@ -833,25 +774,19 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
     pw_stream_add_listener(backend->pw_stream, &backend->pw_stream_listener, &pw_stream_events, (void *)ctx);
 
     // TODO: make this dynamic
-#define MAX_FORMATS 8
+#define MAX_FORMATS 16
     struct spa_pod_dynamic_builder pod_builders[MAX_FORMATS];
-    spa_pod_dynamic_builder_init(&pod_builders[0], NULL, 0, 1);
-    spa_pod_dynamic_builder_init(&pod_builders[1], NULL, 0, 1);
-    spa_pod_dynamic_builder_init(&pod_builders[2], NULL, 0, 1);
-    spa_pod_dynamic_builder_init(&pod_builders[3], NULL, 0, 1);
-    spa_pod_dynamic_builder_init(&pod_builders[4], NULL, 0, 1);
-    spa_pod_dynamic_builder_init(&pod_builders[5], NULL, 0, 1);
-    spa_pod_dynamic_builder_init(&pod_builders[6], NULL, 0, 1);
-    spa_pod_dynamic_builder_init(&pod_builders[7], NULL, 0, 1);
-    _Static_assert(MAX_FORMATS == 8, "invalid number of formats");
+    for (size_t i = 0; i < MAX_FORMATS; i++) {
+        spa_pod_dynamic_builder_init(&pod_builders[i], NULL, 0, 1);
+    }
 
     size_t cur_format = 0;
     const struct spa_pod * params[MAX_FORMATS];
 
     for (size_t i = 0; i < ctx->egl.dmabuf_formats.num_formats && cur_format < MAX_FORMATS; i++) {
-        const spa_drm_gl_format_t * format = spa_drm_gl_format_from_drm(ctx->egl.dmabuf_formats.formats[i].drm_format);
+        const wlm_egl_format_t * format = wlm_egl_formats_find_drm(ctx->egl.dmabuf_formats.formats[i].drm_format);
         if (format == NULL) {
-            wlm_log_warn("mirrox-xdg-portal::screencast_pipewire_create_stream(): no spa format for drm format %x\n", ctx->egl.dmabuf_formats.formats[i].drm_format);
+            wlm_log_warn("mirror-xdg-portal::screencast_pipewire_create_stream(): no spa format for drm format %x\n", ctx->egl.dmabuf_formats.formats[i].drm_format);
             continue;
         }
 
@@ -897,33 +832,19 @@ static void screencast_pipewire_create_stream(ctx_t * ctx, xdg_portal_mirror_bac
         cur_format++;
     }
 
-    // TODO: don't hardcode video format options
-//    const struct spa_pod * params[] = {
-//        ADD_FORMAT(&pod_builders[0].b, SPA_VIDEO_FORMAT_ABGR, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-//        ADD_FORMAT(&pod_builders[1].b, SPA_VIDEO_FORMAT_ARGB, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-//        ADD_FORMAT(&pod_builders[2].b, SPA_VIDEO_FORMAT_BGRx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-//        ADD_FORMAT(&pod_builders[3].b, SPA_VIDEO_FORMAT_RGBx, 0x0000000000000000, 0x0100000000000001, 0x0100000000000002, 0x0100000000000004, 0x00ffffffffffffff),
-//        ADD_FORMAT(&pod_builders[4].b, SPA_VIDEO_FORMAT_ABGR),
-//        ADD_FORMAT(&pod_builders[5].b, SPA_VIDEO_FORMAT_ARGB),
-//        ADD_FORMAT(&pod_builders[6].b, SPA_VIDEO_FORMAT_BGRx),
-//        ADD_FORMAT(&pod_builders[7].b, SPA_VIDEO_FORMAT_RGBx)
-//    };
-    uint32_t num_params = cur_format; //ARRAY_LENGTH(params);
-
+    uint32_t num_params = cur_format;
+    if (num_params == MAX_FORMATS) {
+        wlm_log_warn("mirror-xdg-portal::screencast_pipewire_create_stream(): too many supported drm formats, choosing first %d formats\n", num_params);
+    }
     pw_stream_connect(
         backend->pw_stream, PW_DIRECTION_INPUT, backend->pw_node_id,
         PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS,
         params, num_params
     );
 
-    spa_pod_dynamic_builder_clean(&pod_builders[0]);
-    spa_pod_dynamic_builder_clean(&pod_builders[1]);
-    spa_pod_dynamic_builder_clean(&pod_builders[2]);
-    spa_pod_dynamic_builder_clean(&pod_builders[3]);
-    spa_pod_dynamic_builder_clean(&pod_builders[4]);
-    spa_pod_dynamic_builder_clean(&pod_builders[5]);
-    spa_pod_dynamic_builder_clean(&pod_builders[6]);
-    spa_pod_dynamic_builder_clean(&pod_builders[7]);
+    for (size_t i = 0; i < MAX_FORMATS; i++) {
+        spa_pod_dynamic_builder_clean(&pod_builders[i]);
+    }
 }
 
 static void on_pw_stream_process(void * data) {
@@ -1112,7 +1033,7 @@ static void on_pw_param_changed(void * data, uint32_t id, const struct spa_pod *
         backend->h = info_raw.size.height;
         backend->drm_modifier = info_raw.modifier;
 
-        const spa_drm_gl_format_t * format = spa_drm_gl_format_from_spa(info_raw.format);
+        const wlm_egl_format_t * format = wlm_egl_formats_find_spa(info_raw.format);
         if (format == NULL) {
             wlm_log_error("mirror-xdg-portal::on_pw_param_changed(): unsupported SPA format '%d'\n", info_raw.format);
             wlm_mirror_backend_fail_async(backend);
