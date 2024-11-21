@@ -44,7 +44,7 @@ if (${BUILD_DOCUMENTATION})
 endif()
 
 # main target
-file(GLOB sources CONFIGURE_DEPENDS src/*.c)
+file(GLOB_RECURSE sources CONFIGURE_DEPENDS src/*.c)
 add_executable(wl-mirror ${sources})
 target_compile_options(wl-mirror PRIVATE -Wall -Wextra)
 target_include_directories(wl-mirror PRIVATE include/)
