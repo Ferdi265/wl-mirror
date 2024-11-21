@@ -53,6 +53,11 @@ void wlm_egl_init(ctx_t * ctx) {
     ctx->egl.window = EGL_NO_SURFACE;
 
     ctx->egl.glEGLImageTargetTexture2DOES = NULL;
+    ctx->egl.eglQueryDmaBufFormatsEXT = NULL;
+    ctx->egl.eglQueryDmaBufModifiersEXT = NULL;
+
+    ctx->egl.dmabuf_formats.num_formats = 0;
+    ctx->egl.dmabuf_formats.formats = NULL;
 
     ctx->egl.width = 1;
     ctx->egl.height = 1;
@@ -148,6 +153,11 @@ void wlm_egl_init(ctx_t * ctx) {
     if (ctx->egl.glEGLImageTargetTexture2DOES == NULL) {
         wlm_log_error("egl::init(): failed to get pointer to glEGLImageTargetTexture2DOES\n");
         wlm_exit_fail(ctx);
+    }
+
+    // query dmabuf formats
+    if (!wlm_egl_query_dmabuf_formats(ctx)) {
+        wlm_log_warn("egl::init(): can't list dmabuf modifiers, this might affect some dmabuf backends\n");
     }
 
     // create vertex buffer object
@@ -261,6 +271,114 @@ void wlm_egl_init(ctx_t * ctx) {
     }
 }
 
+// --- query_dmabuf_formats ---
+
+bool wlm_egl_query_dmabuf_formats(ctx_t * ctx) {
+    //if (!has_extension("EGL_EXT_image_dma_buf_import_modifiers")) {
+    //    wlm_log_error("egl::init(): missing EGL extension EGL_EXT_image_dma_buf_import_modifiers\n");
+    //    return false;
+    //}
+
+    // get pointers to optional functions provided by extensions
+    // - eglQueryDmaBufFormatsEXT: for getting dmabuf formats
+    ctx->egl.eglQueryDmaBufFormatsEXT = (PFNEGLQUERYDMABUFFORMATSEXTPROC)eglGetProcAddress("eglQueryDmaBufFormatsEXT");
+    if (ctx->egl.eglQueryDmaBufFormatsEXT == NULL) {
+        wlm_log_error("egl::init(): failed to get pointer to eglQueryDmaBufFormatsEXT\n");
+        return false;
+    }
+
+    // - eglQueryDmaBufModifiersEXT: for getting dmabuf format modifiers
+    ctx->egl.eglQueryDmaBufModifiersEXT = (PFNEGLQUERYDMABUFMODIFIERSEXTPROC)eglGetProcAddress("eglQueryDmaBufModifiersEXT");
+    if (ctx->egl.eglQueryDmaBufModifiersEXT == NULL) {
+        wlm_log_error("egl::init(): failed to get pointer to eglQueryDmaBufModifiersEXT\n");
+        return false;
+    }
+
+    EGLint num_formats = 0;
+    if (!ctx->egl.eglQueryDmaBufFormatsEXT(ctx->egl.display, 0, NULL, &num_formats)) {
+        wlm_log_error("egl::init(): failed to query number of egl dmabuf formats\n");
+        return false;
+    }
+
+    EGLint * egl_drm_formats = calloc(num_formats, sizeof *egl_drm_formats);
+    if (egl_drm_formats == NULL) {
+        wlm_log_error("egl::init(): failed to allocate egl dmabuf format array\n");
+        return false;
+    }
+
+    if (!ctx->egl.eglQueryDmaBufFormatsEXT(ctx->egl.display, num_formats, egl_drm_formats, &num_formats)) {
+        free(egl_drm_formats);
+        wlm_log_error("egl::init(): failed to query egl dmabuf formats\n");
+        return false;
+    }
+
+    dmabuf_format_t * dmabuf_formats = calloc(num_formats, sizeof *dmabuf_formats);
+    if (dmabuf_formats == NULL) {
+        free(egl_drm_formats);
+        wlm_log_error("egl::init(): failed to allocate dmabuf format array\n");
+        return false;
+    }
+
+    bool success = true;
+    for (size_t i = 0; i < (size_t)num_formats; i++) {
+        EGLint num_modifiers = 0;
+        if (!ctx->egl.eglQueryDmaBufModifiersEXT(ctx->egl.display, egl_drm_formats[i], 0, NULL, NULL, &num_modifiers)) {
+            wlm_log_error("egl::init(): failed to allocate dmabuf format array\n");
+            success = false;
+            break;
+        }
+
+        EGLuint64KHR * egl_drm_modifiers = calloc(num_modifiers, sizeof *egl_drm_modifiers);
+        if (egl_drm_modifiers == NULL) {
+            wlm_log_error("egl::init(): failed to allocate egl dmabuf format modifier array for format %x\n", egl_drm_formats[i]);
+            success = false;
+            break;
+        }
+
+        if (!ctx->egl.eglQueryDmaBufModifiersEXT(ctx->egl.display, egl_drm_formats[i], 0, (EGLuint64KHR*)egl_drm_modifiers, NULL, &num_modifiers)) {
+            free(egl_drm_modifiers);
+            wlm_log_error("egl::init(): failed query egl dmabuf format modifiers for format %x\n", egl_drm_formats[i]);
+            success = false;
+            break;
+        }
+
+        uint64_t * modifiers = calloc(num_modifiers, sizeof *modifiers);
+        if (modifiers == NULL) {
+            free(egl_drm_modifiers);
+            wlm_log_error("egl::init(): failed to allocate modifier array for format %x\n", egl_drm_formats[i]);
+            success = false;
+            break;
+        }
+
+        for (size_t j = 0; j < (size_t)num_modifiers; j++) {
+            modifiers[j] = egl_drm_modifiers[j];
+        }
+
+        dmabuf_formats[i].drm_format = egl_drm_formats[i];
+        dmabuf_formats[i].num_modifiers = num_modifiers;
+        dmabuf_formats[i].modifiers = modifiers;
+
+        free(egl_drm_modifiers);
+    }
+
+    free(egl_drm_formats);
+
+    // cleanup
+    if (!success) {
+        for (size_t i = 0; i < (size_t)num_formats; i++) {
+            if (dmabuf_formats[i].modifiers != NULL) {
+                free(dmabuf_formats[i].modifiers);
+            }
+        }
+        free(dmabuf_formats);
+        return false;
+    }
+
+    ctx->egl.dmabuf_formats.num_formats = num_formats;
+    ctx->egl.dmabuf_formats.formats = dmabuf_formats;
+    return true;
+}
+
 // --- draw_texture ---
 
 void wlm_egl_draw_texture(ctx_t *ctx) {
@@ -355,6 +473,7 @@ void wlm_egl_resize_viewport(ctx_t * ctx) {
     wlm_log_debug(ctx, "egl::resize_viewport(): view_width = %d, view_height = %d\n", view_width, view_height);
 
     // updating GL viewport
+    wlm_log_debug(ctx, "egl::resize_viewport(): win = %dx%d, view = %dx%d, tex = %dx%d\n", win_width, win_height, view_width, view_height, tex_width, tex_height);
     wlm_log_debug(ctx, "egl::resize_viewport(): viewport %d, %d, %d, %d\n",
         (int32_t)(win_width - view_width) / 2, (int32_t)(win_height - view_height) / 2, view_width, view_height
     );
@@ -504,6 +623,13 @@ bool wlm_egl_dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
     image_attribs[i++] = dmabuf->height;
     image_attribs[i++] = EGL_LINUX_DRM_FOURCC_EXT;
     image_attribs[i++] = dmabuf->drm_format;
+    wlm_log_debug(ctx, "egl::dmabuf_to_texture(): w=%d h=%d drm_format=%c%c%c%c\n",
+        dmabuf->width, dmabuf->height,
+        ((dmabuf->drm_format >> 0) & 0xFF),
+        ((dmabuf->drm_format >> 8) & 0xFF),
+        ((dmabuf->drm_format >> 16) & 0xFF),
+        ((dmabuf->drm_format >> 24) & 0xFF)
+    );
 
     for (size_t j = 0; j < dmabuf->planes; j++) {
         image_attribs[i++] = fd_attribs[j];
@@ -516,9 +642,19 @@ bool wlm_egl_dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
         image_attribs[i++] = (uint32_t)dmabuf->modifier;
         image_attribs[i++] = modifier_high_attribs[j];
         image_attribs[i++] = (uint32_t)(dmabuf->modifier >> 32);
+        wlm_log_debug(ctx, "egl::dmabuf_to_texture(): fd=% 3d offset=% 10d stride=% 10d modifier=%016lx\n",
+            dmabuf->fds[j], dmabuf->offsets[j], dmabuf->strides[j], dmabuf->modifier
+        );
     }
 
     image_attribs[i++] = EGL_NONE;
+
+    wlm_log_debug(ctx, "egl::dmabuf_to_texture(): image_attribs=");
+    if (ctx->opt.verbose) {
+        for (i = 0; image_attribs[i] != EGL_NONE; i++) {
+            fprintf(stderr, "%08lx%s", image_attribs[i], image_attribs[i + 1] != EGL_NONE ? "_" : "\n");
+        }
+    }
 
     // create EGLImage from dmabuf with attribute array
     EGLImage frame_image = eglCreateImage(ctx->egl.display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, image_attribs);
@@ -532,9 +668,17 @@ bool wlm_egl_dmabuf_to_texture(ctx_t * ctx, dmabuf_t * dmabuf) {
     // convert EGLImage to GL texture
     glBindTexture(GL_TEXTURE_2D, ctx->egl.texture);
     ctx->egl.glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, frame_image);
+    ctx->egl.texture_initialized = true;
 
     // destroy temporary image
     eglDestroyImage(ctx->egl.display, frame_image);
+
+    // set texture size and aspect ratio only if changed
+    if (dmabuf->width != ctx->egl.width || dmabuf->height != ctx->egl.height) {
+        ctx->egl.width = dmabuf->width;
+        ctx->egl.height = dmabuf->height;
+        wlm_egl_resize_viewport(ctx);
+    }
 
     return true;
 }
@@ -545,6 +689,15 @@ void wlm_egl_cleanup(ctx_t *ctx) {
     if (!ctx->egl.initialized) return;
 
     wlm_log_debug(ctx, "egl::cleanup(): destroying EGL objects\n");
+
+    if (ctx->egl.dmabuf_formats.formats != NULL) {
+        for (size_t i = 0; i < ctx->egl.dmabuf_formats.num_formats; i++) {
+            if (ctx->egl.dmabuf_formats.formats[i].modifiers != NULL) {
+                free(ctx->egl.dmabuf_formats.formats[i].modifiers);
+            }
+        }
+        free(ctx->egl.dmabuf_formats.formats);
+    }
 
     if (ctx->egl.shader_program != 0) glDeleteProgram(ctx->egl.shader_program);
     if (ctx->egl.freeze_framebuffer != 0) glDeleteFramebuffers(1, &ctx->egl.freeze_framebuffer);
