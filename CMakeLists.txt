@@ -20,6 +20,7 @@ set(PROTOCOLS
     "staging/fractional-scale/fractional-scale-v1.xml"
     "staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml"
     "staging/ext-image-capture-source/ext-image-capture-source-v1.xml"
+    "staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml"
     "unstable/xdg-output/xdg-output-unstable-v1.xml"
     "unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
     "unstable/wlr-export-dmabuf-unstable-v1.xml"
