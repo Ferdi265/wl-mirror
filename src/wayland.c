@@ -1,3 +1,4 @@
+#include "wlm/proto/ext-image-capture-source-v1.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -287,6 +288,42 @@ static void on_registry_add(
             registry, id, &zwlr_screencopy_manager_v1_interface, 3
         );
         ctx->wl.screencopy_manager_id = id;
+    } else if (strcmp(interface, ext_image_copy_capture_manager_v1_interface.name) == 0) {
+        if (ctx->wl.copy_capture_manager != NULL) {
+            wlm_log_error("wayland::on_registry_add(): duplicate screencopy_manager\n");
+            wlm_exit_fail(ctx);
+        }
+
+        // bind image copy capture manager object
+        // - for extcopy backend
+        ctx->wl.copy_capture_manager = (struct ext_image_copy_capture_manager_v1 *)wl_registry_bind(
+            registry, id, &ext_image_copy_capture_manager_v1_interface, 1
+        );
+        ctx->wl.copy_capture_manager_id = id;
+    } else if (strcmp(interface, ext_output_image_capture_source_manager_v1_interface.name) == 0) {
+        if (ctx->wl.output_capture_source_manager != NULL) {
+            wlm_log_error("wayland::on_registry_add(): duplicate screencopy_manager\n");
+            wlm_exit_fail(ctx);
+        }
+
+        // bind output capture source manager object
+        // - for extcopy backend
+        ctx->wl.output_capture_source_manager = (struct ext_output_image_capture_source_manager_v1 *)wl_registry_bind(
+            registry, id, &ext_output_image_capture_source_manager_v1_interface, 1
+        );
+        ctx->wl.output_capture_source_manager_id = id;
+    } else if (strcmp(interface, ext_foreign_toplevel_image_capture_source_manager_v1_interface.name) == 0) {
+        if (ctx->wl.toplevel_capture_source_manager != NULL) {
+            wlm_log_error("wayland::on_registry_add(): duplicate screencopy_manager\n");
+            wlm_exit_fail(ctx);
+        }
+
+        // bind toplevel capture source manager object
+        // - for extcopy backend
+        ctx->wl.toplevel_capture_source_manager = (struct ext_foreign_toplevel_image_capture_source_manager_v1 *)wl_registry_bind(
+            registry, id, &ext_foreign_toplevel_image_capture_source_manager_v1_interface, 1
+        );
+        ctx->wl.toplevel_capture_source_manager_id = id;
     } else if (strcmp(interface, wl_shm_interface.name) == 0) {
         if (ctx->wl.shm != NULL) {
             wlm_log_error("wayland::on_registry_add(): duplicate shm\n");
@@ -405,6 +442,15 @@ static void on_registry_remove(
         wlm_exit_fail(ctx);
     } else if (id == ctx->wl.dmabuf_manager_id) {
         wlm_log_error("wayland::on_registry_remove(): dmabuf_manager disappeared\n");
+        wlm_exit_fail(ctx);
+    } else if (id == ctx->wl.copy_capture_manager_id) {
+        wlm_log_error("wayland::on_registry_remove(): copy_capture_manager disappeared\n");
+        wlm_exit_fail(ctx);
+    } else if (id == ctx->wl.output_capture_source_manager_id) {
+        wlm_log_error("wayland::on_registry_remove(): output_capture_source_manager disappeared\n");
+        wlm_exit_fail(ctx);
+    } else if (id == ctx->wl.toplevel_capture_source_manager_id) {
+        wlm_log_error("wayland::on_registry_remove(): toplevel_capture_source_manager disappeared\n");
         wlm_exit_fail(ctx);
     } else {
         {
@@ -852,6 +898,13 @@ void wlm_wayland_init(ctx_t * ctx) {
     ctx->wl.screencopy_manager = NULL;
     ctx->wl.screencopy_manager_id = 0;
 
+    ctx->wl.copy_capture_manager = NULL;
+    ctx->wl.output_capture_source_manager = NULL;
+    ctx->wl.toplevel_capture_source_manager = NULL;
+    ctx->wl.copy_capture_manager_id = 0;
+    ctx->wl.output_capture_source_manager_id = 0;
+    ctx->wl.toplevel_capture_source_manager_id = 0;
+
     ctx->wl.outputs = NULL;
     ctx->wl.seats = NULL;
 
@@ -1140,6 +1193,9 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
         ctx->wl.seats = NULL;
     }
 
+    if (ctx->wl.copy_capture_manager != NULL) ext_image_copy_capture_manager_v1_destroy(ctx->wl.copy_capture_manager);
+    if (ctx->wl.output_capture_source_manager != NULL) ext_output_image_capture_source_manager_v1_destroy(ctx->wl.output_capture_source_manager);
+    if (ctx->wl.toplevel_capture_source_manager != NULL) ext_foreign_toplevel_image_capture_source_manager_v1_destroy(ctx->wl.toplevel_capture_source_manager);
     if (ctx->wl.dmabuf_manager != NULL) zwlr_export_dmabuf_manager_v1_destroy(ctx->wl.dmabuf_manager);
     if (ctx->wl.screencopy_manager != NULL) zwlr_screencopy_manager_v1_destroy(ctx->wl.screencopy_manager);
     if (ctx->wl.shm != NULL) wl_shm_destroy(ctx->wl.shm);

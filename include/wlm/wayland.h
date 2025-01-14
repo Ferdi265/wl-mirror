@@ -10,6 +10,8 @@
 #include <wlm/proto/xdg-output-unstable-v1.h>
 #include <wlm/proto/wlr-export-dmabuf-unstable-v1.h>
 #include <wlm/proto/wlr-screencopy-unstable-v1.h>
+#include <wlm/proto/ext-image-copy-capture-v1.h>
+#include <wlm/proto/ext-image-capture-source-v1.h>
 
 #ifdef WITH_LIBDECOR
 #include <libdecor.h>
@@ -65,6 +67,14 @@ typedef struct ctx_wl {
     struct zwlr_screencopy_manager_v1 * screencopy_manager;
     uint32_t shm_id;
     uint32_t screencopy_manager_id;
+
+    // extcopy backend objects
+    struct ext_image_copy_capture_manager_v1 * copy_capture_manager;
+    struct ext_output_image_capture_source_manager_v1 * output_capture_source_manager;
+    struct ext_foreign_toplevel_image_capture_source_manager_v1 * toplevel_capture_source_manager;
+    uint32_t copy_capture_manager_id;
+    uint32_t output_capture_source_manager_id;
+    uint32_t toplevel_capture_source_manager_id;
 
     // output list
     output_list_node_t * outputs;
