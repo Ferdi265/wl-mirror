@@ -59,6 +59,9 @@ bool wlm_opt_parse_backend(backend_t * backend, const char * backend_arg) {
     } else if (strcmp(backend_arg, "screencopy") == 0) {
         *backend = BACKEND_SCREENCOPY;
         return true;
+    } else if (strcmp(backend_arg, "extcopy") == 0) {
+        *backend = BACKEND_EXTCOPY;
+        return true;
     } else {
         return false;
     }
@@ -373,6 +376,7 @@ void wlm_opt_usage(ctx_t * ctx) {
     printf("  - auto        automatically try the backends in order and use the first that works (default)\n");
     printf("  - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs\n");
     printf("  - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs\n");
+    printf("  - extcopy     use the ext-image-copy-capture-v1 protocol to capture outputs\n");
     printf("\n");
     printf("transforms:\n");
     printf("  transforms are specified as a dash-separated list of flips followed by a rotation\n");

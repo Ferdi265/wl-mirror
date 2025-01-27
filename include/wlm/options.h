@@ -22,7 +22,8 @@ typedef enum {
 typedef enum {
     BACKEND_AUTO,
     BACKEND_DMABUF,
-    BACKEND_SCREENCOPY
+    BACKEND_SCREENCOPY,
+    BACKEND_EXTCOPY,
 } backend_t;
 
 typedef struct ctx_opt {

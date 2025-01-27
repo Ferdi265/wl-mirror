@@ -15,5 +15,6 @@ typedef struct mirror_backend {
 
 void wlm_mirror_dmabuf_init(struct ctx * ctx);
 void wlm_mirror_screencopy_init(struct ctx * ctx);
+void wlm_mirror_extcopy_init(struct ctx * ctx);
 
 #endif

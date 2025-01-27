@@ -100,8 +100,16 @@ typedef struct {
 } fallback_backend_t;
 
 static fallback_backend_t auto_fallback_backends[] = {
+#ifdef WITH_GBM
+    // prefer extcopy if gbm supported
+    { "extcopy", wlm_mirror_extcopy_init },
+#endif
     { "dmabuf", wlm_mirror_dmabuf_init },
     { "screencopy", wlm_mirror_screencopy_init },
+#if !defined(WITH_GBM)
+    // prefer wlr formats if gbm not supported
+    { "extcopy", wlm_mirror_extcopy_init },
+#endif
     { NULL, NULL }
 };
 
@@ -152,6 +160,10 @@ void wlm_mirror_backend_init(ctx_t * ctx) {
 
         case BACKEND_SCREENCOPY:
             wlm_mirror_screencopy_init(ctx);
+            break;
+
+        case BACKEND_EXTCOPY:
+            wlm_mirror_extcopy_init(ctx);
             break;
     }
 
