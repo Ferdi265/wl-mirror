@@ -12,7 +12,9 @@
 #include <wlm/proto/wlr-screencopy-unstable-v1.h>
 #include <wlm/proto/ext-image-copy-capture-v1.h>
 #include <wlm/proto/ext-image-capture-source-v1.h>
+#include <wlm/proto/linux-dmabuf-unstable-v1.h>
 #include <wlm/wayland/shm.h>
+#include <wlm/wayland/dmabuf.h>
 
 #ifdef WITH_LIBDECOR
 #include <libdecor.h>
@@ -44,6 +46,7 @@ typedef struct seat_list_node {
 
 typedef struct ctx_wl {
     ctx_wl_shm_t shmbuf;
+    ctx_wl_dmabuf_t dmabuf;
 
     struct wl_display * display;
     struct wl_registry * registry;
@@ -61,14 +64,18 @@ typedef struct ctx_wl {
     uint32_t wm_base_id;
     uint32_t output_manager_id;
 
+    // shm and dmabuf objects
+    struct wl_shm * shm;
+    uint32_t shm_id;
+    struct zwp_linux_dmabuf_v1 * linux_dmabuf;
+    uint32_t linux_dmabuf_id;
+
     // dmabuf backend objects
     struct zwlr_export_dmabuf_manager_v1 * dmabuf_manager;
     uint32_t dmabuf_manager_id;
 
     // screencopy backend objects
-    struct wl_shm * shm;
     struct zwlr_screencopy_manager_v1 * screencopy_manager;
-    uint32_t shm_id;
     uint32_t screencopy_manager_id;
 
     // extcopy backend objects

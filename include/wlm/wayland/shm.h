@@ -31,10 +31,9 @@ bool wlm_wayland_shm_create_pool(ctx_t * ctx);
 /// Allocate a shared memory buffer
 ///
 /// This interface manages only one single shared memory buffer at a time.
-/// Calling this function a second time results in an error.
+/// Calling this function a second time without deallocating results in an error.
 ///
 /// TODO: Allow managing multiple shared memory buffers
-/// TODO: properly handle wl_buffer::release event
 bool wlm_wayland_shm_alloc(ctx_t * ctx, uint32_t shm_format, uint32_t width, uint32_t height, uint32_t stride);
 
 /// Deallocate the allocated shared memory buffer

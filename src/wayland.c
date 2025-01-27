@@ -336,6 +336,18 @@ static void on_registry_add(
             registry, id, &wl_shm_interface, 1
         );
         ctx->wl.shm_id = id;
+    } else if (strcmp(interface, zwp_linux_dmabuf_v1_interface.name) == 0) {
+        if (ctx->wl.linux_dmabuf != NULL) {
+            wlm_log_error("wayland::on_registry_add(): duplicate linux_dmabuf\n");
+            wlm_exit_fail(ctx);
+        }
+
+        // bind linux_dmabuf object
+        // - for mirror-screencopy backend
+        ctx->wl.linux_dmabuf = (struct zwp_linux_dmabuf_v1 *)wl_registry_bind(
+            registry, id, &zwp_linux_dmabuf_v1_interface, 1
+        );
+        ctx->wl.linux_dmabuf_id = id;
     } else if (strcmp(interface, wl_output_interface.name) == 0) {
         // allocate output node
         output_list_node_t * node = malloc(sizeof (output_list_node_t));
@@ -439,6 +451,12 @@ static void on_registry_remove(
         wlm_exit_fail(ctx);
     } else if (id == ctx->wl.output_manager_id) {
         wlm_log_error("wayland::on_registry_remove(): output_manager disappeared\n");
+        wlm_exit_fail(ctx);
+    } else if (id == ctx->wl.shm_id) {
+        wlm_log_error("wayland::on_registry_remove(): shm disappeared\n");
+        wlm_exit_fail(ctx);
+    } else if (id == ctx->wl.linux_dmabuf_id) {
+        wlm_log_error("wayland::on_registry_remove(): linux_dmabuf disappeared\n");
         wlm_exit_fail(ctx);
     } else if (id == ctx->wl.dmabuf_manager_id) {
         wlm_log_error("wayland::on_registry_remove(): dmabuf_manager disappeared\n");
@@ -891,10 +909,13 @@ void wlm_wayland_init(ctx_t * ctx) {
     ctx->wl.output_manager = NULL;
     ctx->wl.output_manager_id = 0;
 
-    ctx->wl.dmabuf_manager = NULL;
-    ctx->wl.dmabuf_manager_id = 0;
     ctx->wl.shm = NULL;
     ctx->wl.shm_id = 0;
+    ctx->wl.linux_dmabuf = NULL;
+    ctx->wl.linux_dmabuf_id = 0;
+
+    ctx->wl.dmabuf_manager = NULL;
+    ctx->wl.dmabuf_manager_id = 0;
     ctx->wl.screencopy_manager = NULL;
     ctx->wl.screencopy_manager_id = 0;
 
@@ -941,6 +962,7 @@ void wlm_wayland_init(ctx_t * ctx) {
     ctx->wl.initialized = true;
 
     wlm_wayland_shm_init(ctx);
+    wlm_wayland_dmabuf_init(ctx);
 
     // connect to display
     ctx->wl.display = wl_display_connect(NULL);
@@ -1161,6 +1183,7 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
     wlm_log_debug(ctx, "wayland::cleanup(): destroying wayland objects\n");
 
     wlm_wayland_shm_cleanup(ctx);
+    wlm_wayland_dmabuf_cleanup(ctx);
 
     // deregister event handler
     wlm_event_remove_fd(ctx, &ctx->wl.event_handler);
@@ -1202,6 +1225,7 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
     if (ctx->wl.toplevel_capture_source_manager != NULL) ext_foreign_toplevel_image_capture_source_manager_v1_destroy(ctx->wl.toplevel_capture_source_manager);
     if (ctx->wl.dmabuf_manager != NULL) zwlr_export_dmabuf_manager_v1_destroy(ctx->wl.dmabuf_manager);
     if (ctx->wl.screencopy_manager != NULL) zwlr_screencopy_manager_v1_destroy(ctx->wl.screencopy_manager);
+    if (ctx->wl.linux_dmabuf != NULL) zwp_linux_dmabuf_v1_destroy(ctx->wl.linux_dmabuf);
     if (ctx->wl.shm != NULL) wl_shm_destroy(ctx->wl.shm);
 #ifdef WITH_LIBDECOR
     if (ctx->wl.libdecor_frame != NULL) libdecor_frame_unref(ctx->wl.libdecor_frame);
