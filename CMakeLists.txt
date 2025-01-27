@@ -7,6 +7,7 @@ project(wl-mirror C)
 option(INSTALL_EXAMPLE_SCRIPTS "install wl-mirror example scripts" OFF)
 option(INSTALL_DOCUMENTATION "install wl-mirror manual pages" OFF)
 option(WITH_LIBDECOR "use libdecor for window decoration" OFF)
+option(WITH_GBM "use GBM for dmabuf allocation" OFF)
 set(FORCE_WAYLAND_SCANNER_PATH "" CACHE STRING "provide a custom path for wayland-scanner")
 
 # wayland protocols needed by wl-mirror
