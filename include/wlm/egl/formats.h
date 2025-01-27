@@ -29,7 +29,7 @@ enum spa_video_format {
 #define SPA_FORMAT(a) SPA_VIDEO_FORMAT_UNKNOWN
 #endif
 
-typedef struct {
+typedef struct wlm_egl_format  {
     enum wl_shm_format wl_shm_format;
     uint32_t drm_format;
     enum spa_video_format spa_format;

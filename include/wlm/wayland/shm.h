@@ -7,13 +7,6 @@
 
 typedef struct ctx ctx_t;
 
-typedef struct {
-    uint32_t drm_format;
-    uint32_t width;
-    uint32_t height;
-    uint32_t stride;
-} wlm_shm_buffer_t;
-
 typedef struct ctx_wl_shm {
     // shm buffer state
     int fd;

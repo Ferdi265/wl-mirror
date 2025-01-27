@@ -1,15 +1,9 @@
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <wlm/context.h>
 #include <wlm/mirror-screencopy.h>
+#include <wlm/egl/shm.h>
 #include <wlm/egl/formats.h>
-#include <sys/mman.h>
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
 
 static void backend_cancel(screencopy_mirror_backend_t * backend) {
     wlm_log_error("mirror-screencopy::backend_cancel(): cancelling capture due to error\n");
@@ -155,29 +149,11 @@ static void on_ready(
         return;
     }
 
-    // store frame data into texture
-    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, backend->frame_stride / (format->bpp / 8));
-    glTexImage2D(GL_TEXTURE_2D,
-        0, format->gl_format, backend->frame_width, backend->frame_height,
-        0, format->gl_format, format->gl_type, shm_addr
-    );
-    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
-    ctx->egl.format = format->gl_format;
-    ctx->egl.texture_region_aware = true;
-    ctx->egl.texture_initialized = true;
-
-    // set buffer flags
     bool invert_y = backend->frame_flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT;
-    if (ctx->mirror.invert_y != invert_y) {
-        ctx->mirror.invert_y = invert_y;
-        wlm_egl_update_uniforms(ctx);
-    }
-
-    // set texture size and aspect ratio only if changed
-    if (backend->frame_width != ctx->egl.width || backend->frame_height != ctx->egl.height) {
-        ctx->egl.width = backend->frame_width;
-        ctx->egl.height = backend->frame_height;
-        wlm_egl_resize_viewport(ctx);
+    if (!wlm_egl_shm_import(ctx, shm_addr, format, backend->frame_width, backend->frame_height, backend->frame_stride, invert_y)) {
+        wlm_log_error("mirror-screencopy::on_ready(): shm buffer import failed\n");
+        backend_cancel(backend);
+        return;
     }
 
     zwlr_screencopy_frame_v1_destroy(backend->screencopy_frame);
