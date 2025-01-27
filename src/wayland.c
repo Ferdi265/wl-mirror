@@ -940,6 +940,8 @@ void wlm_wayland_init(ctx_t * ctx) {
     ctx->wl.closing = false;
     ctx->wl.initialized = true;
 
+    wlm_wayland_shm_init(ctx);
+
     // connect to display
     ctx->wl.display = wl_display_connect(NULL);
     if (ctx->wl.display == NULL) {
@@ -1157,6 +1159,8 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
     if (!ctx->wl.initialized) return;
 
     wlm_log_debug(ctx, "wayland::cleanup(): destroying wayland objects\n");
+
+    wlm_wayland_shm_cleanup(ctx);
 
     // deregister event handler
     wlm_event_remove_fd(ctx, &ctx->wl.event_handler);

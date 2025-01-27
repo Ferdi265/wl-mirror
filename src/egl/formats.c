@@ -133,7 +133,6 @@ static const wlm_egl_format_t formats[] = {
     }
 };
 
-// TODO: implement
 const wlm_egl_format_t * wlm_egl_formats_find_shm(enum wl_shm_format shm_format) {
     const wlm_egl_format_t * format = formats;
     while (format->bpp != -1U) {

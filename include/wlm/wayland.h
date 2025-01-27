@@ -12,6 +12,7 @@
 #include <wlm/proto/wlr-screencopy-unstable-v1.h>
 #include <wlm/proto/ext-image-copy-capture-v1.h>
 #include <wlm/proto/ext-image-capture-source-v1.h>
+#include <wlm/wayland/shm.h>
 
 #ifdef WITH_LIBDECOR
 #include <libdecor.h>
@@ -42,6 +43,8 @@ typedef struct seat_list_node {
 } seat_list_node_t;
 
 typedef struct ctx_wl {
+    ctx_wl_shm_t shmbuf;
+
     struct wl_display * display;
     struct wl_registry * registry;
 

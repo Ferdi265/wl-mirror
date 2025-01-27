@@ -5,7 +5,6 @@
 #include <wayland-client-protocol.h>
 #include <GLES2/gl2.h>
 
-#include <libdrm/drm_fourcc.h>
 #ifdef WITH_LIBDRM
 #include <libdrm/drm_fourcc.h>
 #define DRM_FORMAT(a) DRM_FORMAT_ ## a

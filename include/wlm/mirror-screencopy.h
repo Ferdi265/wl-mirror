@@ -18,15 +18,6 @@ typedef enum {
 typedef struct {
     mirror_backend_t header;
 
-    // shm state
-    int shm_fd;
-    size_t shm_size;
-    void * shm_addr;
-
-    // wl_shm objects
-    struct wl_shm_pool * shm_pool;
-    struct wl_buffer * shm_buffer;
-
     // screencopy frame object
     struct zwlr_screencopy_frame_v1 * screencopy_frame;
 
