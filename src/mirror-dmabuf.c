@@ -103,8 +103,13 @@ static void on_frame(
     backend->dmabuf.drm_format = format;
     backend->dmabuf.planes = num_objects;
 
-    wlm_log_debug(ctx, "mirror-dmabuf::on_frame(): w=%d h=%d gl_format=%x drm_format=%08x drm_modifier=%016lx\n",
-        backend->dmabuf.width, backend->dmabuf.height, GL_RGB8_OES, backend->dmabuf.drm_format, backend->dmabuf.modifier
+    wlm_log_debug(ctx, "mirror-dmabuf::on_frame(): w=%d h=%d gl_format=%x drm_format=%c%c%c%c drm_modifier=%016lx\n",
+        backend->dmabuf.width, backend->dmabuf.height, GL_RGB8_OES,
+        (backend->dmabuf.drm_format >> 0) & 0xFF,
+        (backend->dmabuf.drm_format >> 8) & 0xFF,
+        (backend->dmabuf.drm_format >> 16) & 0xFF,
+        (backend->dmabuf.drm_format >> 24) & 0xFF,
+        backend->dmabuf.modifier
     );
 
     for (size_t i = 0; i < num_objects; i++) {
@@ -177,20 +182,12 @@ static void on_ready(
 
     ctx->egl.format = GL_RGB8_OES; // FIXME: find out actual format
     ctx->egl.texture_region_aware = false;
-    ctx->egl.texture_initialized = true;
 
     // set buffer flags only if changed
     bool invert_y = backend->buffer_flags & ZWP_LINUX_BUFFER_PARAMS_V1_FLAGS_Y_INVERT;
     if (ctx->mirror.invert_y != invert_y) {
         ctx->mirror.invert_y = invert_y;
         wlm_egl_update_uniforms(ctx);
-    }
-
-    // set texture size and aspect ratio only if changed
-    if (backend->dmabuf.width != ctx->egl.width || backend->dmabuf.height != ctx->egl.height) {
-        ctx->egl.width = backend->dmabuf.width;
-        ctx->egl.height = backend->dmabuf.height;
-        wlm_egl_resize_viewport(ctx);
     }
 
     dmabuf_frame_cleanup(backend);

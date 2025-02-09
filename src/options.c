@@ -59,6 +59,11 @@ bool wlm_opt_parse_backend(backend_t * backend, const char * backend_arg) {
     } else if (strcmp(backend_arg, "screencopy") == 0) {
         *backend = BACKEND_SCREENCOPY;
         return true;
+#ifdef WITH_XDG_PORTAL_BACKEND
+    } else if (strcmp(backend_arg, "xdg-portal") == 0 || strcmp(backend_arg, "pipewire") == 0) {
+        *backend = BACKEND_XDG_PORTAL;
+        return true;
+#endif
     } else {
         return false;
     }
@@ -373,6 +378,10 @@ void wlm_opt_usage(ctx_t * ctx) {
     printf("  - auto        automatically try the backends in order and use the first that works (default)\n");
     printf("  - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs\n");
     printf("  - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs\n");
+#ifdef WITH_XDG_PORTAL_BACKEND
+    printf("  - xdg-portal  use xdg-desktop-portal and pipewire to capture outputs or windows\n");
+    printf("  - pipewire    alias for 'xdg-portal'\n");
+#endif
     printf("\n");
     printf("transforms:\n");
     printf("  transforms are specified as a dash-separated list of flips followed by a rotation\n");
