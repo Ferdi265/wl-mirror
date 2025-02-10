@@ -273,7 +273,7 @@ static void do_capture(ctx_t * ctx) {
 
         wlm_log_debug(ctx, "mirror-extcopy::do_capture(): creating capture session\n");
         backend->state = STATE_WAIT_BUFFER_INFO;
-        backend->capture_session = ext_image_copy_capture_manager_v1_create_session(ctx->wl.copy_capture_manager, backend->capture_source, 0);
+        backend->capture_session = ext_image_copy_capture_manager_v1_create_session(ctx->wl.copy_capture_manager, backend->capture_source, ctx->opt.show_cursor ? EXT_IMAGE_COPY_CAPTURE_MANAGER_V1_OPTIONS_PAINT_CURSORS : 0);
         ext_image_copy_capture_session_v1_add_listener(backend->capture_session, &capture_session_listener, (void *)ctx);
     } else if (backend->state == STATE_READY) {
         if (backend->capture_frame != NULL) {
