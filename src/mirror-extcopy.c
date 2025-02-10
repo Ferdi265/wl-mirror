@@ -9,19 +9,32 @@ static void extcopy_frame_cleanup(extcopy_mirror_backend_t * backend) {
     if (backend->capture_frame != NULL) ext_image_copy_capture_frame_v1_destroy(backend->capture_frame);
     if (backend->modifiers != NULL) free(backend->modifiers);
 
+    backend->capture_frame = NULL;
+    backend->modifiers = NULL;
     backend->width = 0;
     backend->height = 0;
     backend->shm_format = 0;
     backend->drm_format = 0;
-    backend->modifiers = NULL;
     backend->num_modifiers = 0;
 }
 
-static void backend_cancel(extcopy_mirror_backend_t * backend) {
+static void extcopy_session_cleanup(ctx_t * ctx, extcopy_mirror_backend_t * backend) {
+    extcopy_frame_cleanup(backend);
+
+    if (backend->capture_session != NULL) ext_image_copy_capture_session_v1_destroy(backend->capture_session);
+    if (backend->capture_source != NULL) ext_image_capture_source_v1_destroy(backend->capture_source);
+    if (wlm_wayland_dmabuf_get_buffer(ctx) != NULL) wlm_wayland_dmabuf_dealloc(ctx);
+    if (wlm_wayland_shm_get_buffer(ctx) != NULL) wlm_wayland_shm_dealloc(ctx);
+
+    backend->capture_target = NULL;
+    backend->capture_session = NULL;
+    backend->capture_source = NULL;
+}
+
+static void backend_cancel(ctx_t * ctx, extcopy_mirror_backend_t * backend) {
     wlm_log_error("mirror-extcopy::backend_cancel(): cancelling capture due to error\n");
 
-    extcopy_frame_cleanup(backend);
-    if (backend->capture_source != NULL) ext_image_capture_source_v1_destroy(backend->capture_source);
+    extcopy_session_cleanup(ctx, backend);
 
     backend->state = STATE_CANCELED;
     backend->header.fail_count++;
@@ -59,7 +72,7 @@ static void on_capture_session_dmabuf_format(void * data, struct ext_image_copy_
 
     if (modifiers_arr->size % sizeof (uint64_t) != 0) {
         wlm_log_error("mirror-extcopy::on_capture_session_dmabuf_format(): modifiers have invalid size %zd, expected multiple of %zd\n", modifiers_arr->size, sizeof (uint64_t));
-        backend_cancel(backend);
+        backend_cancel(ctx, backend);
         return;
     }
 
@@ -74,7 +87,7 @@ static void on_capture_session_dmabuf_format(void * data, struct ext_image_copy_
     backend->modifiers = (uint64_t *)calloc(backend->num_modifiers, sizeof (uint64_t));
     if (backend->modifiers == NULL) {
         wlm_log_error("mirror-extcopy::on_capture_session_dmabuf_format(): failed to allocate modifiers array\n");
-        backend_cancel(backend);
+        backend_cancel(ctx, backend);
         return;
     }
 
@@ -90,7 +103,7 @@ static void on_capture_session_dmabuf_device(void * data, struct ext_image_copy_
     wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_dmabuf_device(): opening device\n");
     if (device->size != sizeof (dev_t)) {
         wlm_log_error("mirror-extcopy::on_capture_session_dmabuf_device(): array size mismatch: %zd != %zd\n", device->size, sizeof (dev_t));
-        backend_cancel(backend);
+        backend_cancel(ctx, backend);
         return;
     }
 
@@ -99,7 +112,7 @@ static void on_capture_session_dmabuf_device(void * data, struct ext_image_copy_
 
     if (!wlm_wayland_dmabuf_open_device(ctx, device_id)) {
         wlm_log_error("mirror-extcopy::on_capture_session_dmabuf_device(): failed to open device\n");
-        backend_cancel(backend);
+        backend_cancel(ctx, backend);
         return;
     }
 
@@ -122,13 +135,23 @@ static void on_capture_session_done(void * data, struct ext_image_copy_capture_s
     (void)session;
 }
 
+static void on_capture_session_stopped(void * data, struct ext_image_copy_capture_session_v1 * session) {
+    ctx_t * ctx = (ctx_t *)data;
+    extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
+
+    wlm_log_error("mirror-extcopy::on_capture_session_stoppped(): capture session closed unexpectedly\n");
+    backend_cancel(ctx, backend);
+
+    (void)session;
+}
+
 static const struct ext_image_copy_capture_frame_v1_listener capture_frame_listener;
 static void on_dmabuf_allocated(ctx_t * ctx, bool success) {
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
     if (!success) {
         wlm_log_error("mirror-extcopy::on_dmabuf_allocated(): failed to allocate DMA-BUF\n");
-        backend_cancel(backend);
+        backend_cancel(ctx, backend);
         return;
     }
 
@@ -142,6 +165,7 @@ static const struct ext_image_copy_capture_session_v1_listener capture_session_l
     .dmabuf_format = on_capture_session_dmabuf_format,
     .dmabuf_device = on_capture_session_dmabuf_device,
     .done = on_capture_session_done,
+    .stopped = on_capture_session_stopped,
 };
 
 // --- capture frame event handlers ---
@@ -192,7 +216,7 @@ static void on_capture_frame_ready(void * data, struct ext_image_copy_capture_fr
 
     if (!wlm_egl_dmabuf_to_texture(ctx, wlm_wayland_dmabuf_get_raw_buffer(ctx))) {
         wlm_log_error("mirror-extcopy::on_capture_frame_ready(): failed to import dmabuf\n");
-        backend_cancel(backend);
+        backend_cancel(ctx, backend);
         return;
     }
 
@@ -219,7 +243,7 @@ static void on_capture_frame_failed(void * data, struct ext_image_copy_capture_f
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
     wlm_log_error("mirror-extcopy::on_capture_frame_failed(): failed to capture frame, reason = %d\n", reason);
-    backend_cancel(backend);
+    backend_cancel(ctx, backend);
 
     (void)frame;
 }
@@ -237,8 +261,15 @@ static const struct ext_image_copy_capture_frame_v1_listener capture_frame_liste
 static void do_capture(ctx_t * ctx) {
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
+    if (backend->capture_target != NULL && backend->capture_target != ctx->mirror.current_target) {
+        wlm_log_debug(ctx, "mirror-extcopy::do_capture(): capture target changed, closing session\n");
+        extcopy_session_cleanup(ctx, backend);
+        backend->state = STATE_INIT;
+    }
+
     if (backend->state == STATE_INIT || backend->state == STATE_CANCELED) {
-        backend->capture_source = ext_output_image_capture_source_manager_v1_create_source(ctx->wl.output_capture_source_manager, ctx->mirror.current_target->output);
+        backend->capture_target = ctx->mirror.current_target;
+        backend->capture_source = ext_output_image_capture_source_manager_v1_create_source(ctx->wl.output_capture_source_manager, backend->capture_target->output);
 
         wlm_log_debug(ctx, "mirror-extcopy::do_capture(): creating capture session\n");
         backend->state = STATE_WAIT_BUFFER_INFO;
@@ -258,7 +289,7 @@ static void do_capture(ctx_t * ctx) {
         ext_image_copy_capture_frame_v1_capture(backend->capture_frame);
         backend->state = STATE_WAIT_READY;
     } else if (backend->state == STATE_WAIT_READY) {
-        wlm_log_debug(ctx, "mirror-extcopy::do_capture(): waiting until frame is captured...\n");
+        // nop
     }
 }
 
@@ -266,10 +297,7 @@ static void do_cleanup(ctx_t * ctx) {
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
     wlm_log_debug(ctx, "mirror-extcopy::do_cleanup(): destroying mirror-extcopy objects\n");
-    extcopy_frame_cleanup(backend);
-
-    if (backend->capture_session != NULL) ext_image_copy_capture_session_v1_destroy(backend->capture_session);
-    if (backend->capture_source != NULL) ext_image_capture_source_v1_destroy(backend->capture_source);
+    extcopy_session_cleanup(ctx, backend);
 
     free(backend);
     ctx->mirror.backend = NULL;

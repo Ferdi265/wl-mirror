@@ -2,6 +2,7 @@
 #define WL_MIRROR_MIRROR_EXTCOPY_H_
 
 #include <wlm/mirror.h>
+#include <wlm/wayland.h>
 #include <wlm/proto/ext-image-copy-capture-v1.h>
 #include <wlm/proto/ext-image-capture-source-v1.h>
 
@@ -17,6 +18,7 @@ typedef enum {
 typedef struct {
     mirror_backend_t header;
 
+    output_list_node_t * capture_target;
     struct ext_image_capture_source_v1 * capture_source;
     struct ext_image_copy_capture_session_v1 * capture_session;
     struct ext_image_copy_capture_frame_v1 * capture_frame;
