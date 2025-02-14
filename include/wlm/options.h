@@ -2,6 +2,7 @@
 #define WL_MIRROR_OPTIONS_H_
 
 #include <stdbool.h>
+#include <stdnoreturn.h>
 
 typedef struct ctx ctx_t;
 
@@ -70,5 +71,6 @@ void wlm_opt_zero(ctx_t *);
 void wlm_opt_cleanup(ctx_t *);
 
 void wlm_opt_parse(ctx_t *, int argc, char ** argv);
+noreturn void wlm_opt_print_help(ctx_t *);
 
 #endif
