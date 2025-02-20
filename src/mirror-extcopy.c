@@ -26,7 +26,6 @@ static void extcopy_session_cleanup(ctx_t * ctx, extcopy_mirror_backend_t * back
     if (wlm_wayland_dmabuf_get_buffer(ctx) != NULL) wlm_wayland_dmabuf_dealloc(ctx);
     if (wlm_wayland_shm_get_buffer(ctx) != NULL) wlm_wayland_shm_dealloc(ctx);
 
-    backend->capture_target = NULL;
     backend->capture_session = NULL;
     backend->capture_source = NULL;
 }
@@ -77,13 +76,11 @@ static void on_capture_session_dmabuf_format(void * data, struct ext_image_copy_
     }
 
     if (backend->modifiers != NULL) {
-        wlm_log_debug(ctx, "XDEBUG: freeing\n");
         free(backend->modifiers);
         backend->modifiers = NULL;
     }
 
     backend->num_modifiers = modifiers_arr->size / sizeof (uint64_t);
-    wlm_log_debug(ctx, "XDEBUG: allocating\n");
     backend->modifiers = (uint64_t *)calloc(backend->num_modifiers, sizeof (uint64_t));
     if (backend->modifiers == NULL) {
         wlm_log_error("mirror-extcopy::on_capture_session_dmabuf_format(): failed to allocate modifiers array\n");
@@ -261,15 +258,8 @@ static const struct ext_image_copy_capture_frame_v1_listener capture_frame_liste
 static void do_capture(ctx_t * ctx) {
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
-    if (backend->capture_target != NULL && backend->capture_target != ctx->mirror.current_target) {
-        wlm_log_debug(ctx, "mirror-extcopy::do_capture(): capture target changed, closing session\n");
-        extcopy_session_cleanup(ctx, backend);
-        backend->state = STATE_INIT;
-    }
-
     if (backend->state == STATE_INIT || backend->state == STATE_CANCELED) {
-        backend->capture_target = ctx->mirror.current_target;
-        backend->capture_source = ext_output_image_capture_source_manager_v1_create_source(ctx->wl.output_capture_source_manager, backend->capture_target->output);
+        backend->capture_source = ext_output_image_capture_source_manager_v1_create_source(ctx->wl.output_capture_source_manager, ctx->mirror.current_target->output);
 
         wlm_log_debug(ctx, "mirror-extcopy::do_capture(): creating capture session\n");
         backend->state = STATE_WAIT_BUFFER_INFO;
@@ -303,6 +293,15 @@ static void do_cleanup(ctx_t * ctx) {
     ctx->mirror.backend = NULL;
 }
 
+static void on_options_updated(ctx_t * ctx) {
+    extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
+
+    wlm_log_debug(ctx, "mirror-extcopy::on_options_updated(): options updated, restarting capture\n");
+    extcopy_session_cleanup(ctx, backend);
+    backend->state = STATE_INIT;
+    do_capture(ctx);
+}
+
 // --- wlm_mirror_extcopy_init ---
 
 void wlm_mirror_extcopy_init(ctx_t * ctx) {
@@ -326,6 +325,7 @@ void wlm_mirror_extcopy_init(ctx_t * ctx) {
 
     backend->header.do_capture = do_capture;
     backend->header.do_cleanup = do_cleanup;
+    backend->header.on_options_updated = on_options_updated;
     backend->header.fail_count = 0;
 
     backend->capture_source = NULL;

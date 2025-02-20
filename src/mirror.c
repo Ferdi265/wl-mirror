@@ -272,6 +272,12 @@ void wlm_mirror_update_title(ctx_t * ctx) {
     free(title);
 }
 
+void wlm_mirror_options_updated(ctx_t * ctx) {
+    if (ctx->mirror.backend != NULL && ctx->mirror.backend->on_options_updated != NULL) {
+        ctx->mirror.backend->on_options_updated(ctx);
+    }
+}
+
 // --- backend_fail ---
 
 void wlm_mirror_backend_fail(ctx_t * ctx) {

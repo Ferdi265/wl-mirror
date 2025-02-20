@@ -311,6 +311,7 @@ void wlm_mirror_dmabuf_init(ctx_t * ctx) {
     // initialize context structure
     backend->header.do_capture = do_capture;
     backend->header.do_cleanup = do_cleanup;
+    backend->header.on_options_updated = NULL;
     backend->header.fail_count = 0;
 
     backend->dmabuf_frame = NULL;

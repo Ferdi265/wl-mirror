@@ -10,6 +10,7 @@ struct ctx;
 typedef struct mirror_backend {
     void (*do_capture)(struct ctx * ctx);
     void (*do_cleanup)(struct ctx * ctx);
+    void (*on_options_updated)(struct ctx * ctx);
     size_t fail_count;
 } mirror_backend_t;
 

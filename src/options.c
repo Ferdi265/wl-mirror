@@ -658,6 +658,7 @@ void wlm_opt_parse(ctx_t * ctx, int argc, char ** argv) {
     if (!is_cli_args) {
         wlm_egl_update_uniforms(ctx);
         wlm_mirror_update_title(ctx);
+        wlm_mirror_options_updated(ctx);
     }
 }
 
