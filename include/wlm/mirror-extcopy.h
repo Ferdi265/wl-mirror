@@ -22,6 +22,8 @@ typedef struct {
     struct ext_image_copy_capture_session_v1 * capture_session;
     struct ext_image_copy_capture_frame_v1 * capture_frame;
 
+    bool has_shm_format;
+    bool has_drm_format;
     uint32_t width;
     uint32_t height;
     uint32_t shm_format;
