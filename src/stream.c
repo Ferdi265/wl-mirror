@@ -122,7 +122,7 @@ static void on_line(ctx_t * ctx, char * line) {
     wlm_opt_parse(ctx, ctx->stream.args_len, ctx->stream.args);
 
     // clear arguments
-    memset(ctx->stream.args, 0, sizeof (char *) * ctx->stream.args_cap);
+    if (ctx->stream.args != NULL) memset(ctx->stream.args, 0, sizeof (char *) * ctx->stream.args_cap);
     ctx->stream.args_len = 0;
 }
 
