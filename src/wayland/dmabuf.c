@@ -85,6 +85,15 @@ static const struct zwp_linux_dmabuf_feedback_v1_listener linux_dmabuf_feedback_
 static void on_linux_buffer_params_created(void * data, struct zwp_linux_buffer_params_v1 * buffer_params, struct wl_buffer * buffer) {
     ctx_t * ctx = (ctx_t *)data;
 
+    zwp_linux_buffer_params_v1_destroy(buffer_params);
+    if (ctx->wl.dmabuf.buffer_params == buffer_params) {
+        ctx->wl.dmabuf.buffer_params = NULL;
+    } else {
+        wlm_log_debug(ctx, "wayland::dmabuf::on_linux_buffer_params_created(): received stale DMA-BUF creation event\n");
+        wl_buffer_destroy(buffer);
+        return;
+    }
+
     bool success = true;
     if (ctx->wl.dmabuf.buffer != NULL) {
         wlm_log_error("wayland::dmabuf::on_linux_buffer_params_created(): buffer already exists\n");
@@ -99,20 +108,24 @@ static void on_linux_buffer_params_created(void * data, struct zwp_linux_buffer_
         ctx->wl.dmabuf.alloc_callback(ctx, success);
         ctx->wl.dmabuf.alloc_callback = NULL;
     }
-
-    (void)buffer_params;
 }
 
 static void on_linux_buffer_params_failed(void * data, struct zwp_linux_buffer_params_v1 * buffer_params) {
     ctx_t * ctx = (ctx_t *)data;
+
+    zwp_linux_buffer_params_v1_destroy(buffer_params);
+    if (ctx->wl.dmabuf.buffer_params == buffer_params) {
+        ctx->wl.dmabuf.buffer_params = NULL;
+    } else {
+        wlm_log_debug(ctx, "wayland::dmabuf::on_linux_buffer_params_failed(): received stale DMA-BUF failure event\n");
+        return;
+    }
 
     if (ctx->wl.dmabuf.alloc_callback != NULL) {
         wlm_log_error("wayland::dmabuf::on_linux_buffer_params_failed(): allocation failed\n");
         ctx->wl.dmabuf.alloc_callback(ctx, false);
         ctx->wl.dmabuf.alloc_callback = NULL;
     }
-
-    (void)buffer_params;
 }
 
 static const struct zwp_linux_buffer_params_v1_listener linux_buffer_params_listener = {
@@ -218,10 +231,8 @@ void wlm_wayland_dmabuf_alloc(ctx_t * ctx, uint32_t drm_format, uint32_t width, 
         return;
     }
 
-    if (ctx->wl.dmabuf.buffer_params != NULL) {
-        zwp_linux_buffer_params_v1_destroy(ctx->wl.dmabuf.buffer_params);
-        ctx->wl.dmabuf.buffer_params = NULL;
-    }
+    // NOTE: old buffer params object destroys itself on success/failure
+    ctx->wl.dmabuf.buffer_params = NULL;
 
     struct gbm_bo * dmabuf_bo = NULL;
     if (modifiers == NULL) {
@@ -290,7 +301,7 @@ void wlm_wayland_dmabuf_alloc(ctx_t * ctx, uint32_t drm_format, uint32_t width, 
 // --- wlm_wayland_dmabuf_dealloc ---
 
 void wlm_wayland_dmabuf_dealloc(ctx_t * ctx) {
-    if (ctx->wl.dmabuf.buffer_params != NULL) zwp_linux_buffer_params_v1_destroy(ctx->wl.dmabuf.buffer_params);
+    // NOTE: old buffer params object destroys itself on success/failure
     ctx->wl.dmabuf.buffer_params = NULL;
 
     if (ctx->wl.dmabuf.buffer != NULL) wl_buffer_destroy(ctx->wl.dmabuf.buffer);
