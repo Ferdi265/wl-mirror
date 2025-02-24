@@ -379,6 +379,19 @@ bool wlm_egl_query_dmabuf_formats(ctx_t * ctx) {
     return true;
 }
 
+bool wlm_egl_check_errors(struct ctx * ctx, const char * msg) {
+    GLenum error = glGetError();
+    if (error == GL_NO_ERROR) return true;
+
+    while (error != GL_NO_ERROR) {
+        wlm_log_error("egl::check_errors(): %s: GL error 0x%x\n", msg, error);
+        error = glGetError();
+    }
+    return false;
+
+    (void)ctx;
+}
+
 // --- draw_texture ---
 
 void wlm_egl_draw_texture(ctx_t *ctx) {
@@ -557,7 +570,10 @@ void wlm_egl_update_uniforms(ctx_t * ctx) {
 void wlm_egl_freeze_framebuffer(struct ctx * ctx) {
     glBindFramebuffer(GL_FRAMEBUFFER, ctx->egl.freeze_framebuffer);
     glBindTexture(GL_TEXTURE_2D, ctx->egl.freeze_texture);
+
     glCopyTexImage2D(GL_TEXTURE_2D, 0, ctx->egl.format, 0, 0, ctx->egl.width, ctx->egl.height, 0);
+    wlm_egl_check_errors(ctx, "failed to copy frame to freeze texture");
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
