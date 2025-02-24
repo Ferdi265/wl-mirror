@@ -94,12 +94,7 @@ bool wlm_egl_dmabuf_import(ctx_t * ctx, dmabuf_t * dmabuf, const wlm_egl_format_
 
     // destroy temporary image
     eglDestroyImage(ctx->egl.display, frame_image);
-
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR) {
-        wlm_log_error("egl::dmabuf::import(): failed to import DMA-BUF: GL error %s (0x%x)\n", glGetString(error), error);
-        return false;
-    }
+    wlm_egl_check_errors(ctx, "dmabuf import failed");
 
     ctx->egl.format = format != NULL ? format->gl_format : GL_RGB8_OES; // TODO: remove this fallback
     ctx->egl.texture_initialized = true;
