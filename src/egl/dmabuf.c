@@ -97,7 +97,7 @@ bool wlm_egl_dmabuf_import(ctx_t * ctx, dmabuf_t * dmabuf, const wlm_egl_format_
 
     GLenum error = glGetError();
     if (error != GL_NO_ERROR) {
-        wlm_log_error("egl::dmabuf::import(): failed to import DMA-BUF: GL error %s (%x)\n", glGetString(error), error);
+        wlm_log_error("egl::dmabuf::import(): failed to import DMA-BUF: GL error %s (0x%x)\n", glGetString(error), error);
         return false;
     }
 

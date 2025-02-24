@@ -13,7 +13,7 @@ bool wlm_egl_shm_import(ctx_t * ctx, void * shm_addr, const wlm_egl_format_t * f
 
     GLenum error = glGetError();
     if (error != GL_NO_ERROR) {
-        wlm_log_error("egl::shm::import(): failed to import shm buffer: GL error %s (%x)\n", glGetString(error), error);
+        wlm_log_error("egl::shm::import(): failed to import shm buffer: GL error %s (0x%x)\n", glGetString(error), error);
         return false;
     }
 
