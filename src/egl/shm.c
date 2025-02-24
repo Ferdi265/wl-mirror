@@ -2,7 +2,7 @@
 #include <wlm/egl/shm.h>
 #include <wlm/egl/formats.h>
 
-bool wlm_egl_shm_import(ctx_t * ctx, void * shm_addr, const wlm_egl_format_t * format, uint32_t width, uint32_t height, uint32_t stride, bool invert_y) {
+bool wlm_egl_shm_import(ctx_t * ctx, void * shm_addr, const wlm_egl_format_t * format, uint32_t width, uint32_t height, uint32_t stride, bool invert_y, bool region_aware) {
     // store frame data into texture
     glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, stride / (format->bpp / 8));
     glTexImage2D(GL_TEXTURE_2D,
@@ -10,15 +10,16 @@ bool wlm_egl_shm_import(ctx_t * ctx, void * shm_addr, const wlm_egl_format_t * f
         0, format->gl_format, format->gl_type, shm_addr
     );
     glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
-    ctx->egl.format = format->gl_format;
-    ctx->egl.texture_region_aware = true;
-    ctx->egl.texture_initialized = true;
 
     GLenum error = glGetError();
     if (error != GL_NO_ERROR) {
         wlm_log_error("egl::shm::import(): failed to import shm buffer: GL error %s (%x)\n", glGetString(error), error);
         return false;
     }
+
+    ctx->egl.format = format->gl_format;
+    ctx->egl.texture_initialized = true;
+    ctx->egl.texture_region_aware = region_aware;
 
     // set buffer flags
     if (ctx->mirror.invert_y != invert_y) {
