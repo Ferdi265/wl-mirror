@@ -293,6 +293,7 @@ static void on_capture_frame_ready(void * data, struct ext_image_copy_capture_fr
         }
 
         // TODO: invert_y?
+        // TODO: pass correct format entry
         if (!wlm_egl_dmabuf_import(ctx, dmabuf, NULL, false, false)) {
             wlm_log_error("mirror-extcopy::on_capture_frame_ready(): failed to import dmabuf\n");
             backend_cancel(ctx, backend);

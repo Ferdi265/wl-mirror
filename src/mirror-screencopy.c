@@ -207,7 +207,8 @@ static void on_ready(
         }
 
         bool invert_y = backend->frame_flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT;
-        if (!wlm_egl_dmabuf_import(ctx, wlm_wayland_dmabuf_get_raw_buffer(ctx), format, invert_y, true)) {
+        // TODO: pass correct format entry
+        if (!wlm_egl_dmabuf_import(ctx, wlm_wayland_dmabuf_get_raw_buffer(ctx), NULL, invert_y, true)) {
             wlm_log_error("mirror-screencopy::on_ready(): failed to import dmabuf\n");
             backend_cancel(backend);
             return;
