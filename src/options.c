@@ -53,14 +53,30 @@ bool wlm_opt_parse_backend(backend_t * backend, const char * backend_arg) {
     if (strcmp(backend_arg, "auto") == 0) {
         *backend = BACKEND_AUTO;
         return true;
+    } else if (strcmp(backend_arg, "export-dmabuf") == 0) {
+        *backend = BACKEND_EXPORT_DMABUF;
+        return true;
     } else if (strcmp(backend_arg, "dmabuf") == 0) {
-        *backend = BACKEND_DMABUF;
+        wlm_log_warn("options::parse_backend(): the name 'dmabuf' is deprecated, use 'export-dmabuf' for the wlr-export-dmabuf backend instead\n");
+        *backend = BACKEND_EXPORT_DMABUF;
         return true;
     } else if (strcmp(backend_arg, "screencopy") == 0) {
-        *backend = BACKEND_SCREENCOPY;
+        *backend = BACKEND_SCREENCOPY_AUTO;
+        return true;
+    } else if (strcmp(backend_arg, "screencopy-shm") == 0) {
+        *backend = BACKEND_SCREENCOPY_SHM;
+        return true;
+    } else if (strcmp(backend_arg, "screencopy-dmabuf") == 0) {
+        *backend = BACKEND_SCREENCOPY_DMABUF;
         return true;
     } else if (strcmp(backend_arg, "extcopy") == 0) {
-        *backend = BACKEND_EXTCOPY;
+        *backend = BACKEND_EXTCOPY_AUTO;
+        return true;
+    } else if (strcmp(backend_arg, "extcopy-shm") == 0) {
+        *backend = BACKEND_EXTCOPY_SHM;
+        return true;
+    } else if (strcmp(backend_arg, "extcopy-dmabuf") == 0) {
+        *backend = BACKEND_EXTCOPY_DMABUF;
         return true;
     } else {
         return false;
@@ -373,10 +389,14 @@ void wlm_opt_usage(ctx_t * ctx) {
     printf("        --title N               specify a custom title N for the mirror window\n");
     printf("\n");
     printf("backends:\n");
-    printf("  - auto        automatically try the backends in order and use the first that works (default)\n");
-    printf("  - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs\n");
-    printf("  - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs\n");
-    printf("  - extcopy     use the ext-image-copy-capture-v1 protocol to capture outputs\n");
+    printf("  - auto                automatically try the backends in order and use the first that works (default)\n");
+    printf("  - export-dmabuf       use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs\n");
+    printf("  - screencopy          use the wlr-screencopy-unstable-v1 protocol to capture outputs (auto)\n");
+    printf("  - screencopy-dmabuf   use the wlr-screencopy-unstable-v1 protocol to capture outputs (via DMA-BUF)\n");
+    printf("  - screencopy-shm      use the wlr-screencopy-unstable-v1 protocol to capture outputs (via SHM)\n");
+    printf("  - extcopy             use the ext-image-copy-capture-v1 protocol to capture outputs (auto)\n");
+    printf("  - extcopy-dmabuf      use the ext-image-copy-capture-v1 protocol to capture outputs (via DMA-BUF)\n");
+    printf("  - extcopy-shm         use the ext-image-copy-capture-v1 protocol to capture outputs (via SHM)\n");
     printf("\n");
     printf("transforms:\n");
     printf("  transforms are specified as a dash-separated list of flips followed by a rotation\n");

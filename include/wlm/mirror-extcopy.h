@@ -17,6 +17,7 @@ typedef enum {
 
 typedef struct {
     mirror_backend_t header;
+    bool use_dmabuf;
 
     struct ext_image_capture_source_v1 * capture_source;
     struct ext_image_copy_capture_session_v1 * capture_session;
@@ -24,12 +25,13 @@ typedef struct {
 
     bool has_shm_format;
     bool has_drm_format;
-    uint32_t width;
-    uint32_t height;
-    uint32_t shm_format;
-    uint32_t drm_format;
-    uint64_t * modifiers;
-    size_t num_modifiers;
+    uint32_t frame_width;
+    uint32_t frame_height;
+    uint32_t frame_shm_stride;
+    uint32_t frame_shm_format;
+    uint32_t frame_drm_format;
+    uint64_t * frame_drm_modifiers;
+    size_t frame_num_drm_modifiers;
 
     extcopy_state_t state;
 } extcopy_mirror_backend_t;

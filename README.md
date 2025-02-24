@@ -51,9 +51,14 @@ options:
         --title N               specify a custom title N for the mirror window
 
 backends:
-  - auto        automatically try the backends in order and use the first that works (default)
-  - dmabuf      use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs
-  - screencopy  use the wlr-screencopy-unstable-v1 protocol to capture outputs
+  - auto                automatically try the backends in order and use the first that works (default)
+  - export-dmabuf       use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs
+  - screencopy          use the wlr-screencopy-unstable-v1 protocol to capture outputs (auto)
+  - screencopy-dmabuf   use the wlr-screencopy-unstable-v1 protocol to capture outputs (via DMA-BUF)
+  - screencopy-shm      use the wlr-screencopy-unstable-v1 protocol to capture outputs (via SHM)
+  - extcopy             use the ext-image-copy-capture-v1 protocol to capture outputs (auto)
+  - extcopy-dmabuf      use the ext-image-copy-capture-v1 protocol to capture outputs (via DMA-BUF)
+  - extcopy-shm         use the ext-image-copy-capture-v1 protocol to capture outputs (via SHM)
 
 transforms:
   transforms are specified as a dash-separated list of flips followed by a rotation
@@ -159,7 +164,8 @@ package manager:
 ## Supported Wayland Compositors
 
 `wl-mirror` should work on all Wayland compositors based on wlroots, such as
-sway or hyprland.
+sway or hyprland, as well as compositors that implement the standard
+`ext-image-copy-capture-v1` protocol.
 
 `wl-mirror` currently does not work on KDE and Gnome, due to `wl-mirror` not
 supporting the XDG Desktop Portal screen sharing protocol. This is being worked
@@ -176,6 +182,8 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `libGLESv2`
 - `epoll-shim` (on systems that do not have `epoll`, e.g. FreeBSD)
 - `libdecor` (see `WITH_LIBDECOR`)
+- `libgbm` (see `WITH_GBM`)
+- `libdrm` (see `WITH_GBM`)
 - `wayland-scanner`
 - `scdoc` (for manual pages, see `INSTALL_DOCUMENTATION`)
 
@@ -197,6 +205,7 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `INSTALL_EXAMPLE_SCRIPTS`: also install example scripts (default `OFF`)
 - `INSTALL_DOCUMENTATION`: also build and install manual pages (default `OFF`)
 - `WITH_LIBDECOR`: build with libdecor for window decoration (default `OFF`)
+- `WITH_GBM`: build with GBM and libdrm for DMA-BUF allocation (default `OFF`)
 - `FORCE_WAYLAND_SCANNER_PATH`: always use the provided path for wayland-scanner, do not use pkg-config (default empty)
 - `FORCE_SYSTEM_WL_PROTOCOLS`: always use system-installed wayland-protocols, do not use submodules (default `OFF`)
 - `FORCE_SYSTEM_WLR_PROTOCOLS`: always use system-installed wlr-protocols, do not use submodules (default `OFF`)
@@ -208,10 +217,15 @@ on (see issues [#16](https://github.com/Ferdi265/wl-mirror/issues/16) and
 - `src/main.c`: main entrypoint
 - `src/options.c`: CLI and stream option parsing
 - `src/wayland.c`: Wayland and `xdg_surface` boilerplate
+- `src/wayland/shm.c`: Wayland SHM buffer allocation
+- `src/wayland/dmabuf.c`: GBM DMA-BUF buffer allocation
 - `src/egl.c`: EGL boilerplate
+- `src/egl/shm.c`: EGL SHM buffer import
+- `src/egl/dmabuf.c`: EGL DMA-BUF buffer import
 - `src/mirror.c`: output mirroring code
-- `src/mirror-dmabuf.c`: wlr-export-dmabuf-unstable-v1 backend code
+- `src/mirror-export-dmabuf.c`: wlr-export-dmabuf-unstable-v1 backend code
 - `src/mirror-screencopy.c`: wlr-screencopy-unstable-v1 backend code
+- `src/mirror-extcopy.c`: ext-image-copy-capture-v1 backend code
 - `src/transform.c`: matrix transformation code
 - `src/event.c`: event loop
 - `src/stream.c`: asynchronous option stream input

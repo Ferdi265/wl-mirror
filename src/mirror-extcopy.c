@@ -2,22 +2,26 @@
 #include <wlm/context.h>
 #include <wlm/wayland/shm.h>
 #include <wlm/wayland/dmabuf.h>
+#include <wlm/egl/shm.h>
+#include <wlm/egl/dmabuf.h>
+#include <wlm/egl/formats.h>
 #include <stdlib.h>
 #include <string.h>
 
 static void extcopy_frame_cleanup(extcopy_mirror_backend_t * backend) {
     if (backend->capture_frame != NULL) ext_image_copy_capture_frame_v1_destroy(backend->capture_frame);
-    if (backend->modifiers != NULL) free(backend->modifiers);
+    if (backend->frame_drm_modifiers != NULL) free(backend->frame_drm_modifiers);
 
     backend->capture_frame = NULL;
-    backend->modifiers = NULL;
-    backend->width = 0;
-    backend->height = 0;
     backend->has_shm_format = false;
     backend->has_drm_format = false;
-    backend->shm_format = 0;
-    backend->drm_format = 0;
-    backend->num_modifiers = 0;
+    backend->frame_width = 0;
+    backend->frame_height = 0;
+    backend->frame_shm_stride = 0;
+    backend->frame_shm_format = 0;
+    backend->frame_drm_format = 0;
+    backend->frame_drm_modifiers = NULL;
+    backend->frame_num_drm_modifiers = 0;
 }
 
 static void extcopy_session_cleanup(ctx_t * ctx, extcopy_mirror_backend_t * backend) {
@@ -48,8 +52,8 @@ static void on_capture_session_buffer_size(void * data, struct ext_image_copy_ca
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
     wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_buffer_size(): size = %dx%d\n", width, height);
-    backend->width = width;
-    backend->height = height;
+    backend->frame_width = width;
+    backend->frame_height = height;
 
     (void)session;
 }
@@ -58,10 +62,21 @@ static void on_capture_session_shm_format(void * data, struct ext_image_copy_cap
     ctx_t * ctx = (ctx_t *)data;
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
+    if (backend->use_dmabuf) return;
+
     if (!backend->has_shm_format) {
         wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_shm_format(): shm_format = %x\n", shm_format);
         backend->has_shm_format = true;
-        backend->shm_format = shm_format;
+        backend->frame_shm_format = shm_format;
+
+        const wlm_egl_format_t * format = wlm_egl_formats_find_shm(backend->frame_shm_format);
+        if (format == NULL) {
+            wlm_log_error("mirror-extcopy::on_capture_session_shm_format(): failed to find bpp for shm format\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
+        backend->frame_shm_stride = backend->frame_width * format->bpp;
     } else {
         wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_shm_format(): alternate shm_format = %x (ignoring)\n", shm_format);
         return;
@@ -74,10 +89,12 @@ static void on_capture_session_dmabuf_format(void * data, struct ext_image_copy_
     ctx_t * ctx = (ctx_t *)data;
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
+    if (!backend->use_dmabuf) return;
+
     if (!backend->has_drm_format) {
         wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_dmabuf_format(): drm_format = %x\n", drm_format);
         backend->has_drm_format = true;
-        backend->drm_format = drm_format;
+        backend->frame_drm_format = drm_format;
     } else {
         wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_dmabuf_format(): alternate drm_format = %x (ignoring)\n", drm_format);
         return;
@@ -85,26 +102,24 @@ static void on_capture_session_dmabuf_format(void * data, struct ext_image_copy_
 
     if (modifiers_arr->size % sizeof (uint64_t) != 0) {
         wlm_log_error("mirror-extcopy::on_capture_session_dmabuf_format(): modifiers have invalid size %zd, expected multiple of %zd\n", modifiers_arr->size, sizeof (uint64_t));
-        wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_dmabuf_format(): falling back to shm\n");
-        backend->has_drm_format = false;
+        backend_cancel(ctx, backend);
         return;
     }
 
-    if (backend->modifiers != NULL) {
-        free(backend->modifiers);
-        backend->modifiers = NULL;
+    if (backend->frame_drm_modifiers != NULL) {
+        free(backend->frame_drm_modifiers);
+        backend->frame_drm_modifiers = NULL;
     }
 
-    backend->num_modifiers = modifiers_arr->size / sizeof (uint64_t);
-    backend->modifiers = (uint64_t *)calloc(backend->num_modifiers, sizeof (uint64_t));
-    if (backend->modifiers == NULL) {
+    backend->frame_num_drm_modifiers = modifiers_arr->size / sizeof (uint64_t);
+    backend->frame_drm_modifiers = (uint64_t *)calloc(backend->frame_num_drm_modifiers, sizeof (uint64_t));
+    if (backend->frame_drm_modifiers == NULL) {
         wlm_log_error("mirror-extcopy::on_capture_session_dmabuf_format(): failed to allocate modifiers array\n");
-        wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_dmabuf_format(): falling back to shm\n");
-        backend->has_drm_format = false;
+        backend_cancel(ctx, backend);
         return;
     }
 
-    memcpy(backend->modifiers, modifiers_arr->data, modifiers_arr->size);
+    memcpy(backend->frame_drm_modifiers, modifiers_arr->data, modifiers_arr->size);
 
     (void)session;
 }
@@ -113,11 +128,12 @@ static void on_capture_session_dmabuf_device(void * data, struct ext_image_copy_
     ctx_t * ctx = (ctx_t *)data;
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
+    if (!backend->use_dmabuf) return;
+
     wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_dmabuf_device(): opening device\n");
     if (device->size != sizeof (dev_t)) {
         wlm_log_error("mirror-extcopy::on_capture_session_dmabuf_device(): array size mismatch: %zd != %zd\n", device->size, sizeof (dev_t));
-        wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_dmabuf_device(): falling back to shm\n");
-        backend->has_drm_format = false;
+        backend_cancel(ctx, backend);
         return;
     }
 
@@ -126,26 +142,58 @@ static void on_capture_session_dmabuf_device(void * data, struct ext_image_copy_
 
     if (!wlm_wayland_dmabuf_open_device(ctx, device_id)) {
         wlm_log_error("mirror-extcopy::on_capture_session_dmabuf_device(): failed to open device\n");
-        wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_dmabuf_device(): falling back to shm\n");
-        backend->has_drm_format = false;
+        backend_cancel(ctx, backend);
         return;
     }
 
     (void)session;
 }
 
-static void on_shmbuf_alloc(ctx_t * ctx);
 static void on_dmabuf_allocated(ctx_t * ctx, bool success);
 static void on_capture_session_done(void * data, struct ext_image_copy_capture_session_v1 * session) {
     ctx_t * ctx = (ctx_t *)data;
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
-    if (backend->modifiers == NULL) {
-        wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_done(): allocating SHM buffer\n");
-        on_shmbuf_alloc(ctx);
-    } else {
+    if (backend->capture_frame != NULL) {
+        wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_done(): destroying old capture frame\n");
+        ext_image_copy_capture_frame_v1_destroy(backend->capture_frame);
+        backend->capture_frame = NULL;
+    }
+
+    if (backend->use_dmabuf) {
+        if (!backend->has_drm_format) {
+            wlm_log_error("mirror-extcopy::on_capture_session_done(): missing DRM format\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
+        if (backend->frame_drm_modifiers == NULL) {
+            wlm_log_error("mirror-extcopy::on_capture_session_done(): missing DRM modifiers\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
         wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_done(): allocating DMA-BUF\n");
-        wlm_wayland_dmabuf_alloc(ctx, backend->drm_format, backend->width, backend->height, backend->modifiers, backend->num_modifiers, on_dmabuf_allocated);
+        wlm_wayland_dmabuf_dealloc(ctx);
+        wlm_wayland_dmabuf_alloc(ctx, backend->frame_drm_format, backend->frame_width, backend->frame_height, backend->frame_drm_modifiers, backend->frame_num_drm_modifiers, on_dmabuf_allocated);
+    } else {
+        if (!backend->has_shm_format) {
+            wlm_log_error("mirror-extcopy::on_capture_session_done(): missing SHM format\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
+        wlm_wayland_shm_dealloc(ctx);
+        bool success = wlm_wayland_shm_alloc(ctx, backend->frame_shm_format, backend->frame_width, backend->frame_height, backend->frame_shm_stride);
+
+        if (!success) {
+            wlm_log_error("mirror-extcopy::on_capture_session_done(): failed to allocate SHM buffer\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
+        wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_done(): SHM buffer allocated\n");
+        backend->state = STATE_READY;
     }
 
     (void)session;
@@ -161,31 +209,12 @@ static void on_capture_session_stopped(void * data, struct ext_image_copy_captur
     (void)session;
 }
 
-static void on_shmbuf_alloc(ctx_t * ctx) {
-    extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
-
-    wlm_log_warn("mirror-extcopy::on_shmbuf_alloc(): FIXME: use correct stride calculation\n");
-    uint32_t stride = backend->width * 4 /* TODO: fix this!!!! */;
-    bool success = wlm_wayland_shm_alloc(ctx, backend->shm_format, backend->width, backend->height, stride);
-
-    if (!success) {
-        wlm_log_error("mirror-extcopy::on_shmbuf_alloc(): failed to allocate SHM buffer\n");
-        backend_cancel(ctx, backend);
-        return;
-    }
-
-    wlm_log_debug(ctx, "mirror-extcopy::on_shmbuf_alloc(): SHM buffer allocated\n");
-    backend->state = STATE_READY;
-}
-
 static void on_dmabuf_allocated(ctx_t * ctx, bool success) {
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
     if (!success) {
         wlm_log_error("mirror-extcopy::on_dmabuf_allocated(): failed to allocate DMA-BUF\n");
-        wlm_log_debug(ctx, "mirror-extcopy::on_dmabuf_allocated(): falling back to shm\n");
-        backend->has_drm_format = false;
-        on_shmbuf_alloc(ctx);
+        backend_cancel(ctx, backend);
         return;
     }
 
@@ -248,29 +277,50 @@ static void on_capture_frame_ready(void * data, struct ext_image_copy_capture_fr
 
     wlm_log_debug(ctx, "mirror-extcopy::on_capture_frame_ready(): frame captured\n");
 
-    if (backend->has_drm_format) {
-        if (!wlm_egl_dmabuf_to_texture(ctx, wlm_wayland_dmabuf_get_raw_buffer(ctx))) {
+    if (backend->use_dmabuf) {
+        const wlm_egl_format_t * format = wlm_egl_formats_find_drm(backend->frame_drm_format);
+        if (format == NULL) {
+            wlm_log_error("mirror-extcopy::on_capture_frame_ready(): failed to find GL format for drm format\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
+        dmabuf_t * dmabuf = wlm_wayland_dmabuf_get_raw_buffer(ctx);
+        if (dmabuf == NULL) {
+            wlm_log_error("mirror-extcopy::on_capture_frame_ready(): DMA-BUF disappeared\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
+        // TODO: invert_y?
+        if (!wlm_egl_dmabuf_import(ctx, dmabuf, format, false, false)) {
             wlm_log_error("mirror-extcopy::on_capture_frame_ready(): failed to import dmabuf\n");
             backend_cancel(ctx, backend);
             return;
         }
 
-        ctx->egl.format = GL_RGB8_OES; // FIXME: find out actual format
-        ctx->egl.texture_region_aware = false;
-        ctx->egl.texture_initialized = true;
-
-        // set texture size and aspect ratio only if changed
-        if (backend->width != ctx->egl.width || backend->height != ctx->egl.height) {
-            ctx->egl.width = backend->width;
-            ctx->egl.height = backend->height;
-            wlm_egl_resize_viewport(ctx);
-        }
-
         wlm_log_debug(ctx, "mirror-extcopy::on_capture_frame_ready(): frame captured and DMA-BUF imported\n");
     } else {
-        wlm_log_error("mirror-extcopy::on_capture_frame_ready(): SHM buffer import not implemented\n");
-        backend_cancel(ctx, backend);
-        return;
+        const wlm_egl_format_t * format = wlm_egl_formats_find_shm(backend->frame_shm_format);
+        if (format == NULL) {
+            wlm_log_error("mirror-extcopy::on_capture_frame_ready(): failed to find GL format for shm format\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
+        void * shm_addr = wlm_wayland_shm_get_addr(ctx);
+        if (shm_addr == NULL) {
+            wlm_log_error("mirror-screencopy::on_ready(): shm buffer addr disappeared\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
+        // TODO: invert_y?
+        if (!wlm_egl_shm_import(ctx, shm_addr, format, backend->frame_width, backend->frame_height, backend->frame_shm_stride, false, false)) {
+            wlm_log_error("mirror-screencopy::on_ready(): shm buffer import failed\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
     }
 
     backend->state = STATE_READY;
@@ -319,7 +369,20 @@ static void do_capture(ctx_t * ctx) {
         backend->capture_frame = ext_image_copy_capture_session_v1_create_frame(backend->capture_session);
         ext_image_copy_capture_frame_v1_add_listener(backend->capture_frame, &capture_frame_listener, (void *)ctx);
 
-        ext_image_copy_capture_frame_v1_attach_buffer(backend->capture_frame, wlm_wayland_dmabuf_get_buffer(ctx));
+        struct wl_buffer * buffer = NULL;
+        if (backend->use_dmabuf) {
+            buffer = wlm_wayland_dmabuf_get_buffer(ctx);
+        } else {
+            buffer = wlm_wayland_shm_get_buffer(ctx);
+        }
+
+        if (buffer == NULL) {
+            wlm_log_error("mirror-extcopy::do_capture(): buffer disappeared\n");
+            backend_cancel(ctx, backend);
+            return;
+        }
+
+        ext_image_copy_capture_frame_v1_attach_buffer(backend->capture_frame, buffer);
         ext_image_copy_capture_frame_v1_capture(backend->capture_frame);
         backend->state = STATE_WAIT_READY;
     } else if (backend->state == STATE_WAIT_READY) {
@@ -348,22 +411,27 @@ static void on_options_updated(ctx_t * ctx) {
 
 // --- wlm_mirror_extcopy_init ---
 
-void wlm_mirror_extcopy_init(ctx_t * ctx) {
+void wlm_mirror_extcopy_shm_init(ctx_t * ctx) {
     // check for required protocols
+    if (ctx->wl.shm == NULL) {
+        wlm_log_error("mirror-extcopy::shm_init(): missing wl_shm protocol\n");
+        return;
+    }
+
     if (ctx->wl.copy_capture_manager == NULL) {
-        wlm_log_error("mirror-extcopy::init(): missing ext_image_copy_capture protocol\n");
+        wlm_log_error("mirror-extcopy::shm_init(): missing ext_image_copy_capture protocol\n");
         return;
     }
 
     if (ctx->wl.output_capture_source_manager == NULL) {
-        wlm_log_error("mirror-extcopy::init(): missing ext_output_image_capture_source_manager protocol\n");
+        wlm_log_error("mirror-extcopy::shm_init(): missing ext_output_image_capture_source_manager protocol\n");
         return;
     }
 
     // allocate backend context structure
     extcopy_mirror_backend_t * backend = calloc(1, sizeof (extcopy_mirror_backend_t));
     if (backend == NULL) {
-        wlm_log_error("mirror-extcopy::init(): failed to allocate backend state\n");
+        wlm_log_error("mirror-extcopy::shm_init(): failed to allocate backend state\n");
         return;
     }
 
@@ -371,17 +439,69 @@ void wlm_mirror_extcopy_init(ctx_t * ctx) {
     backend->header.do_cleanup = do_cleanup;
     backend->header.on_options_updated = on_options_updated;
     backend->header.fail_count = 0;
+    backend->use_dmabuf = false;
 
     backend->capture_source = NULL;
     backend->capture_session = NULL;
     backend->capture_frame = NULL;
 
-    backend->width = 0;
-    backend->height = 0;
-    backend->shm_format = 0;
-    backend->drm_format = 0;
-    backend->modifiers = NULL;
-    backend->num_modifiers = 0;
+    backend->frame_width = 0;
+    backend->frame_height = 0;
+    backend->frame_shm_stride = 0;
+    backend->frame_shm_format = 0;
+    backend->frame_drm_format = 0;
+    backend->frame_drm_modifiers = NULL;
+    backend->frame_num_drm_modifiers = 0;
+
+    backend->state = STATE_INIT;
+
+    // set backend object as current backend
+    ctx->mirror.backend = (mirror_backend_t *)backend;
+
+    // create shm pool
+    if (!wlm_wayland_shm_create_pool(ctx)) {
+        wlm_log_error("mirror-extcopy::shm_init(): failed to create shm pool\n");
+        wlm_mirror_backend_fail(ctx);
+        return;
+    }
+}
+
+void wlm_mirror_extcopy_dmabuf_init(ctx_t * ctx) {
+    // check for required protocols
+    if (ctx->wl.copy_capture_manager == NULL) {
+        wlm_log_error("mirror-extcopy::dmabuf_init(): missing ext_image_copy_capture protocol\n");
+        return;
+    }
+
+    if (ctx->wl.output_capture_source_manager == NULL) {
+        wlm_log_error("mirror-extcopy::dmabuf_init(): missing ext_output_image_capture_source_manager protocol\n");
+        return;
+    }
+
+    // allocate backend context structure
+    extcopy_mirror_backend_t * backend = calloc(1, sizeof (extcopy_mirror_backend_t));
+    if (backend == NULL) {
+        wlm_log_error("mirror-extcopy::dmabuf_init(): failed to allocate backend state\n");
+        return;
+    }
+
+    backend->header.do_capture = do_capture;
+    backend->header.do_cleanup = do_cleanup;
+    backend->header.on_options_updated = on_options_updated;
+    backend->header.fail_count = 0;
+    backend->use_dmabuf = true;
+
+    backend->capture_source = NULL;
+    backend->capture_session = NULL;
+    backend->capture_frame = NULL;
+
+    backend->frame_width = 0;
+    backend->frame_height = 0;
+    backend->frame_shm_stride = 0;
+    backend->frame_shm_format = 0;
+    backend->frame_drm_format = 0;
+    backend->frame_drm_modifiers = NULL;
+    backend->frame_num_drm_modifiers = 0;
 
     backend->state = STATE_INIT;
 

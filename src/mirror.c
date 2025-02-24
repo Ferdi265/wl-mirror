@@ -66,6 +66,7 @@ static const struct wl_callback_listener frame_callback_listener = {
 
 // --- init_mirror ---
 
+static fallback_backend_t auto_fallback_backends[];
 void wlm_mirror_init(ctx_t * ctx) {
     // initialize context structure
     ctx->mirror.current_target = NULL;
@@ -74,6 +75,7 @@ void wlm_mirror_init(ctx_t * ctx) {
     ctx->mirror.invert_y = false;
 
     ctx->mirror.backend = NULL;
+    ctx->mirror.fallback_backends = auto_fallback_backends;
     ctx->mirror.auto_backend_index = 0;
 
     ctx->mirror.initialized = true;
@@ -94,22 +96,30 @@ void wlm_mirror_init(ctx_t * ctx) {
 
 // --- auto backend handler
 
-typedef struct {
-    char * name;
-    void (*init)(ctx_t * ctx);
-} fallback_backend_t;
-
 static fallback_backend_t auto_fallback_backends[] = {
 #ifdef WITH_GBM
-    // prefer extcopy if gbm supported
-    { "extcopy", wlm_mirror_extcopy_init },
+    { "extcopy-dmabuf", wlm_mirror_extcopy_dmabuf_init },
+    { "screencopy-dmabuf", wlm_mirror_screencopy_dmabuf_init },
 #endif
-    { "dmabuf", wlm_mirror_dmabuf_init },
-    { "screencopy", wlm_mirror_screencopy_init },
-#if !defined(WITH_GBM)
-    // prefer wlr formats if gbm not supported
-    { "extcopy", wlm_mirror_extcopy_init },
+    { "export-dmabuf", wlm_mirror_export_dmabuf_init },
+    { "extcopy-shm", wlm_mirror_extcopy_shm_init },
+    { "screencopy-shm", wlm_mirror_screencopy_shm_init },
+    { NULL, NULL }
+};
+
+static fallback_backend_t auto_screencopy_backends[] = {
+#ifdef WITH_GBM
+    { "screencopy-dmabuf", wlm_mirror_screencopy_dmabuf_init },
 #endif
+    { "screencopy-shm", wlm_mirror_screencopy_shm_init },
+    { NULL, NULL }
+};
+
+static fallback_backend_t auto_extcopy_backends[] = {
+#ifdef WITH_GBM
+    { "extcopy-dmabuf", wlm_mirror_extcopy_dmabuf_init },
+#endif
+    { "extcopy-shm", wlm_mirror_extcopy_shm_init },
     { NULL, NULL }
 };
 
@@ -117,7 +127,7 @@ static void auto_backend_fallback(ctx_t * ctx) {
     while (true) {
         // get next backend
         size_t index = ctx->mirror.auto_backend_index;
-        fallback_backend_t * next_backend = &auto_fallback_backends[index];
+        fallback_backend_t * next_backend = &ctx->mirror.fallback_backends[index];
         if (next_backend->name == NULL) {
             wlm_log_error("mirror::auto_backend_fallback(): no working backend found, exiting\n");
             wlm_exit_fail(ctx);
@@ -151,19 +161,41 @@ void wlm_mirror_backend_init(ctx_t * ctx) {
 
     switch (ctx->opt.backend) {
         case BACKEND_AUTO:
+            ctx->mirror.fallback_backends = auto_fallback_backends;
+            ctx->mirror.auto_backend_index = 0;
             auto_backend_fallback(ctx);
             break;
 
-        case BACKEND_DMABUF:
-            wlm_mirror_dmabuf_init(ctx);
+        case BACKEND_EXPORT_DMABUF:
+            wlm_mirror_export_dmabuf_init(ctx);
             break;
 
-        case BACKEND_SCREENCOPY:
-            wlm_mirror_screencopy_init(ctx);
+        case BACKEND_SCREENCOPY_AUTO:
+            ctx->mirror.fallback_backends = auto_screencopy_backends;
+            ctx->mirror.auto_backend_index = 0;
+            auto_backend_fallback(ctx);
             break;
 
-        case BACKEND_EXTCOPY:
-            wlm_mirror_extcopy_init(ctx);
+        case BACKEND_SCREENCOPY_DMABUF:
+            wlm_mirror_screencopy_dmabuf_init(ctx);
+            break;
+
+        case BACKEND_SCREENCOPY_SHM:
+            wlm_mirror_screencopy_shm_init(ctx);
+            break;
+
+        case BACKEND_EXTCOPY_AUTO:
+            ctx->mirror.fallback_backends = auto_extcopy_backends;
+            ctx->mirror.auto_backend_index = 0;
+            auto_backend_fallback(ctx);
+            break;
+
+        case BACKEND_EXTCOPY_DMABUF:
+            wlm_mirror_extcopy_dmabuf_init(ctx);
+            break;
+
+        case BACKEND_EXTCOPY_SHM:
+            wlm_mirror_extcopy_shm_init(ctx);
             break;
     }
 

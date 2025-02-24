@@ -30,6 +30,6 @@ typedef struct {
     // dmabuf state flags
     dmabuf_state_t state;
     uint32_t processed_objects;
-} dmabuf_mirror_backend_t;
+} export_dmabuf_mirror_backend_t;
 
 #endif

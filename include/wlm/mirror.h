@@ -12,6 +12,12 @@
 struct ctx;
 struct output_list_node;
 
+typedef struct fallback_backend fallback_backend_t;
+struct fallback_backend {
+    char * name;
+    void (*init)(struct ctx * ctx);
+};
+
 typedef struct ctx_mirror {
     struct output_list_node * current_target;
     struct wl_callback * frame_callback;
@@ -20,6 +26,7 @@ typedef struct ctx_mirror {
 
     // backend data
     mirror_backend_t * backend;
+    fallback_backend_t * fallback_backends;
     size_t auto_backend_index;
 
     // state flags

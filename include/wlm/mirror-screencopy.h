@@ -7,7 +7,9 @@
 #include <wayland-client.h>
 
 typedef enum {
+    STATE_WAIT_DMABUF_DEVICE,
     STATE_WAIT_BUFFER,
+    STATE_WAIT_BUFFER_ALLOCATED,
     STATE_WAIT_BUFFER_DONE,
     STATE_WAIT_FLAGS,
     STATE_WAIT_READY,
@@ -17,6 +19,7 @@ typedef enum {
 
 typedef struct {
     mirror_backend_t header;
+    bool use_dmabuf;
 
     // screencopy frame object
     struct zwlr_screencopy_frame_v1 * screencopy_frame;
