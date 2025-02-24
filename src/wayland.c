@@ -271,7 +271,7 @@ static void on_registry_add(
         }
 
         // bind dmabuf manager object
-        // - for mirror-dmabuf backend
+        // - for mirror-export-dmabuf backend
         ctx->wl.dmabuf_manager = (struct zwlr_export_dmabuf_manager_v1 *)wl_registry_bind(
             registry, id, &zwlr_export_dmabuf_manager_v1_interface, 1
         );
@@ -345,7 +345,7 @@ static void on_registry_add(
         // bind linux_dmabuf object
         // - for mirror-screencopy backend
         ctx->wl.linux_dmabuf = (struct zwp_linux_dmabuf_v1 *)wl_registry_bind(
-            registry, id, &zwp_linux_dmabuf_v1_interface, 1
+            registry, id, &zwp_linux_dmabuf_v1_interface, 4
         );
         ctx->wl.linux_dmabuf_id = id;
     } else if (strcmp(interface, wl_output_interface.name) == 0) {

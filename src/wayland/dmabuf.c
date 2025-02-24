@@ -13,6 +13,7 @@
 
 static void on_linux_dmabuf_feedback_main_device(void * data, struct zwp_linux_dmabuf_feedback_v1 * feedback, struct wl_array * device) {
     ctx_t * ctx = (ctx_t *)data;
+    wlm_log_debug(ctx, "wayland::dmabuf::on_feedback_main_device(): opening main device\n");
 
     if (device->size != sizeof (dev_t)) {
         wlm_log_error("array size mismatch: %zd != %zd\n", device->size, sizeof (dev_t));
@@ -62,7 +63,9 @@ static void on_linux_dmabuf_feedback_tranche_done(void * data, struct zwp_linux_
 }
 
 static void on_linux_dmabuf_feedback_done(void * data, struct zwp_linux_dmabuf_feedback_v1 * feedback) {
-    (void)data;
+    ctx_t * ctx = (ctx_t *)data;
+    wlm_log_debug(ctx, "wayland::dmabuf::feedback_done(): feedback done\n");
+
     (void)feedback;
 }
 
@@ -156,6 +159,7 @@ bool wlm_wayland_dmabuf_open_device(ctx_t * ctx, dev_t device) {
 
     if (ctx->wl.dmabuf.feedback != NULL) {
         zwp_linux_dmabuf_feedback_v1_destroy(ctx->wl.dmabuf.feedback);
+        ctx->wl.dmabuf.feedback = NULL;
     }
 
     drmDevice * drm_device = NULL;
@@ -184,6 +188,7 @@ bool wlm_wayland_dmabuf_open_device(ctx_t * ctx, dev_t device) {
 
     drmFreeDevice(&drm_device);
 
+    wlm_log_debug(ctx, "wayland::dmabuf::open_device(): opening gbm device\n");
     ctx->wl.dmabuf.gbm_device = gbm_create_device(fd);
     if (ctx->wl.dmabuf.gbm_device == NULL) {
         wlm_log_error("wayland::dmabuf::open_device(): failed to open gbm device\n");
@@ -353,8 +358,6 @@ void wlm_wayland_dmabuf_init(ctx_t * ctx) {
 
 void wlm_wayland_dmabuf_cleanup(ctx_t * ctx) {
     if (!ctx->wl.dmabuf.initialized) return;
-
-    wlm_log_debug(ctx, "wayland::dmabuf::cleanup(): destroying wayland dmabuf objects\n");
 
     wlm_wayland_dmabuf_dealloc(ctx);
 
