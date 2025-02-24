@@ -76,6 +76,10 @@ wl-mirror - a simple Wayland output mirror client
 *-S, --stream*
 	Accept a stream of additional options on stdin, see *STREAM MODE*.
 
+*--title T*
+	Specify a custom title T for the mirror window. This title can contain
+	placeholders, see *TITLE PLACEHOLDERS*
+
 # BACKENDS
 
 *auto*
@@ -167,6 +171,22 @@ In stream mode, *wl-mirror* interprets lines on stdin as additional command line
 
 Option lines on stdin are processed asynchronously, and can override all options and the captured output.
 Stream mode is used by *wl-present*(1) to add interactive controls to *wl-mirror*.
+
+# TITLE PLACEHOLDERS
+
+The title string supports the following placeholders:
+
+- {width}, {height}: size of the mirrored area
+- {x}, {y}: offsets on the screen
+- {target_width}, {target_height}, {target_output}: info about the mirrored device
+
+A few perhaps useful examples:
+
+	\--title 'Wayland Mirror Output {target_output}'
+
+	\--title '{target_output}:{width}x{height}+{x}+{y}'
+
+	\--title 'resize set {width} {height} move position {x} {y}'
 
 # AUTHORS
 

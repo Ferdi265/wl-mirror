@@ -430,9 +430,9 @@ void wlm_opt_usage(ctx_t * ctx) {
     printf("  - {target_width}, {target_height}\n");
     printf("    {target_output}:                 info about the mirrored device\n");
     printf("  a few perhaps useful examples:\n");
-    printf("    --title='Wayland Mirror Output {target_output}'\n");
-    printf("    --title='{target_output}:{width}x{height}+{x}+{y}'\n");
-    printf("    --title='resize set {width} {height} move position {x} {y}'\n");
+    printf("    --title 'Wayland Mirror Output {target_output}'\n");
+    printf("    --title '{target_output}:{width}x{height}+{x}+{y}'\n");
+    printf("    --title 'resize set {width} {height} move position {x} {y}'\n");
     wlm_cleanup(ctx);
     exit(0);
 }
