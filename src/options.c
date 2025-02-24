@@ -389,7 +389,7 @@ void wlm_opt_usage(ctx_t * ctx) {
     printf("        --title N               specify a custom title N for the mirror window\n");
     printf("\n");
     printf("backends:\n");
-    printf("  - auto                automatically try the backends in order and use the first that works (default)\n");
+    printf("  - auto                automatically try the backends in order of efficiency and use the first that works (default)\n");
     printf("  - export-dmabuf       use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs\n");
     printf("  - screencopy          use the wlr-screencopy-unstable-v1 protocol to capture outputs (auto)\n");
     printf("  - screencopy-dmabuf   use the wlr-screencopy-unstable-v1 protocol to capture outputs (via DMA-BUF)\n");

@@ -79,16 +79,49 @@ wl-mirror - a simple Wayland output mirror client
 # BACKENDS
 
 *auto*
-	Automatically try backends in order and use the first that works (enabled by default).
-	The next backend is selected automatically when the current backend fails to capture a frame 10 times in a row.
+	Automatically try backends in order of backend efficiency and use the first
+	that works (enabled by default). The next backend is selected automatically
+	when the current backend fails to capture a frame 10 times in a row.
 
-*dmabuf*
+	The current fallback order is:
+
+	- *extcopy-dmabuf* (if compiled with libGBM)
+	- *screencopy-dmabuf* (if compiled with libGBM)
+	- *export-dmabuf*
+	- *extcopy-shm*
+	- *screencopy-shm*
+
+*export-dmabuf*
 	Use the *wlr-export-dmabuf-unstable-v1* protocol to capture outputs (requires wlroots).
 	This backend keeps the image data on the GPU and does not need expensive copies to the CPU and back.
 
-*screencopy*
+*screencopy-dmabuf*
+	Use the *wlr-screencopy-unstable-v1* protocol to capture outputs (requires wlroots)
+	This backend keeps the image data on the GPU and does not need expensive
+	copies to the CPU and back. This backend requires wl-mirror to be compiled
+	with support for allocating DMA-BUFs using libGBM.
+
+*screencopy-shm*
 	Use the *wlr-screencopy-unstable-v1* protocol to capture outputs (requires wlroots)
 	This backend passes the image data via shared memory on the CPU, but may have better compatibility with complex GPU driver configurations (e.g., multi GPU).
+
+*screencopy*
+	Automatically tries *screencopy-dmabuf* or *screencopy-shm* and uses the
+	first one that works. Fallback works the same as with *auto*.
+
+*extcopy-dmabuf*
+	Use the *ext-image-copy-capture-v1* protocol to capture outputs
+	This backend keeps the image data on the GPU and does not need expensive
+	copies to the CPU and back. This backend requires wl-mirror to be compiled
+	with support for allocating DMA-BUFs using libGBM.
+
+*extcopy-shm*
+	Use the *ext-image-copy-capture-v1* protocol to capture outputs
+	This backend passes the image data via shared memory on the CPU, but may have better compatibility with complex GPU driver configurations (e.g., multi GPU).
+
+*extcopy*
+	Automatically tries *extcopy-dmabuf* or *extcopy-shm* and uses the
+	first one that works. Fallback works the same as with *auto*.
 
 # TRANSFORMS
 

@@ -51,7 +51,7 @@ options:
         --title N               specify a custom title N for the mirror window
 
 backends:
-  - auto                automatically try the backends in order and use the first that works (default)
+  - auto                automatically try the backends in order of efficiency and use the first that works (default)
   - export-dmabuf       use the wlr-export-dmabuf-unstable-v1 protocol to capture outputs
   - screencopy          use the wlr-screencopy-unstable-v1 protocol to capture outputs (auto)
   - screencopy-dmabuf   use the wlr-screencopy-unstable-v1 protocol to capture outputs (via DMA-BUF)
