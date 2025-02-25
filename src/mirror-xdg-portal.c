@@ -14,6 +14,7 @@
 #include <wlm/mirror-xdg-portal.h>
 #include <wlm/util.h>
 #include <wlm/egl/formats.h>
+#include <wlm/egl/dmabuf.h>
 
 static void wlm_mirror_backend_fail_async(xdg_portal_mirror_backend_t * backend) {
     backend->state = STATE_BROKEN;
@@ -946,7 +947,9 @@ static void on_pw_stream_process(void * data) {
             return;
         }
 
-        if (!wlm_egl_dmabuf_to_texture(ctx, &dmabuf)) {
+        // TODO: pass correct format entry
+        // TODO: invert_y?
+        if (!wlm_egl_dmabuf_import(ctx, &dmabuf, NULL, false, false)) {
             wlm_log_error("mirror-xdg-portal::on_pw_stream_process(): failed to import dmabuf\n");
             pw_stream_queue_buffer(backend->pw_stream, buffer);
             wlm_mirror_backend_fail_async(backend);
@@ -959,13 +962,6 @@ static void on_pw_stream_process(void * data) {
         free(dmabuf.fds);
         free(dmabuf.offsets);
         free(dmabuf.strides);
-        ctx->egl.format = backend->gl_format;
-        ctx->egl.texture_region_aware = false;
-
-        if (ctx->mirror.invert_y != false) {
-            ctx->mirror.invert_y = false;
-            wlm_egl_update_uniforms(ctx);
-        }
 
         backend->header.fail_count = 0;
     } else if (spa_buffer->datas[0].type == SPA_DATA_MemPtr) {
