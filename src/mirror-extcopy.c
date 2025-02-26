@@ -412,27 +412,23 @@ static void on_options_updated(ctx_t * ctx) {
 
 // --- wlm_mirror_extcopy_init ---
 
-void wlm_mirror_extcopy_shm_init(ctx_t * ctx) {
+static void wlm_mirror_extcopy_init(ctx_t * ctx, bool use_dmabuf) {
     // check for required protocols
-    if (ctx->wl.shm == NULL) {
+    if (!use_dmabuf && ctx->wl.shm == NULL) {
         wlm_log_error("mirror-extcopy::shm_init(): missing wl_shm protocol\n");
         return;
-    }
-
-    if (ctx->wl.copy_capture_manager == NULL) {
-        wlm_log_error("mirror-extcopy::shm_init(): missing ext_image_copy_capture protocol\n");
+    } else if (ctx->wl.copy_capture_manager == NULL) {
+        wlm_log_error("mirror-extcopy::init(): missing ext_image_copy_capture protocol\n");
         return;
-    }
-
-    if (ctx->wl.output_capture_source_manager == NULL) {
-        wlm_log_error("mirror-extcopy::shm_init(): missing ext_output_image_capture_source_manager protocol\n");
+    } else if (ctx->wl.output_capture_source_manager == NULL) {
+        wlm_log_error("mirror-extcopy::init(): missing ext_output_image_capture_source_manager protocol\n");
         return;
     }
 
     // allocate backend context structure
     extcopy_mirror_backend_t * backend = calloc(1, sizeof (extcopy_mirror_backend_t));
     if (backend == NULL) {
-        wlm_log_error("mirror-extcopy::shm_init(): failed to allocate backend state\n");
+        wlm_log_error("mirror-extcopy::init(): failed to allocate backend state\n");
         return;
     }
 
@@ -440,7 +436,7 @@ void wlm_mirror_extcopy_shm_init(ctx_t * ctx) {
     backend->header.do_cleanup = do_cleanup;
     backend->header.on_options_updated = on_options_updated;
     backend->header.fail_count = 0;
-    backend->use_dmabuf = false;
+    backend->use_dmabuf = use_dmabuf;
 
     backend->capture_source = NULL;
     backend->capture_session = NULL;
@@ -459,53 +455,20 @@ void wlm_mirror_extcopy_shm_init(ctx_t * ctx) {
     // set backend object as current backend
     ctx->mirror.backend = (mirror_backend_t *)backend;
 
-    // create shm pool
-    if (!wlm_wayland_shm_create_pool(ctx)) {
-        wlm_log_error("mirror-extcopy::shm_init(): failed to create shm pool\n");
-        wlm_mirror_backend_fail(ctx);
-        return;
+    if (!use_dmabuf) {
+        // create shm pool
+        if (!wlm_wayland_shm_create_pool(ctx)) {
+            wlm_log_error("mirror-extcopy::shm_init(): failed to create shm pool\n");
+            wlm_mirror_backend_fail(ctx);
+            return;
+        }
     }
 }
 
+void wlm_mirror_extcopy_shm_init(ctx_t * ctx) {
+    wlm_mirror_extcopy_init(ctx, false);
+}
+
 void wlm_mirror_extcopy_dmabuf_init(ctx_t * ctx) {
-    // check for required protocols
-    if (ctx->wl.copy_capture_manager == NULL) {
-        wlm_log_error("mirror-extcopy::dmabuf_init(): missing ext_image_copy_capture protocol\n");
-        return;
-    }
-
-    if (ctx->wl.output_capture_source_manager == NULL) {
-        wlm_log_error("mirror-extcopy::dmabuf_init(): missing ext_output_image_capture_source_manager protocol\n");
-        return;
-    }
-
-    // allocate backend context structure
-    extcopy_mirror_backend_t * backend = calloc(1, sizeof (extcopy_mirror_backend_t));
-    if (backend == NULL) {
-        wlm_log_error("mirror-extcopy::dmabuf_init(): failed to allocate backend state\n");
-        return;
-    }
-
-    backend->header.do_capture = do_capture;
-    backend->header.do_cleanup = do_cleanup;
-    backend->header.on_options_updated = on_options_updated;
-    backend->header.fail_count = 0;
-    backend->use_dmabuf = true;
-
-    backend->capture_source = NULL;
-    backend->capture_session = NULL;
-    backend->capture_frame = NULL;
-
-    backend->frame_width = 0;
-    backend->frame_height = 0;
-    backend->frame_shm_stride = 0;
-    backend->frame_shm_format = 0;
-    backend->frame_drm_format = 0;
-    backend->frame_drm_modifiers = NULL;
-    backend->frame_num_drm_modifiers = 0;
-
-    backend->state = STATE_INIT;
-
-    // set backend object as current backend
-    ctx->mirror.backend = (mirror_backend_t *)backend;
+    wlm_mirror_extcopy_init(ctx, true);
 }

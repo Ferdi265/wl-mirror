@@ -338,20 +338,23 @@ static void on_dmabuf_device_opened(ctx_t * ctx, bool success) {
 
 // --- init_mirror_screencopy ---
 
-void wlm_mirror_screencopy_shm_init(ctx_t * ctx) {
+static void wlm_mirror_screencopy_init(ctx_t * ctx, bool use_dmabuf) {
     // check for required protocols
-    if (ctx->wl.shm == NULL) {
+    if (use_dmabuf && ctx->wl.linux_dmabuf == NULL) {
+        wlm_log_error("mirror-screencopy::dmabuf_init(): missing linux_dmabuf protocol\n");
+        return;
+    } else if (!use_dmabuf && ctx->wl.shm == NULL) {
         wlm_log_error("mirror-screencopy::shm_init(): missing wl_shm protocol\n");
         return;
     } else if (ctx->wl.screencopy_manager == NULL) {
-        wlm_log_error("mirror-screencopy::shm_init(): missing wlr_screencopy protocol\n");
+        wlm_log_error("mirror-screencopy::init(): missing wlr_screencopy protocol\n");
         return;
     }
 
     // allocate backend context structure
     screencopy_mirror_backend_t * backend = calloc(1, sizeof (screencopy_mirror_backend_t));
     if (backend == NULL) {
-        wlm_log_error("mirror-screencopy::shm_init(): failed to allocate backend state\n");
+        wlm_log_error("mirror-screencopy::init(): failed to allocate backend state\n");
         return;
     }
 
@@ -360,7 +363,7 @@ void wlm_mirror_screencopy_shm_init(ctx_t * ctx) {
     backend->header.do_cleanup = do_cleanup;
     backend->header.on_options_updated = NULL;
     backend->header.fail_count = 0;
-    backend->use_dmabuf = false;
+    backend->use_dmabuf = use_dmabuf;
 
     backend->screencopy_frame = NULL;
 
@@ -370,56 +373,30 @@ void wlm_mirror_screencopy_shm_init(ctx_t * ctx) {
     backend->frame_format = 0;
     backend->frame_flags = 0;
 
-    backend->state = STATE_READY;
-
     // set backend object as current backend
     ctx->mirror.backend = (mirror_backend_t *)backend;
 
-    // create shm pool
-    if (!wlm_wayland_shm_create_pool(ctx)) {
-        wlm_log_error("mirror-screencopy::shm_init(): failed to create shm pool\n");
-        wlm_mirror_backend_fail(ctx);
-        return;
+    if (use_dmabuf) {
+        backend->state = STATE_WAIT_DMABUF_DEVICE;
+
+        // open dmabuf device
+        wlm_wayland_dmabuf_open_main_device(ctx, on_dmabuf_device_opened);
+    } else {
+        backend->state = STATE_READY;
+
+        // create shm pool
+        if (!wlm_wayland_shm_create_pool(ctx)) {
+            wlm_log_error("mirror-screencopy::shm_init(): failed to create shm pool\n");
+            wlm_mirror_backend_fail(ctx);
+            return;
+        }
     }
 }
 
+void wlm_mirror_screencopy_shm_init(ctx_t * ctx) {
+    wlm_mirror_screencopy_init(ctx, false);
+}
+
 void wlm_mirror_screencopy_dmabuf_init(ctx_t * ctx) {
-    // check for required protocols
-    if (ctx->wl.linux_dmabuf == NULL) {
-        wlm_log_error("mirror-screencopy::dmabuf_init(): missing linux_dmabuf protocol\n");
-        return;
-    } else if (ctx->wl.screencopy_manager == NULL) {
-        wlm_log_error("mirror-screencopy::dmabuf_init(): missing wlr_screencopy protocol\n");
-        return;
-    }
-
-    // allocate backend context structure
-    screencopy_mirror_backend_t * backend = calloc(1, sizeof (screencopy_mirror_backend_t));
-    if (backend == NULL) {
-        wlm_log_error("mirror-screencopy::dmabuf_init(): failed to allocate backend state\n");
-        return;
-    }
-
-    // initialize context structure
-    backend->header.do_capture = do_capture;
-    backend->header.do_cleanup = do_cleanup;
-    backend->header.on_options_updated = NULL;
-    backend->header.fail_count = 0;
-    backend->use_dmabuf = true;
-
-    backend->screencopy_frame = NULL;
-
-    backend->frame_width = 0;
-    backend->frame_height = 0;
-    backend->frame_stride = 0;
-    backend->frame_format = 0;
-    backend->frame_flags = 0;
-
-    backend->state = STATE_WAIT_DMABUF_DEVICE;
-
-    // set backend object as current backend
-    ctx->mirror.backend = (mirror_backend_t *)backend;
-
-    // open dmabuf device
-    wlm_wayland_dmabuf_open_main_device(ctx, on_dmabuf_device_opened);
+    wlm_mirror_screencopy_init(ctx, true);
 }
