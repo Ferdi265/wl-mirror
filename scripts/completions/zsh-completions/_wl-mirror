@@ -57,7 +57,7 @@ _wl_mirror() {
             _message "region format: '<x>,<y> <width>x<height> [output]'"
             ;;
         title)
-            _message "tile placeholders:"
+            _message "title placeholders:"
             _message "  {width}, {height}"
             _message "  {x}, {y}"
             _message "  {target_width}, {target_height}"
