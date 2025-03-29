@@ -1,7 +1,9 @@
 #compdef wl-present
 
 _wl_mirror_outputs() {
-    swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p'
+    if [[ "$XDG_CURRENT_DESKTOP" == "sway" ]]; then
+        swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p'
+    fi
 }
 
 _wl_mirror_transforms() {
