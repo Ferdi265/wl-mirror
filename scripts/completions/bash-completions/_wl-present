@@ -1,0 +1,96 @@
+# wl-present(1) completion                                 -*- shell-script -*-
+
+_comp_cmd_wl-present_name() {
+    # can't complete name currently
+    return
+}
+
+_comp_cmd_wl-present_output() {
+    if [[ "$XDG_CURRENT_DESKTOP" == "sway" ]]; then
+        local OUTPUTS=( $(swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p') )
+        _comp_compgen -- -W '"${OUTPUTS}"'
+    fi
+}
+
+_comp_cmd_wl-present_scaling() {
+    _comp_compgen -- -W 'fit cover exact linear nearest'
+}
+
+_comp_cmd_wl-present_region() {
+    # can't complete regions currently
+    return
+}
+
+_comp_cmd_wl-present_custom() {
+    local WLM_OPTS=(
+        -h --help
+        -V --version
+        -v --verbose --no-verbose
+        -c --show-cursor --no-show-cursor
+        -i --invert-colors --no-invert-colors
+        -f --freeze --unfreeze --toggle-freeze
+        -F --fullscreen --no-fullscreen
+        --fullscreen-output --no-fullscreen-output
+        -s --scaling
+        -b --backend
+        -t --transform
+        -r --region --no-region
+        -S --stream
+        --title
+    )
+    _comp_compgen -- -W '"${WLM_OPTS[@]}"'
+}
+
+_comp_cmd_wl-present() {
+    local cur prev words cword comp_args
+    _comp_initialize -- "$@" || return
+
+    local OPTS=(
+        -n --name
+    )
+    local ARG_OPTS=(
+        -n --name
+    )
+
+    local CMDS=(
+        help
+        mirror
+        set-output
+        set-region unset-region
+        set-scaling
+        freeze unfreeze toggle-freeze
+        fullscreen unfullscreen
+        fullscreen-output no-fullscreen-output
+        custom
+    )
+    local ARG_CMDS=(
+        mirror
+        set-output
+        set-region
+        set-scaling
+        fullscreen-output
+        custom
+    )
+
+    # TODO: ensure options are only completed before subcommand
+    # TODO: ensure subcommand is only completed once
+    # TODO: ensure wl-mirror options are completed correctly
+    case $prev in
+        -n | --name) _comp_cmd_wl-present_name; return;;
+        mirror) _comp_cmd_wl-present_output; return;;
+        set-output) _comp_cmd_wl-present_output; return;;
+        set-region) _comp_cmd_wl-present_region; return;;
+        set-scaling) _comp_cmd_wl-present_scaling; return;;
+        fullscreen-output) _comp_cmd_wl-present_output; return;;
+        custom) _comp_cmd_wl-present_custom; return;;
+    esac
+
+    if [[ $cur == -* ]]; then
+        _comp_compgen -- -W '"${OPTS[@]}"'
+    else
+        _comp_compgen -- -W '"${CMDS[@]}"'
+    fi
+} &&
+    complete -F _comp_cmd_wl-present wl-present
+
+# ex: filetype=sh
