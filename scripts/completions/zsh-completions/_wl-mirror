@@ -1,0 +1,73 @@
+#compdef wl-mirror
+
+_wl_mirror_outputs() {
+    swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p'
+}
+
+_wl_mirror_transforms() {
+    printf '%s\n' normal flipX flipY 0cw 90cw 180cw 270cw 0ccw 90ccw 180ccw 270ccw flipped 0 90 180 270
+}
+
+_wl_mirror_backends() {
+    printf '%s\n' auto export-dmabuf screencopy screencopy-dmabuf screencopy-shm extcopy extcopy-dmabuf extcopy-shm
+}
+
+_wl_mirror_scalings() {
+    printf '%s\n' fit cover exact linear nearest
+}
+
+_wl_mirror() {
+    local -a outputs transforms backends scalings
+    outputs=("${(@f)$(_wl_mirror_outputs)}")
+    transforms=("${(@f)$(_wl_mirror_transforms)}")
+    backends=("${(@f)$(_wl_mirror_backends)}")
+    scalings=("${(@f)$(_wl_mirror_scalings)}")
+
+    local -a options
+    options=(
+        '1:output:_values "output" $outputs'
+        '(-h --help)'{-h,--help}'[show this help]'
+        '(-V --version)'{-V,--version}'[print version]'
+        '(-v --verbose --no-verbose)'{-v,--verbose}'[enable debug logging]'
+        '--no-verbose[disable debug logging]'
+        '(-c --show-cursor --no-show-cursor)'{-c,--show-cursor}'[show the cursor on the mirrored screen]'
+        '--no-show-cursor[do not show the cursor on the mirrored screen]'
+        '(-i --invert-colors --no-invert-colors)'{-i,--invert-colors}'[invert colors in the mirrored screen]'
+        '--no-invert-colors[do not invert colors]'
+        '(-f --freeze --unfreeze --toggle-freeze)'{-f,--freeze}'[freeze the current image on the screen]'
+        '--unfreeze[resume the screen capture after a freeze]'
+        '--toggle-freeze[toggle freeze state of screen capture]'
+        '(-F --fullscreen --no-fullscreen --fullscreen-output --no-fullscreen-output)'{-F,--fullscreen}'[display wl-mirror as fullscreen]'
+        '--no-fullscreen[display wl-mirror as a window]'
+        '--fullscreen-output[set fullscreen target output, implies --fullscreen]:output:_values "output" $outputs'
+        '--no-fullscreen-output[unset fullscreen target output, implies --no-fullscreen]'
+        '-s[scaling method]:scaling method:_values "scaling" $scalings'
+        '-b[use a specific backend]:backend:_values "backend" $backends'
+        '-t[apply custom transform]:transform:_values "transform" $transforms'
+        '(-r --region)'{-r,--region}'[capture custom region]:region:->region'
+        '--no-region[capture the entire output]'
+        '-S[accept a stream of additional options on stdin]'
+        '--title[specify a custom title for the mirror window]:title:->title'
+    )
+
+    _arguments -s $options && return
+
+    case $state in
+        region)
+            _message "region format: '<x>,<y> <width>x<height> [output]'"
+            ;;
+        title)
+            _message "title placeholders:"
+            _message "  {width}, {height}"
+            _message "  {x}, {y}"
+            _message "  {target_width}, {target_height}"
+            _message "  {target_output}"
+            ;;
+        *)
+            _values "output" $outputs
+            ;;
+    esac
+}
+
+_wl_mirror "$@"
+

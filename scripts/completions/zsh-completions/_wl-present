@@ -1,0 +1,95 @@
+#compdef wl-present
+
+_wl_mirror_outputs() {
+    swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p'
+}
+
+_wl_mirror_transforms() {
+    printf '%s\n' normal flipX flipY 0cw 90cw 180cw 270cw 0ccw 90ccw 180ccw 270ccw flipped 0 90 180 270
+}
+
+_wl_mirror_backends() {
+    printf '%s\n' auto export-dmabuf screencopy screencopy-dmabuf screencopy-shm extcopy extcopy-dmabuf extcopy-shm
+}
+
+_wl_mirror_scalings() {
+    printf '%s\n' fit cover exact linear nearest
+}
+
+_wl_present() {
+    local -a outputs transforms backends scalings
+    outputs=("${(@f)$(_wl_mirror_outputs)}")
+    transforms=("${(@f)$(_wl_mirror_transforms)}")
+    backends=("${(@f)$(_wl_mirror_backends)}")
+    scalings=("${(@f)$(_wl_mirror_scalings)}")
+
+
+    local -a outputs transforms backends scalings
+    outputs=("${(@f)$(_wl_mirror_outputs)}")
+    transforms=("${(@f)$(_wl_mirror_transforms)}")
+    backends=("${(@f)$(_wl_mirror_backends)}")
+    scalings=("${(@f)$(_wl_mirror_scalings)}")
+
+
+    local -a commands options
+    commands=(
+        'help:show this help'
+        'mirror:start wl-mirror on an output'
+        'set-output:set the recorded output'
+        'set-region:set the recorded region'
+        'unset-region:unset the recorded region'
+        'set-scaling:set the scaling mode'
+        'freeze:freeze the screen'
+        'unfreeze:resume the screen capture after freeze'
+        'toggle-freeze:toggle freeze state of screen capture'
+        'fullscreen:fullscreen the wl-mirror window'
+        'unfullscreen:unfullscreen the wl-mirror window'
+        'fullscreen-output:set fullscreen target output, implies fullscreen'
+        'no-fullscreen-output:unset fullscreen target output, implies unfullscreen'
+        'custom:send custom options to wl-mirror'
+    )
+
+    options=(
+        '(-n --name)'{-n,--name}'[use an alternative pipe name]:pipe name'
+        '(-h --help)'{-h,--help}'[show this help]'
+        '1:command:->command'
+        '*::args:->args'
+    )
+
+    _arguments -s $options && return 0
+
+    case $state in
+    command)
+        _describe -t commands 'command' commands
+        ;;
+    args)
+        case $words[1] in
+        mirror|fullscreen-output)
+            _wl_mirror
+            ;;
+        set-output)
+            if (( CURRENT == 2 )); then
+                _values output $outputs
+            fi
+            ;;
+        set-region)
+            if (( CURRENT == 2 )); then
+                _message "region format: '<x>,<y> <width>x<height> [output]'"
+            fi
+            return
+            ;;
+        set-scaling)
+            if (( CURRENT == 2 )); then
+                _values scale $scalings
+            fi
+            ;;
+        custom)
+            _wl-mirror
+            ;;
+        esac
+        ;;
+    esac
+}
+
+_wl_present
+
