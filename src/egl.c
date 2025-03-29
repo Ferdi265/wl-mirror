@@ -524,7 +524,6 @@ void wlm_egl_resize_window(ctx_t * ctx) {
 
     // resize window, then trigger viewport recalculation
     wl_egl_window_resize(ctx->egl.window, width, height, 0, 0);
-    wp_viewport_set_source(ctx->wl.viewport, 0, 0, wl_fixed_from_int(width), wl_fixed_from_int(height));
     wlm_egl_resize_viewport(ctx);
 
     // redraw frame
