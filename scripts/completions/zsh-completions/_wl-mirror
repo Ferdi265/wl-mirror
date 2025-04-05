@@ -26,8 +26,14 @@ _wl_mirror() {
     scalings=("${(@f)$(_wl_mirror_scalings)}")
 
     local -a options
-    options=(
-        '1:output:_values "output" $outputs'
+    if [ ${#outputs} -eq 1 ]; then
+        _message -e "Couldn't find any outputs. Is your XDG_CURRENT_DESKTOP valid?"
+    else
+        options+=('1:output:_values "output" $outputs')
+        options+='--fullscreen-output[set fullscreen target output, implies --fullscreen]:output:_values "output" $outputs'
+    fi
+
+    options+=(
         '(-h --help)'{-h,--help}'[show this help]'
         '(-V --version)'{-V,--version}'[print version]'
         '(-v --verbose --no-verbose)'{-v,--verbose}'[enable debug logging]'
@@ -41,7 +47,6 @@ _wl_mirror() {
         '--toggle-freeze[toggle freeze state of screen capture]'
         '(-F --fullscreen --no-fullscreen --fullscreen-output --no-fullscreen-output)'{-F,--fullscreen}'[display wl-mirror as fullscreen]'
         '--no-fullscreen[display wl-mirror as a window]'
-        '--fullscreen-output[set fullscreen target output, implies --fullscreen]:output:_values "output" $outputs'
         '--no-fullscreen-output[unset fullscreen target output, implies --no-fullscreen]'
         '-s[scaling method]:scaling method:_values "scaling" $scalings'
         '-b[use a specific backend]:backend:_values "backend" $backends'

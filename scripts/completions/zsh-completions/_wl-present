@@ -25,14 +25,6 @@ _wl_present() {
     backends=("${(@f)$(_wl_mirror_backends)}")
     scalings=("${(@f)$(_wl_mirror_scalings)}")
 
-
-    local -a outputs transforms backends scalings
-    outputs=("${(@f)$(_wl_mirror_outputs)}")
-    transforms=("${(@f)$(_wl_mirror_transforms)}")
-    backends=("${(@f)$(_wl_mirror_backends)}")
-    scalings=("${(@f)$(_wl_mirror_scalings)}")
-
-
     local -a commands options
     commands=(
         'help:show this help'
@@ -71,7 +63,11 @@ _wl_present() {
             ;;
         set-output)
             if (( CURRENT == 2 )); then
-                _values output $outputs
+                if [ ${#outputs} -eq 1 ]; then
+                    _message -e "Couldn't find any outputs. Is your XDG_CURRENT_DESKTOP valid?"
+                else
+                    _values output $outputs
+                fi
             fi
             ;;
         set-region)
