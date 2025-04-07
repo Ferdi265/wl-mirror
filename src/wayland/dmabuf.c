@@ -158,6 +158,10 @@ void wlm_wayland_dmabuf_open_main_device(ctx_t * ctx, wlm_wayland_dmabuf_callbac
 #else
     wlm_log_error("wayland::dmabuf::open_device(): need libGBM for dmabuf allocation\n");
     cb(ctx, false);
+
+    (void)ctx;
+    (void)cb;
+    (void)linux_dmabuf_feedback_listener;
 #endif
 }
 
@@ -211,6 +215,9 @@ bool wlm_wayland_dmabuf_open_device(ctx_t * ctx, dev_t device) {
     return true;
 #else
     wlm_log_error("wayland::dmabuf::open_device(): need libGBM for dmabuf allocation\n");
+
+    (void)ctx;
+    (void)device;
     return false;
 #endif
 }
@@ -295,6 +302,14 @@ void wlm_wayland_dmabuf_alloc(ctx_t * ctx, uint32_t drm_format, uint32_t width, 
 #else
     wlm_log_error("wayland::dmabuf::open_device(): need libGBM for dmabuf allocation\n");
     cb(ctx, false);
+
+    (void)ctx;
+    (void)drm_format;
+    (void)width;
+    (void)height;
+    (void)modifiers;
+    (void)num_modifiers;
+    (void)linux_buffer_params_listener;
 #endif
 }
 
