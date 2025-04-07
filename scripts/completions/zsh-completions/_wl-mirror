@@ -1,9 +1,13 @@
 #compdef wl-mirror
 
 _wl_mirror_outputs() {
-    if [[ "$XDG_CURRENT_DESKTOP" == "sway" ]]; then
-        swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p'
-    fi
+    case "$XDG_CURRENT_DESKTOP" in
+        sway|swayfx)
+           swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p'
+           ;;
+       *)
+           _message "Output completion is not supported on '${XDG_CURRENT_DESKTOP}'"
+   esac
 }
 
 _wl_mirror_transforms() {
@@ -19,6 +23,10 @@ _wl_mirror_scalings() {
 }
 
 _wl_mirror() {
+    if [ -z "${XDG_CURRENT_DESKTOP+x}" ]; then
+        _message "Please set XDG_CURRENT_DESKTOP to enable completion of outputs"
+    fi
+
     local -a outputs transforms backends scalings
     outputs=("${(@f)$(_wl_mirror_outputs)}")
     transforms=("${(@f)$(_wl_mirror_transforms)}")
@@ -26,9 +34,7 @@ _wl_mirror() {
     scalings=("${(@f)$(_wl_mirror_scalings)}")
 
     local -a options
-    if [ ${#outputs} -eq 1 ]; then
-        _message -e "Couldn't find any outputs. Is your XDG_CURRENT_DESKTOP valid?"
-    else
+    if [ -n "${outputs}" ]; then
         options+=('1:output:_values "output" $outputs')
         options+='--fullscreen-output[set fullscreen target output, implies --fullscreen]:output:_values "output" $outputs'
     fi
