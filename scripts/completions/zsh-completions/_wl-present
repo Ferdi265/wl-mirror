@@ -5,9 +5,9 @@ _wl_mirror_outputs() {
         sway|swayfx)
            swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p'
            ;;
-       *)
+        *)
            _message "Output completion is not supported on '${XDG_CURRENT_DESKTOP}'"
-   esac
+    esac
 }
 
 _wl_mirror_transforms() {
@@ -25,6 +25,11 @@ _wl_mirror_scalings() {
 _wl_present() {
     if [ -z "${XDG_CURRENT_DESKTOP+x}" ]; then
         _message "Please set XDG_CURRENT_DESKTOP to enable completion of outputs"
+    else
+        case "$XDG_CURRENT_DESKTOP" in
+            sway|swayfx) ;;
+            *) _message "Output completion is not supported on '${XDG_CURRENT_DESKTOP}'"
+       esac
     fi
 
     local -a outputs transforms backends scalings
