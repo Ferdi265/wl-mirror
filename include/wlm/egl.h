@@ -74,6 +74,7 @@ void wlm_egl_init(struct ctx * ctx);
 bool wlm_egl_query_dmabuf_formats(struct ctx * ctx);
 bool wlm_egl_check_errors(struct ctx * ctx, const char * msg);
 
+void wlm_egl_draw_frame(struct ctx * ctx);
 void wlm_egl_draw_texture(struct ctx * ctx);
 void wlm_egl_resize_viewport(struct ctx * ctx);
 void wlm_egl_resize_window(struct ctx * ctx);

@@ -624,7 +624,12 @@ static void on_surface_configure_finished(ctx_t * ctx) {
 #else
     xdg_surface_ack_configure(ctx->wl.xdg_surface, ctx->wl.last_surface_serial);
 #endif
-    wl_surface_commit(ctx->wl.surface);
+
+    // draw frame to attach and commit buffer
+    // reduces number of empty commits
+    // required if libdecor is used
+    // contains a surface commit, no second commit necessary
+    wlm_egl_draw_frame(ctx);
 
     // reset configure sequence state machine
 #ifndef WITH_LIBDECOR
@@ -707,9 +712,7 @@ static void on_libdecor_frame_configure(
         wp_viewport_set_destination(ctx->wl.viewport, width, height);
 
         // resize window to reflect new surface size
-        if (ctx->egl.initialized) {
-            wlm_egl_resize_window(ctx);
-        }
+        wlm_egl_resize_window(ctx);
     }
 
     // update configure sequence state machine
@@ -803,9 +806,7 @@ static void on_xdg_toplevel_configure(
         wp_viewport_set_destination(ctx->wl.viewport, width, height);
 
         // resize window to reflect new surface size
-        if (ctx->egl.initialized) {
-            wlm_egl_resize_window(ctx);
-        }
+        wlm_egl_resize_window(ctx);
     }
 
     // update configure sequence state machine
@@ -1036,6 +1037,15 @@ void wlm_wayland_init(ctx_t * ctx) {
 
         wp_fractional_scale_v1_add_listener(ctx->wl.fractional_scale, &fractional_scale_listener, (void *)ctx);
     }
+}
+
+// --- configure_window ---
+
+void wlm_wayland_configure_window(struct ctx * ctx) {
+    if (!ctx->egl.initialized) {
+        wlm_log_error("wayland::configure_window(): egl must be initialized first\n");
+        wlm_exit_fail(ctx);
+    }
 
 #if WITH_LIBDECOR
     // create libdecor context
@@ -1054,10 +1064,8 @@ void wlm_wayland_init(ctx_t * ctx) {
     libdecor_frame_set_title(ctx->wl.libdecor_frame, "Wayland Output Mirror");
 
     // map libdecor frame
+    // commits surface and triggers configure sequence
     libdecor_frame_map(ctx->wl.libdecor_frame);
-
-    // commit surface to trigger configure sequence
-    wl_surface_commit(ctx->wl.surface);
 
     // wait for events
     // - expecting libdecor frame configure event
@@ -1102,13 +1110,13 @@ void wlm_wayland_init(ctx_t * ctx) {
     // check if surface is configured
     // - expecting surface to be configured at this point
     if (!ctx->wl.configured) {
-        wlm_log_error("wayland::init(): surface not configured\n");
+        wlm_log_error("wayland::configure_window(): surface not configured\n");
         wlm_exit_fail(ctx);
     }
 
     // set fullscreen on target output if requested by initial options
     if (ctx->opt.fullscreen && ctx->opt.fullscreen_output != NULL) {
-        wlm_log_debug(ctx, "wayland::init(): fullscreening on target output\n");
+        wlm_log_debug(ctx, "wayland::configure_window(): fullscreening on target output\n");
         wlm_wayland_window_set_fullscreen(ctx);
     }
 }

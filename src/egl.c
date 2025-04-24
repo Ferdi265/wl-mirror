@@ -262,13 +262,6 @@ void wlm_egl_init(ctx_t * ctx) {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof (float), (void *)(2 * sizeof (float)));
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
-
-    // draw initial frame
-    wlm_egl_draw_texture(ctx);
-    if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        wlm_log_error("egl::init(): failed to swap buffers\n");
-        wlm_exit_fail(ctx);
-    }
 }
 
 // --- query_dmabuf_formats ---
@@ -390,6 +383,18 @@ bool wlm_egl_check_errors(struct ctx * ctx, const char * msg) {
     return false;
 
     (void)ctx;
+}
+
+// --- draw_frame ---
+
+void wlm_egl_draw_frame(struct ctx * ctx) {
+    // render frame, set swap interval to 0 to ensure nonblocking buffer swap
+    wlm_egl_draw_texture(ctx);
+    eglSwapInterval(ctx->egl.display, 0);
+    if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
+        wlm_log_error("egl::draw_frame(): failed to swap buffers\n");
+        wlm_exit_fail(ctx);
+    }
 }
 
 // --- draw_texture ---
@@ -525,13 +530,6 @@ void wlm_egl_resize_window(ctx_t * ctx) {
     // resize window, then trigger viewport recalculation
     wl_egl_window_resize(ctx->egl.window, width, height, 0, 0);
     wlm_egl_resize_viewport(ctx);
-
-    // redraw frame
-    wlm_egl_draw_texture(ctx);
-    if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        wlm_log_error("egl::resize_window(): failed to swap buffers\n");
-        wlm_exit_fail(ctx);
-    }
 }
 
 // --- update_uniforms ---

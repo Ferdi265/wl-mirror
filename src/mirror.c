@@ -48,13 +48,7 @@ static void on_frame(
     // - screencapture events from backend
     wl_display_roundtrip(ctx->wl.display);
 
-    // render frame, set swap interval to 0 to ensure nonblocking buffer swap
-    wlm_egl_draw_texture(ctx);
-    eglSwapInterval(ctx->egl.display, 0);
-    if (eglSwapBuffers(ctx->egl.display, ctx->egl.surface) != EGL_TRUE) {
-        wlm_log_error("mirror::on_frame(): failed to swap buffers\n");
-        wlm_exit_fail(ctx);
-    }
+    wlm_egl_draw_frame(ctx);
 
     (void)frame_callback;
     (void)msec;

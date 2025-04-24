@@ -50,6 +50,9 @@ int main(int argc, char ** argv) {
     wlm_log_debug(&ctx, "main::main(): initializing EGL\n");
     wlm_egl_init(&ctx);
 
+    wlm_log_debug(&ctx, "main::main(): configuring wayland window\n");
+    wlm_wayland_configure_window(&ctx);
+
     wlm_log_debug(&ctx, "main::main(): initializing mirror\n");
     wlm_mirror_init(&ctx);
 
