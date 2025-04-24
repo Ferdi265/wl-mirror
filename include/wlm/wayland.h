@@ -8,6 +8,7 @@
 #include <wlm/proto/fractional-scale-v1.h>
 #include <wlm/proto/xdg-shell.h>
 #include <wlm/proto/xdg-output-unstable-v1.h>
+#include <wlm/proto/xdg-foreign-unstable-v2.h>
 #include <wlm/proto/wlr-export-dmabuf-unstable-v1.h>
 #include <wlm/proto/wlr-screencopy-unstable-v1.h>
 #include <wlm/proto/ext-image-copy-capture-v1.h>
@@ -85,6 +86,12 @@ typedef struct ctx_wl {
     uint32_t copy_capture_manager_id;
     uint32_t output_capture_source_manager_id;
     uint32_t toplevel_capture_source_manager_id;
+
+    // xdg portal backend objects
+    struct zxdg_exporter_v2 * xdg_exporter;
+    struct zxdg_exported_v2 * xdg_exported_surface;
+    const char * xdg_exported_handle;
+    uint32_t xdg_exporter_id;
 
     // output list
     output_list_node_t * outputs;
