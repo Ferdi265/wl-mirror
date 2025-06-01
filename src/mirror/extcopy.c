@@ -1,3 +1,4 @@
+#include "wlm/mirror/target.h"
 #include <wlm/mirror/extcopy.h>
 #include <wlm/context.h>
 #include <wlm/wayland/shm.h>
@@ -28,12 +29,10 @@ static void extcopy_session_cleanup(ctx_t * ctx, extcopy_mirror_backend_t * back
     extcopy_frame_cleanup(backend);
 
     if (backend->capture_session != NULL) ext_image_copy_capture_session_v1_destroy(backend->capture_session);
-    if (backend->capture_source != NULL) ext_image_capture_source_v1_destroy(backend->capture_source);
     if (wlm_wayland_dmabuf_get_buffer(ctx) != NULL) wlm_wayland_dmabuf_dealloc(ctx);
     if (wlm_wayland_shm_get_buffer(ctx) != NULL) wlm_wayland_shm_dealloc(ctx);
 
     backend->capture_session = NULL;
-    backend->capture_source = NULL;
 }
 
 static void backend_cancel(ctx_t * ctx, extcopy_mirror_backend_t * backend) {
@@ -354,11 +353,17 @@ static void do_capture(ctx_t * ctx) {
     extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
 
     if (backend->state == STATE_INIT || backend->state == STATE_CANCELED) {
-        backend->capture_source = ext_output_image_capture_source_manager_v1_create_source(ctx->wl.output_capture_source_manager, ctx->mirror.current_target->output);
+        // check if target is supported
+        struct ext_image_capture_source_v1 * capture_source = wlm_mirror_target_get_capture_source(ctx->mirror.current_target);
+        if (capture_source == NULL) {
+            wlm_log_error("mirror-extcopy::do_capture(): capture target not supported by this backend\n");
+            wlm_mirror_backend_fail(ctx);
+            return;
+        }
 
         wlm_log_debug(ctx, "mirror-extcopy::do_capture(): creating capture session\n");
         backend->state = STATE_WAIT_BUFFER_INFO;
-        backend->capture_session = ext_image_copy_capture_manager_v1_create_session(ctx->wl.copy_capture_manager, backend->capture_source, ctx->opt.show_cursor ? EXT_IMAGE_COPY_CAPTURE_MANAGER_V1_OPTIONS_PAINT_CURSORS : 0);
+        backend->capture_session = ext_image_copy_capture_manager_v1_create_session(ctx->wl.copy_capture_manager, capture_source, ctx->opt.show_cursor ? EXT_IMAGE_COPY_CAPTURE_MANAGER_V1_OPTIONS_PAINT_CURSORS : 0);
         ext_image_copy_capture_session_v1_add_listener(backend->capture_session, &capture_session_listener, (void *)ctx);
     } else if (backend->state == STATE_READY) {
         if (backend->capture_frame != NULL) {
@@ -438,7 +443,6 @@ static void wlm_mirror_extcopy_init(ctx_t * ctx, bool use_dmabuf) {
     backend->header.fail_count = 0;
     backend->use_dmabuf = use_dmabuf;
 
-    backend->capture_source = NULL;
     backend->capture_session = NULL;
     backend->capture_frame = NULL;
 

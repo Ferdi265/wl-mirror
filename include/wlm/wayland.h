@@ -12,6 +12,7 @@
 #include <wlm/proto/wlr-screencopy-unstable-v1.h>
 #include <wlm/proto/ext-image-copy-capture-v1.h>
 #include <wlm/proto/ext-image-capture-source-v1.h>
+#include <wlm/proto/ext-foreign-toplevel-list-v1.h>
 #include <wlm/proto/linux-dmabuf-unstable-v1.h>
 #include <wlm/wayland/shm.h>
 #include <wlm/wayland/dmabuf.h>
@@ -26,6 +27,9 @@ typedef struct output_list_node {
     struct output_list_node * next;
     struct ctx * ctx;
     char * name;
+    char * make;
+    char * model;
+    char * description;
     struct wl_output * output;
     struct zxdg_output_v1 * xdg_output;
     uint32_t output_id;
@@ -129,6 +133,7 @@ void wlm_wayland_window_set_title(struct ctx * ctx, const char * title);
 void wlm_wayland_window_set_fullscreen(struct ctx * ctx);
 void wlm_wayland_window_unset_fullscreen(struct ctx * ctx);
 void wlm_wayland_window_update_scale(struct ctx * ctx, double scale, bool is_fractional);
+bool wlm_wayland_find_output(ctx_t * ctx, const char * output_name, output_list_node_t ** output);
 void wlm_wayland_cleanup(struct ctx * ctx);
 
 #endif

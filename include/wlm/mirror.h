@@ -8,6 +8,7 @@
 #include <EGL/egl.h>
 #include <wlm/transform.h>
 #include <wlm/mirror/backends.h>
+#include <wlm/mirror/target.h>
 
 struct ctx;
 struct output_list_node;
@@ -19,7 +20,7 @@ struct fallback_backend {
 };
 
 typedef struct ctx_mirror {
-    struct output_list_node * current_target;
+    wlm_mirror_target_t * current_target;
     struct wl_callback * frame_callback;
     region_t current_region;
     bool invert_y;
