@@ -74,11 +74,16 @@ void wlm_mirror_init(ctx_t * ctx) {
 
     ctx->mirror.initialized = true;
 
+    // TODO: use wlm_mirror_target_parse
+    // TODO: make wlm_mirror_target_parse implement finding output (or toplevel?) by region
+    // TODO: only find and create target in a single place! (other place is opt parse)
     // finding target output
-    if (!wlm_opt_find_output(ctx, &ctx->mirror.current_target, &ctx->mirror.current_region)) {
+    output_list_node_t * target_output = NULL;
+    if (!wlm_opt_find_output(ctx, &target_output, &ctx->mirror.current_region)) {
         wlm_log_error("mirror::init(): failed to find output\n");
         wlm_exit_fail(ctx);
     }
+    ctx->mirror.current_target = wlm_mirror_target_create_output(ctx, target_output);
 
     // update window title
     wlm_mirror_update_title(ctx);
@@ -201,7 +206,7 @@ void wlm_mirror_backend_init(ctx_t * ctx) {
 void wlm_mirror_output_removed(ctx_t * ctx, output_list_node_t * node) {
     if (!ctx->mirror.initialized) return;
     if (ctx->mirror.current_target == NULL) return;
-    if (ctx->mirror.current_target != node) return;
+    if (wlm_mirror_target_get_output_node(ctx->mirror.current_target) != node) return;
 
     wlm_log_error("mirror::output_removed(): output disappeared, closing\n");
     wlm_exit_fail(ctx);
@@ -234,9 +239,20 @@ static int format_title(ctx_t * ctx, char ** dst, char * fmt) {
     int y                    = !ctx->mirror.initialized ? 0 : ctx->mirror.current_region.y;
     int width                = !ctx->mirror.initialized ? 0 : ctx->mirror.current_region.width;
     int height               = !ctx->mirror.initialized ? 0 : ctx->mirror.current_region.height;
-    int target_width         = !ctx->mirror.initialized ? 0 : ctx->mirror.current_target == NULL ? 0 : ctx->mirror.current_target->width;
-    int target_height        = !ctx->mirror.initialized ? 0 : ctx->mirror.current_target == NULL ? 0 : ctx->mirror.current_target->height;
-    const char * target_name = !ctx->mirror.initialized ? "" : ctx->mirror.current_target == NULL ? "" : ctx->mirror.current_target->name;
+
+    uint32_t target_width = 0;
+    uint32_t target_height = 0;
+    const char * target_name = "";
+
+    if (ctx->mirror.initialized && ctx->mirror.current_target != NULL) {
+        // TODO: support for other target types
+        output_list_node_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
+        if (output_node != NULL) {
+            target_width = output_node->width;
+            target_height = output_node->height;
+            target_name = output_node->name;
+        }
+    }
 
     specifier_t replacements[] = {
         {"{x}", 'd', {.d = x}},
@@ -331,6 +347,7 @@ void wlm_mirror_cleanup(ctx_t * ctx) {
 
     wlm_log_debug(ctx, "mirror::cleanup(): destroying mirror objects\n");
 
+    if (ctx->mirror.current_target != NULL) wlm_mirror_target_destroy(ctx->mirror.current_target);
     if (ctx->mirror.backend != NULL) ctx->mirror.backend->do_cleanup(ctx);
     if (ctx->mirror.frame_callback != NULL) wl_callback_destroy(ctx->mirror.frame_callback);
 
