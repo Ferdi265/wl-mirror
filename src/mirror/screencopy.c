@@ -281,10 +281,18 @@ static void do_capture(ctx_t * ctx) {
         backend->frame_flags = 0;
         backend->state = STATE_WAIT_BUFFER;
 
+        // check if target is supported
+        output_list_node_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
+        if (output_node == NULL) {
+            wlm_log_error("mirror-screencopy::do_capture(): capture target not supported by this backend\n");
+            wlm_mirror_backend_fail(ctx);
+            return;
+        }
+
         // create screencopy_frame
         if (ctx->opt.has_region) {
             backend->screencopy_frame = zwlr_screencopy_manager_v1_capture_output_region(
-                ctx->wl.screencopy_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output,
+                ctx->wl.screencopy_manager, ctx->opt.show_cursor, output_node->output,
                 ctx->mirror.current_region.x,
                 ctx->mirror.current_region.y,
                 ctx->mirror.current_region.width,
@@ -292,7 +300,7 @@ static void do_capture(ctx_t * ctx) {
             );
         } else {
             backend->screencopy_frame = zwlr_screencopy_manager_v1_capture_output(
-                ctx->wl.screencopy_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output
+                ctx->wl.screencopy_manager, ctx->opt.show_cursor, output_node->output
             );
         }
         if (backend->screencopy_frame == NULL) {
