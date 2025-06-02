@@ -116,22 +116,22 @@ slurp-region() {
 }
 
 slurp-output-or-region() {
-    $SLURP -o -f '%o|%x,%y %wx%h' 2>/dev/null
+    $SLURP -o -f '%x,%y %wx%h %o' 2>/dev/null
 }
 
 mirror() {
     if [[ "$#" -eq 0 || "$1" =~ ^- ]]; then
         OUTPUT_REGION=$(ask-output-or-region)
-        IFS='|' read -r OUTPUT REGION <<< "$OUTPUT_REGION"
 
-        mirror "$OUTPUT" -r "$REGION" "$@"
-        return
+        ARGS=("-S" "-r" "$OUTPUT_REGION" "$@")
+    else
+        OUTPUT="$1"
+        shift
+
+        ARGS=("-S" "$@" "$OUTPUT")
     fi
 
-    OUTPUT="$1"
-    shift
-
-    $PIPECTL -n "$PRESENT_PIPE_NAME" -o | wl-mirror -S "$@" "$OUTPUT"
+    $PIPECTL -n "$PRESENT_PIPE_NAME" -o | wl-mirror "${ARGS[@]}"
 }
 
 mirror-cmd() {
