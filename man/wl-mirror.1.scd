@@ -158,6 +158,10 @@ Regions are specified in the format used by the *slurp*(1) utility:
 
 	'*x*,*y* *width*x*height* [*output*]'
 
+In *slurp*(1) syntax, this would be specified as follows (the last part with *%o* is optional):
+
+	'*%x*,*%y* *%w*x*%h* *%o*'
+
 When processing the region option, the region is translated into output coordinates, so when the output moves, the captured region moves with it.
 When a region is specified, the *output* positional argument is optional.
 
