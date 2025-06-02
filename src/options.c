@@ -185,7 +185,7 @@ bool wlm_opt_parse_region(region_t * region, char ** output, const char * region
 
     char * position = strtok(region_str, " ");
     char * size = strtok(NULL, " ");
-    char * output_label = strtok(NULL, " ");
+    char * output_label = strtok(NULL, "");
 
     if (position == NULL) {
         wlm_log_error("options::parse_region_option(): missing region position\n");
@@ -195,7 +195,7 @@ bool wlm_opt_parse_region(region_t * region, char ** output, const char * region
 
     char * x = strtok(position, ",");
     char * y = strtok(NULL, ",");
-    char * rest = strtok(NULL, ",");
+    char * rest = strtok(NULL, "");
 
     if (x == NULL) {
         wlm_log_error("options::parse_region_option(): missing x position\n");
@@ -206,7 +206,7 @@ bool wlm_opt_parse_region(region_t * region, char ** output, const char * region
         free(region_str);
         return false;
     } else if (rest != NULL) {
-        wlm_log_error("options::parse_region_option(): unexpected position component %s\n", rest);
+        wlm_log_error("options::parse_region_option(): unexpected position component '%s'\n", rest);
         free(region_str);
         return false;
     }
@@ -235,7 +235,7 @@ bool wlm_opt_parse_region(region_t * region, char ** output, const char * region
 
     char * width = strtok(size, "x");
     char * height = strtok(NULL, "x");
-    rest = strtok(NULL, "x");
+    rest = strtok(NULL, "");
     if (width == NULL) {
         wlm_log_error("options::parse_region_option(): missing width\n");
         free(region_str);
@@ -245,7 +245,7 @@ bool wlm_opt_parse_region(region_t * region, char ** output, const char * region
         free(region_str);
         return false;
     } else if (rest != NULL) {
-        wlm_log_error("options::parse_region_option(): unexpected size component %s\n", rest);
+        wlm_log_error("options::parse_region_option(): unexpected size component '%s'\n", rest);
         free(region_str);
         return false;
     }
