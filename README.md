@@ -111,7 +111,8 @@ The [`scripts/`](scripts/) folder contains examples on how `wl-mirror` can be us
 The following keybindings shortcuts can be used in your sway config.
 
 ```
-mode "present" {
+set $mode_present Present: (m) start mirror, (o) set-output, (r) set-region, (Shift-r) unset-region, (s) set-scaling, (f) toggle-freeze, (c) custom settings 
+mode "$mode_present" {
     # command starts mirroring
     bindsym m mode "default"; exec wl-present mirror
     # these commands modify an already running mirroring window
@@ -126,7 +127,7 @@ mode "present" {
     bindsym Return mode "default"
     bindsym Escape mode "default"
 }
-bindsym $mod+p mode "present"
+bindsym $mod+p mode "$mode_present"
 ```
 
 This requires `wl-mirror`, the `wl-present` script, `pipectl` (optional),
