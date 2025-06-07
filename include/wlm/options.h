@@ -28,6 +28,9 @@ typedef enum {
     BACKEND_EXTCOPY_AUTO,
     BACKEND_EXTCOPY_SHM,
     BACKEND_EXTCOPY_DMABUF,
+#ifdef WITH_XDG_PORTAL_BACKEND
+    BACKEND_XDG_PORTAL,
+#endif
 } backend_t;
 
 typedef struct ctx_opt {

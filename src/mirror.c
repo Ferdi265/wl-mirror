@@ -191,6 +191,12 @@ void wlm_mirror_backend_init(ctx_t * ctx) {
         case BACKEND_EXTCOPY_SHM:
             wlm_mirror_extcopy_shm_init(ctx);
             break;
+
+#ifdef WITH_XDG_PORTAL_BACKEND
+        case BACKEND_XDG_PORTAL:
+            wlm_mirror_xdg_portal_init(ctx);
+            break;
+#endif
     }
 
     if (ctx->mirror.backend == NULL) wlm_exit_fail(ctx);
