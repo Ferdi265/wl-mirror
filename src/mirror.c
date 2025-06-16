@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <wlm/context.h>
 #include <EGL/eglext.h>
-#include <wlm/mirror-backends.h>
+#include <wlm/mirror/backends.h>
 #include <wlm/util.h>
 #include <wlm/proto/linux-dmabuf-unstable-v1.h>
 

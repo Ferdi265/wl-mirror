@@ -1,4 +1,4 @@
-#include <wlm/mirror-extcopy.h>
+#include <wlm/mirror/extcopy.h>
 #include <wlm/context.h>
 #include <wlm/wayland/shm.h>
 #include <wlm/wayland/dmabuf.h>

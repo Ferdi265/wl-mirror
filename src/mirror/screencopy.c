@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <wlm/context.h>
-#include <wlm/mirror-screencopy.h>
+#include <wlm/mirror/screencopy.h>
 #include <wlm/egl/shm.h>
 #include <wlm/egl/dmabuf.h>
 #include <wlm/egl/formats.h>

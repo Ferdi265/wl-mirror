@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <wlm/context.h>
-#include <wlm/mirror-export-dmabuf.h>
+#include <wlm/mirror/export-dmabuf.h>
 #include <EGL/eglext.h>
 #include <wlm/proto/linux-dmabuf-unstable-v1.h>
 #include <wlm/egl/dmabuf.h>
