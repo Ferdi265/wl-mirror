@@ -282,7 +282,7 @@ static void do_capture(ctx_t * ctx) {
         backend->state = STATE_WAIT_BUFFER;
 
         // check if target is supported
-        output_list_node_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
+        wlm_wayland_output_entry_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
         if (output_node == NULL) {
             wlm_log_error("mirror-screencopy::do_capture(): capture target not supported by this backend\n");
             wlm_mirror_backend_fail(ctx);
@@ -382,7 +382,7 @@ static void wlm_mirror_screencopy_init(ctx_t * ctx, bool use_dmabuf) {
     backend->frame_flags = 0;
 
     // set backend object as current backend
-    ctx->mirror.backend = (mirror_backend_t *)backend;
+    ctx->mirror.backend = (wlm_mirror_backend_t *)backend;
 
     if (use_dmabuf) {
         backend->state = STATE_WAIT_DMABUF_DEVICE;

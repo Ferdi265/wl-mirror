@@ -288,9 +288,9 @@ bool wlm_opt_parse_region(region_t * region, char ** output, const char * region
     return true;
 }
 
-bool wlm_opt_find_output(ctx_t * ctx, output_list_node_t ** output_handle, region_t * region_handle) {
+bool wlm_opt_find_output(ctx_t * ctx, wlm_wayland_output_entry_t ** output_handle, region_t * region_handle) {
     char * output_name = ctx->opt.output;
-    output_list_node_t * local_output_handle = NULL;
+    wlm_wayland_output_entry_t * local_output_handle = NULL;
     region_t local_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
 
     if (ctx->opt.output != NULL) {
@@ -298,7 +298,7 @@ bool wlm_opt_find_output(ctx_t * ctx, output_list_node_t ** output_handle, regio
         wlm_wayland_find_output(ctx, ctx->opt.output, &local_output_handle);
     } else if (ctx->opt.has_region) {
         wlm_log_debug(ctx, "options::find_output(): searching for output by region\n");
-        output_list_node_t * cur = ctx->wl.outputs;
+        wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
         while (cur != NULL) {
             region_t output_region = {
                 .x = cur->x, .y = cur->y,
@@ -651,7 +651,7 @@ void wlm_opt_parse(ctx_t * ctx, int argc, char ** argv) {
         wlm_wayland_window_unset_fullscreen(ctx);
     }
 
-    output_list_node_t * target_output = NULL;
+    wlm_wayland_output_entry_t * target_output = NULL;
     region_t target_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
     if (!is_cli_args && wlm_opt_find_output(ctx, &target_output, &target_region)) {
         // TODO: only find and create target in a single place! (other place is mirror init)

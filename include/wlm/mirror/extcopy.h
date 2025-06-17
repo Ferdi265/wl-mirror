@@ -16,7 +16,7 @@ typedef enum {
 } extcopy_state_t;
 
 typedef struct {
-    mirror_backend_t header;
+    wlm_mirror_backend_t header;
     bool use_dmabuf;
 
     struct ext_image_copy_capture_session_v1 * capture_session;

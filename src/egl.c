@@ -306,7 +306,7 @@ bool wlm_egl_query_dmabuf_formats(ctx_t * ctx) {
         return false;
     }
 
-    dmabuf_format_t * dmabuf_formats = calloc(num_formats, sizeof *dmabuf_formats);
+    wlm_dmabuf_format_t * dmabuf_formats = calloc(num_formats, sizeof *dmabuf_formats);
     if (dmabuf_formats == NULL) {
         free(egl_drm_formats);
         wlm_log_error("egl::init(): failed to allocate dmabuf format array\n");
@@ -444,7 +444,7 @@ void wlm_egl_resize_viewport(ctx_t * ctx) {
         // wayland doesn't provide this information
         // TODO: figure out how to deal with this without hardcoding output targets
         double output_scale = 1;
-        output_list_node_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
+        wlm_wayland_output_entry_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
         if (output_node != NULL) {
             output_scale = (double)tex_width / output_node->width;
         }

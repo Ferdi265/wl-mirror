@@ -10,7 +10,7 @@ static void on_output_geometry(
     int32_t x, int32_t y, int32_t physical_width, int32_t physical_height,
     int32_t subpixel, const char * make, const char * model, int32_t transform
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update make only if changed
@@ -106,7 +106,7 @@ static void on_output_scale(
     void * data, struct wl_output * output,
     int32_t scale
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update scale only if changed
@@ -142,7 +142,7 @@ static void on_xdg_output_description(
     void * data, struct zxdg_output_v1 * xdg_output,
     const char * description
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update description only if changed
@@ -159,7 +159,7 @@ static void on_xdg_output_logical_position(
     void * data, struct zxdg_output_v1 * xdg_output,
     int32_t x, int32_t y
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update position only if changed
@@ -177,7 +177,7 @@ static void on_xdg_output_logical_size(
     void * data, struct zxdg_output_v1 * xdg_output,
     int32_t width, int32_t height
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update size only if changed
@@ -195,7 +195,7 @@ static void on_xdg_output_name(
     void * data, struct zxdg_output_v1 * xdg_output,
     const char * name
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update name only if changed
@@ -380,7 +380,7 @@ static void on_registry_add(
         ctx->wl.linux_dmabuf_id = id;
     } else if (strcmp(interface, wl_output_interface.name) == 0) {
         // allocate output node
-        output_list_node_t * node = malloc(sizeof (output_list_node_t));
+        wlm_wayland_output_entry_t * node = malloc(sizeof (wlm_wayland_output_entry_t));
         if (node == NULL) {
             wlm_log_error("wayland::on_registry_add(): failed to allocate output node\n");
             wlm_exit_fail(ctx);
@@ -439,7 +439,7 @@ static void on_registry_add(
         zxdg_output_v1_add_listener(node->xdg_output, &xdg_output_listener, (void *)node);
     } else if (strcmp(interface, wl_seat_interface.name) == 0) {
         // allocate seat node
-        seat_list_node_t * node = malloc(sizeof (seat_list_node_t));
+        wlm_wayland_seat_entry_t * node = malloc(sizeof (wlm_wayland_seat_entry_t));
         if (node == NULL) {
             wlm_log_error("wayland::on_registry_add(): failed to allocate seat node\n");
             wlm_exit_fail(ctx);
@@ -505,9 +505,9 @@ static void on_registry_remove(
         wlm_exit_fail(ctx);
     } else {
         {
-            output_list_node_t ** link = &ctx->wl.outputs;
-            output_list_node_t * cur = ctx->wl.outputs;
-            output_list_node_t * prev = NULL;
+            wlm_wayland_output_entry_t ** link = &ctx->wl.outputs;
+            wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
+            wlm_wayland_output_entry_t * prev = NULL;
             while (cur != NULL) {
                 if (id == cur->output_id) {
                     wlm_log_debug(ctx, "wayland::on_registry_remove(): output %s removed (id = %d)\n", cur->name, id);
@@ -542,9 +542,9 @@ static void on_registry_remove(
         // output not found
         // id must have been a seat
         {
-            seat_list_node_t ** link = &ctx->wl.seats;
-            seat_list_node_t * cur = ctx->wl.seats;
-            seat_list_node_t * prev = NULL;
+            wlm_wayland_seat_entry_t ** link = &ctx->wl.seats;
+            wlm_wayland_seat_entry_t * cur = ctx->wl.seats;
+            wlm_wayland_seat_entry_t * prev = NULL;
             while (cur != NULL) {
                 if (id == cur->seat_id) {
                     wlm_log_debug(ctx, "wayland::on_registry_remove(): seat removed (id = %d)\n", id);
@@ -598,8 +598,8 @@ static void on_surface_enter(
     ctx_t * ctx = (ctx_t *)data;
 
     // find output list node for the entered output
-    output_list_node_t * node = NULL;
-    output_list_node_t * cur = ctx->wl.outputs;
+    wlm_wayland_output_entry_t * node = NULL;
+    wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
     while (cur != NULL) {
         if (cur->output == output) {
             node = cur;
@@ -911,7 +911,7 @@ static const struct wp_fractional_scale_v1_listener fractional_scale_listener = 
 
 // --- find_output ---
 
-static bool match_output(output_list_node_t * node, const char * name) {
+static bool match_output(wlm_wayland_output_entry_t * node, const char * name) {
     // check if name is equal
     if (node->name != NULL && strcmp(node->name, name) == 0) {
         // matched output name (e.g. 'eDP-1')
@@ -991,9 +991,9 @@ static bool match_output(output_list_node_t * node, const char * name) {
     return true;
 }
 
-bool wlm_wayland_find_output(ctx_t * ctx, const char * output_name, output_list_node_t ** output) {
+bool wlm_wayland_find_output(ctx_t * ctx, const char * output_name, wlm_wayland_output_entry_t ** output) {
     bool found = false;
-    output_list_node_t * cur = ctx->wl.outputs;
+    wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
     while (cur != NULL) {
         if (match_output(cur, output_name)) {
             break;
@@ -1273,7 +1273,7 @@ void wlm_wayland_window_set_title(ctx_t * ctx, const char * title) {
 // --- set_window_fullscreen ---
 
 void wlm_wayland_window_set_fullscreen(ctx_t * ctx) {
-    output_list_node_t * output_node = NULL;
+    wlm_wayland_output_entry_t * output_node = NULL;
     if (ctx->opt.fullscreen_output == NULL) {
         output_node = ctx->wl.current_output;
     } else if (!wlm_wayland_find_output(ctx, ctx->opt.fullscreen_output, &output_node)) {
@@ -1331,8 +1331,8 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
 
     {
         // free every output in output list
-        output_list_node_t * cur = ctx->wl.outputs;
-        output_list_node_t * prev = NULL;
+        wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
+        wlm_wayland_output_entry_t * prev = NULL;
         while (cur != NULL) {
             prev = cur;
             cur = cur->next;
@@ -1351,8 +1351,8 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
 
     {
         // free every seat in seat list
-        seat_list_node_t * cur = ctx->wl.seats;
-        seat_list_node_t * prev = NULL;
+        wlm_wayland_seat_entry_t * cur = ctx->wl.seats;
+        wlm_wayland_seat_entry_t * prev = NULL;
         while (cur != NULL) {
             prev = cur;
             cur = cur->next;

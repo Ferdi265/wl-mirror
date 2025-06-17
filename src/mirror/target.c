@@ -17,7 +17,7 @@ static wlm_mirror_target_t * create_null_target(ctx_t * ctx) {
     return target;
 }
 
-static wlm_mirror_target_t * create_output_target(ctx_t * ctx, output_list_node_t * output_node) {
+static wlm_mirror_target_t * create_output_target(ctx_t * ctx, wlm_wayland_output_entry_t * output_node) {
     wlm_mirror_target_output_t * output_target = calloc(1, sizeof *output_target);
     output_target->header.type = WLM_MIRROR_TARGET_TYPE_OUTPUT;
     output_target->header.source = NULL;
@@ -80,13 +80,13 @@ wlm_mirror_target_t * wlm_mirror_target_parse(ctx_t * ctx, const char * target_s
 }
 
 // TODO: remove this
-wlm_mirror_target_t * wlm_mirror_target_create_output(ctx_t * ctx, output_list_node_t * output_node) {
+wlm_mirror_target_t * wlm_mirror_target_create_output(ctx_t * ctx, wlm_wayland_output_entry_t * output_node) {
     return create_output_target(ctx, output_node);
 }
 
 wlm_mirror_target_t * wlm_mirror_target_find_output(ctx_t * ctx, const char * name) {
     // try to match output by name
-    output_list_node_t * output_node = NULL;
+    wlm_wayland_output_entry_t * output_node = NULL;
     if (!wlm_wayland_find_output(ctx, name, &output_node)) {
         return NULL;
     }
@@ -129,7 +129,7 @@ wlm_mirror_target_t * wlm_mirror_target_find_toplevel(ctx_t * ctx, const char * 
     (void)create_toplevel_target;
 }
 
-output_list_node_t * wlm_mirror_target_get_output_node(wlm_mirror_target_t * target) {
+wlm_wayland_output_entry_t * wlm_mirror_target_get_output_node(wlm_mirror_target_t * target) {
     if (target == NULL) {
         return NULL;
     }

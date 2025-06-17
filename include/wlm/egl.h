@@ -12,7 +12,7 @@
 struct ctx;
 
 #define MAX_PLANES 4
-typedef struct dmabuf {
+typedef struct wlm_dmabuf {
     uint32_t width;
     uint32_t height;
     uint32_t drm_format;
@@ -22,18 +22,18 @@ typedef struct dmabuf {
     uint32_t * offsets;
     uint32_t * strides;
     uint64_t modifier;
-} dmabuf_t;
+} wlm_dmabuf_t;
 
 typedef struct {
     uint32_t drm_format;
     size_t num_modifiers;
     uint64_t * modifiers;
-} dmabuf_format_t;
+} wlm_dmabuf_format_t;
 
 typedef struct {
     size_t num_formats;
-    dmabuf_format_t * formats;
-} dmabuf_formats_t;
+    wlm_dmabuf_format_t * formats;
+} wlm_dmabuf_formats_t;
 
 typedef struct ctx_egl {
     EGLDisplay display;
@@ -48,7 +48,7 @@ typedef struct ctx_egl {
     PFNEGLQUERYDMABUFMODIFIERSEXTPROC eglQueryDmaBufModifiersEXT;
 
     // supported dmabuf formats
-    dmabuf_formats_t dmabuf_formats;
+    wlm_dmabuf_formats_t dmabuf_formats;
 
     // texture size
     uint32_t width;

@@ -23,8 +23,8 @@
 
 struct ctx;
 
-typedef struct output_list_node {
-    struct output_list_node * next;
+typedef struct wlm_wayland_output_entry {
+    struct wlm_wayland_output_entry * next;
     struct ctx * ctx;
     char * name;
     char * make;
@@ -39,14 +39,14 @@ typedef struct output_list_node {
     int32_t height;
     int32_t scale;
     enum wl_output_transform transform;
-} output_list_node_t;
+} wlm_wayland_output_entry_t;
 
-typedef struct seat_list_node {
-    struct seat_list_node * next;
+typedef struct wlm_wayland_seat_entry {
+    struct wlm_wayland_seat_entry * next;
     struct ctx * ctx;
     struct wl_seat * seat;
     uint32_t seat_id;
-} seat_list_node_t;
+} wlm_wayland_seat_entry_t;
 
 typedef struct ctx_wl {
     ctx_wl_shm_t shmbuf;
@@ -91,8 +91,8 @@ typedef struct ctx_wl {
     uint32_t toplevel_capture_source_manager_id;
 
     // output list
-    output_list_node_t * outputs;
-    seat_list_node_t * seats;
+    wlm_wayland_output_entry_t * outputs;
+    wlm_wayland_seat_entry_t * seats;
 
     // surface objects
     struct wl_surface * surface;
@@ -107,13 +107,13 @@ typedef struct ctx_wl {
 #endif
 
     // buffer size
-    output_list_node_t * current_output;
+    wlm_wayland_output_entry_t * current_output;
     uint32_t width;
     uint32_t height;
     double scale;
 
     // event handler
-    event_handler_t event_handler;
+    wlm_event_loop_handler_t event_handler;
 
     // state flags
     uint32_t last_surface_serial;
@@ -133,7 +133,7 @@ void wlm_wayland_window_set_title(struct ctx * ctx, const char * title);
 void wlm_wayland_window_set_fullscreen(struct ctx * ctx);
 void wlm_wayland_window_unset_fullscreen(struct ctx * ctx);
 void wlm_wayland_window_update_scale(struct ctx * ctx, double scale, bool is_fractional);
-bool wlm_wayland_find_output(ctx_t * ctx, const char * output_name, output_list_node_t ** output);
+bool wlm_wayland_find_output(ctx_t * ctx, const char * output_name, wlm_wayland_output_entry_t ** output);
 void wlm_wayland_cleanup(struct ctx * ctx);
 
 #endif

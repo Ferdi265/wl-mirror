@@ -11,10 +11,10 @@
 #include <wlm/mirror/target.h>
 
 struct ctx;
-struct output_list_node;
+struct wlm_wayland_output_entry;
 
-typedef struct fallback_backend fallback_backend_t;
-struct fallback_backend {
+typedef struct wlm_fallback_backend wlm_fallback_backend_t;
+struct wlm_fallback_backend {
     char * name;
     void (*init)(struct ctx * ctx);
 };
@@ -26,8 +26,8 @@ typedef struct ctx_mirror {
     bool invert_y;
 
     // backend data
-    mirror_backend_t * backend;
-    fallback_backend_t * fallback_backends;
+    wlm_mirror_backend_t * backend;
+    wlm_fallback_backend_t * fallback_backends;
     size_t auto_backend_index;
 
     // state flags
@@ -37,7 +37,7 @@ typedef struct ctx_mirror {
 void wlm_mirror_init(struct ctx * ctx);
 void wlm_mirror_backend_init(struct ctx * ctx);
 
-void wlm_mirror_output_removed(struct ctx * ctx, struct output_list_node * node);
+void wlm_mirror_output_removed(struct ctx * ctx, struct wlm_wayland_output_entry * node);
 void wlm_mirror_update_title(struct ctx * ctx);
 void wlm_mirror_options_updated(struct ctx * ctx);
 

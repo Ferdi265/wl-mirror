@@ -15,7 +15,7 @@ typedef enum {
 } dmabuf_state_t;
 
 typedef struct {
-    mirror_backend_t header;
+    wlm_mirror_backend_t header;
 
     // dmabuf frame object
     struct zwlr_export_dmabuf_frame_v1 * dmabuf_frame;
@@ -25,7 +25,7 @@ typedef struct {
     uint32_t y;
     uint32_t buffer_flags;
     uint32_t frame_flags;
-    dmabuf_t dmabuf;
+    wlm_dmabuf_t dmabuf;
 
     // dmabuf state flags
     dmabuf_state_t state;
