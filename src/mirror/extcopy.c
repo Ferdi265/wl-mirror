@@ -284,7 +284,7 @@ static void on_capture_frame_ready(void * data, struct ext_image_copy_capture_fr
             return;
         }
 
-        dmabuf_t * dmabuf = wlm_wayland_dmabuf_get_raw_buffer(ctx);
+        wlm_dmabuf_t * dmabuf = wlm_wayland_dmabuf_get_raw_buffer(ctx);
         if (dmabuf == NULL) {
             wlm_log_error("mirror-extcopy::on_capture_frame_ready(): DMA-BUF disappeared\n");
             backend_cancel(ctx, backend);
@@ -457,7 +457,7 @@ static void wlm_mirror_extcopy_init(ctx_t * ctx, bool use_dmabuf) {
     backend->state = STATE_INIT;
 
     // set backend object as current backend
-    ctx->mirror.backend = (mirror_backend_t *)backend;
+    ctx->mirror.backend = (wlm_mirror_backend_t *)backend;
 
     if (!use_dmabuf) {
         // create shm pool

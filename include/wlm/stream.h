@@ -30,7 +30,7 @@ typedef struct ctx_stream {
     size_t args_len;
     size_t args_cap;
 
-    event_handler_t event_handler;
+    wlm_event_loop_handler_t event_handler;
     bool initialized;
 } ctx_stream_t;
 

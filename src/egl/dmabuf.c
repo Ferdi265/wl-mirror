@@ -44,7 +44,7 @@ static const EGLAttrib modifier_high_attribs[] = {
 };
 _Static_assert(ARRAY_LENGTH(modifier_high_attribs) == MAX_PLANES, "modifier_high_attribs has incorrect length");
 
-bool wlm_egl_dmabuf_import(ctx_t * ctx, dmabuf_t * dmabuf, const wlm_egl_format_t * format, bool invert_y, bool region_aware) {
+bool wlm_egl_dmabuf_import(ctx_t * ctx, wlm_dmabuf_t * dmabuf, const wlm_egl_format_t * format, bool invert_y, bool region_aware) {
     if (dmabuf->planes > MAX_PLANES) {
         wlm_log_error("egl::dmabuf::import(): too many planes, got %zd, can support at most %d\n", dmabuf->planes, MAX_PLANES);
         return false;

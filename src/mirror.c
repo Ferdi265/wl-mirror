@@ -60,7 +60,7 @@ static const struct wl_callback_listener frame_callback_listener = {
 
 // --- init_mirror ---
 
-static fallback_backend_t auto_fallback_backends[];
+static wlm_fallback_backend_t auto_fallback_backends[];
 void wlm_mirror_init(ctx_t * ctx) {
     // initialize context structure
     ctx->mirror.current_target = NULL;
@@ -77,7 +77,7 @@ void wlm_mirror_init(ctx_t * ctx) {
     // TODO: make wlm_mirror_target_parse implement finding output (or toplevel?) by region
     // TODO: only find and create target in a single place! (other place is opt parse)
     // finding target output
-    output_list_node_t * target_output = NULL;
+    wlm_wayland_output_entry_t * target_output = NULL;
     if (!wlm_opt_find_output(ctx, &target_output, &ctx->mirror.current_region)) {
         wlm_log_error("mirror::init(): failed to find output\n");
         wlm_exit_fail(ctx);
@@ -94,7 +94,7 @@ void wlm_mirror_init(ctx_t * ctx) {
 
 // --- auto backend handler
 
-static fallback_backend_t auto_fallback_backends[] = {
+static wlm_fallback_backend_t auto_fallback_backends[] = {
 #ifdef WITH_GBM
     { "extcopy-dmabuf", wlm_mirror_extcopy_dmabuf_init },
     { "screencopy-dmabuf", wlm_mirror_screencopy_dmabuf_init },
@@ -105,7 +105,7 @@ static fallback_backend_t auto_fallback_backends[] = {
     { NULL, NULL }
 };
 
-static fallback_backend_t auto_screencopy_backends[] = {
+static wlm_fallback_backend_t auto_screencopy_backends[] = {
 #ifdef WITH_GBM
     { "screencopy-dmabuf", wlm_mirror_screencopy_dmabuf_init },
 #endif
@@ -113,7 +113,7 @@ static fallback_backend_t auto_screencopy_backends[] = {
     { NULL, NULL }
 };
 
-static fallback_backend_t auto_extcopy_backends[] = {
+static wlm_fallback_backend_t auto_extcopy_backends[] = {
 #ifdef WITH_GBM
     { "extcopy-dmabuf", wlm_mirror_extcopy_dmabuf_init },
 #endif
@@ -125,7 +125,7 @@ static void auto_backend_fallback(ctx_t * ctx) {
     while (true) {
         // get next backend
         size_t index = ctx->mirror.auto_backend_index;
-        fallback_backend_t * next_backend = &ctx->mirror.fallback_backends[index];
+        wlm_fallback_backend_t * next_backend = &ctx->mirror.fallback_backends[index];
         if (next_backend->name == NULL) {
             wlm_log_error("mirror::auto_backend_fallback(): no working backend found, exiting\n");
             wlm_exit_fail(ctx);
@@ -202,7 +202,7 @@ void wlm_mirror_backend_init(ctx_t * ctx) {
 
 // --- output_removed / output_added ---
 
-void wlm_mirror_output_removed(ctx_t * ctx, output_list_node_t * node) {
+void wlm_mirror_output_removed(ctx_t * ctx, wlm_wayland_output_entry_t * node) {
     if (!ctx->mirror.initialized) return;
     if (ctx->mirror.current_target == NULL) return;
     if (wlm_mirror_target_get_output_node(ctx->mirror.current_target) != node) return;
@@ -216,11 +216,11 @@ void wlm_mirror_output_removed(ctx_t * ctx, output_list_node_t * node) {
     wlm_mirror_update_title(ctx);
 }
 
-void wlm_mirror_output_added(ctx_t * ctx, output_list_node_t * node) {
+void wlm_mirror_output_added(ctx_t * ctx, wlm_wayland_output_entry_t * node) {
     if (!ctx->mirror.initialized) return;
     if (ctx->mirror.current_target != NULL) return;
 
-    output_list_node_t * target = NULL;
+    wlm_wayland_output_entry_t * target = NULL;
     region_t region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
     if (!wlm_opt_find_output(ctx, &target, &region)) {
         wlm_log_warn("mirror::output_added(): target output not yet found, continuing to wait for reconnect\n");
@@ -231,7 +231,7 @@ void wlm_mirror_output_added(ctx_t * ctx, output_list_node_t * node) {
     if (target != node) return;
 
     wlm_log_debug(ctx, "mirror::output_added(): target output reconnected, restarting capture\n");
-    ctx->mirror.current_target = target;
+    ctx->mirror.current_target = wlm_mirror_target_create_output(ctx, target);
     ctx->mirror.current_region = region;
     wlm_mirror_backend_init(ctx);
     wlm_mirror_update_title(ctx);
@@ -271,7 +271,7 @@ static int format_title(ctx_t * ctx, char ** dst, char * fmt) {
 
     if (ctx->mirror.initialized && ctx->mirror.current_target != NULL) {
         // TODO: support for other target types
-        output_list_node_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
+        wlm_wayland_output_entry_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
         if (output_node != NULL) {
             target_width = output_node->width;
             target_height = output_node->height;

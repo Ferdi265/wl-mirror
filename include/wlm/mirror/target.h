@@ -20,7 +20,7 @@ typedef struct {
 
 typedef struct {
     wlm_mirror_target_t header;
-    output_list_node_t * output;
+    wlm_wayland_output_entry_t * output;
 } wlm_mirror_target_output_t;
 
 typedef struct {
@@ -33,9 +33,9 @@ wlm_mirror_target_t * wlm_mirror_target_find_output(ctx_t * ctx, const char * na
 wlm_mirror_target_t * wlm_mirror_target_find_toplevel(ctx_t * ctx, const char * identifier);
 
 // TODO: remove this
-wlm_mirror_target_t * wlm_mirror_target_create_output(ctx_t * ctx, output_list_node_t * output_node);
+wlm_mirror_target_t * wlm_mirror_target_create_output(ctx_t * ctx, wlm_wayland_output_entry_t * output_node);
 
-output_list_node_t * wlm_mirror_target_get_output_node(wlm_mirror_target_t * target);
+wlm_wayland_output_entry_t * wlm_mirror_target_get_output_node(wlm_mirror_target_t * target);
 struct ext_image_capture_source_v1 * wlm_mirror_target_get_capture_source(wlm_mirror_target_t * target);
 enum wl_output_transform wlm_mirror_target_get_transform(wlm_mirror_target_t * target);
 
