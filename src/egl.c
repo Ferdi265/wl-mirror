@@ -77,7 +77,7 @@ void wlm_egl_init(ctx_t * ctx) {
     ctx->egl.initialized = true;
 
     // create egl display
-    ctx->egl.display = eglGetDisplay((EGLNativeDisplayType)ctx->wl.display);
+    ctx->egl.display = eglGetDisplay((EGLNativeDisplayType)wlm_wayland_core_get_display(ctx));
     if (ctx->egl.display == EGL_NO_DISPLAY) {
         wlm_log_error("egl::init(): failed to create EGL display\n");
         wlm_exit_fail(ctx);

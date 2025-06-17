@@ -676,27 +676,6 @@ static void on_surface_configure_finished(ctx_t * ctx) {
 }
 
 #ifdef WITH_LIBDECOR
-// --- libdecor event handlers ---
-
-// HACK: needed because on_libdecor_error does not have a userdata parameter
-static ctx_t * libdecor_error_context = NULL;
-
-static void on_libdecor_error(
-    struct libdecor * libdecor_context,
-    enum libdecor_error error, const char * message
-) {
-    ctx_t * ctx = libdecor_error_context;
-
-    wlm_log_error("wayland::on_libdecor_error(): error %d, %s\n", error, message);
-    wlm_exit_fail(ctx);
-
-    (void)libdecor_context;
-}
-
-static struct libdecor_interface libdecor_listener = {
-    .error = on_libdecor_error,
-};
-
 // --- libdecor_frame event handlers ---
 
 static void on_libdecor_frame_configure(
@@ -770,7 +749,7 @@ static void on_libdecor_frame_close(
     ctx_t * ctx = (ctx_t *)data;
 
     wlm_log_debug(ctx, "wayland::on_libdecor_frame_close(): close request received\n");
-    ctx->wl.closing = true;
+    wlm_wayland_core_request_close(ctx);
 
     (void)frame;
 }
@@ -861,7 +840,7 @@ static void on_xdg_toplevel_close(
     ctx_t * ctx = (ctx_t *)data;
 
     wlm_log_debug(ctx, "wayland::on_xdg_toplevel_close(): close request received\n");
-    ctx->wl.closing = true;
+    wlm_wayland_core_request_close(ctx);
 
     (void)xdg_toplevel;
 }
@@ -871,26 +850,6 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener = {
     .close = on_xdg_toplevel_close
 };
 #endif
-
-// --- wayland event loop handlers ---
-
-static void on_wayland_event(ctx_t * ctx, uint32_t events) {
-    (void)events;
-
-    if (wl_display_dispatch(ctx->wl.display) == -1) {
-        ctx->wl.closing = true;
-    }
-
-#ifdef WITH_LIBDECOR
-    if (libdecor_dispatch(ctx->wl.libdecor_context, 0) < 0) {
-        ctx->wl.closing = true;
-    }
-#endif
-}
-
-static void on_wayland_each(ctx_t * ctx) {
-    wl_display_flush(ctx->wl.display);
-}
 
 // --- fractional scale event handlers ---
 
@@ -1014,7 +973,6 @@ bool wlm_wayland_find_output(ctx_t * ctx, const char * output_name, wlm_wayland_
 
 void wlm_wayland_init(ctx_t * ctx) {
     // initialize context structure
-    ctx->wl.display = NULL;
     ctx->wl.registry = NULL;
 
     ctx->wl.compositor = NULL;
@@ -1064,38 +1022,22 @@ void wlm_wayland_init(ctx_t * ctx) {
     ctx->wl.height = 0;
     ctx->wl.scale = 1.0;
 
-    ctx->wl.event_handler.next = NULL;
-    ctx->wl.event_handler.fd = -1;
-    ctx->wl.event_handler.events = EPOLLIN;
-    ctx->wl.event_handler.timeout_ms = -1;
-    ctx->wl.event_handler.on_event = on_wayland_event;
-    ctx->wl.event_handler.on_each = on_wayland_each;
-
     ctx->wl.last_surface_serial = 0;
 #ifndef WITH_LIBDECOR
     ctx->wl.xdg_surface_configured = false;
     ctx->wl.xdg_toplevel_configured = false;
 #endif
     ctx->wl.configured = false;
-    ctx->wl.closing = false;
     ctx->wl.initialized = true;
+
+    wlm_wayland_core_zero(ctx);
+    wlm_wayland_core_init(ctx);
 
     wlm_wayland_shm_init(ctx);
     wlm_wayland_dmabuf_init(ctx);
 
-    // connect to display
-    ctx->wl.display = wl_display_connect(NULL);
-    if (ctx->wl.display == NULL) {
-        wlm_log_error("wayland::init(): failed to connect to wayland\n");
-        wlm_exit_fail(ctx);
-    }
-
-    // register event loop
-    ctx->wl.event_handler.fd = wl_display_get_fd(ctx->wl.display);
-    wlm_event_add_fd(ctx, &ctx->wl.event_handler);
-
     // get registry handle
-    ctx->wl.registry = wl_display_get_registry(ctx->wl.display);
+    ctx->wl.registry = wl_display_get_registry(wlm_wayland_core_get_display(ctx));
     if (ctx->wl.registry == NULL) {
         wlm_log_error("wayland::init(): failed to get registry handle\n");
         wlm_exit_fail(ctx);
@@ -1109,7 +1051,7 @@ void wlm_wayland_init(ctx_t * ctx) {
     // wait for registry events
     // - expecting add global events for all required protocols
     // - expecting add global events for all outputs
-    wl_display_roundtrip(ctx->wl.display);
+    wl_display_roundtrip(wlm_wayland_core_get_display(ctx));
 
     // check for missing required protocols
     if (ctx->wl.compositor == NULL) {
@@ -1166,16 +1108,11 @@ void wlm_wayland_configure_window(struct ctx * ctx) {
     }
 
 #if WITH_LIBDECOR
-    // create libdecor context
-    // - for error event
-    libdecor_error_context = ctx;
-    ctx->wl.libdecor_context = libdecor_new(ctx->wl.display, &libdecor_listener);
-
     // create libdecor frame
     // - for configure event
     // - for commit event
     // - for close event
-    ctx->wl.libdecor_frame = libdecor_decorate(ctx->wl.libdecor_context, ctx->wl.surface, &libdecor_frame_listener, ctx);
+    ctx->wl.libdecor_frame = libdecor_decorate(wlm_wayland_core_get_libdecor_context(ctx), ctx->wl.surface, &libdecor_frame_listener, ctx);
 
     // set libdecor app properties
     libdecor_frame_set_app_id(ctx->wl.libdecor_frame, "at.yrlf.wl_mirror");
@@ -1187,7 +1124,7 @@ void wlm_wayland_configure_window(struct ctx * ctx) {
 
     // wait for events
     // - expecting libdecor frame configure event
-    wl_display_roundtrip(ctx->wl.display);
+    wl_display_roundtrip(wlm_wayland_core_get_display(ctx));
 #else
     // create xdg surface
     ctx->wl.xdg_surface = xdg_wm_base_get_xdg_surface(ctx->wl.wm_base, ctx->wl.surface);
@@ -1222,7 +1159,7 @@ void wlm_wayland_configure_window(struct ctx * ctx) {
     // wait for events
     // - expecting surface configure event
     // - expecting xdg toplevel configure event
-    wl_display_roundtrip(ctx->wl.display);
+    wl_display_roundtrip(wlm_wayland_core_get_display(ctx));
 #endif
 
     // wait until surface is configured
@@ -1252,12 +1189,6 @@ void wlm_wayland_configure_window(struct ctx * ctx) {
         wlm_log_debug(ctx, "wayland::configure_window(): fullscreening on target output\n");
         wlm_wayland_window_set_fullscreen(ctx);
     }
-}
-
-// --- close_window ---
-
-void wlm_wayland_window_close(struct ctx * ctx) {
-    ctx->wl.closing = true;
 }
 
 // --- set_window_title ---
@@ -1326,9 +1257,6 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
     wlm_wayland_shm_cleanup(ctx);
     wlm_wayland_dmabuf_cleanup(ctx);
 
-    // deregister event handler
-    wlm_event_remove_fd(ctx, &ctx->wl.event_handler);
-
     {
         // free every output in output list
         wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
@@ -1387,7 +1315,8 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
     if (ctx->wl.viewporter != NULL) wp_viewporter_destroy(ctx->wl.viewporter);
     if (ctx->wl.compositor != NULL) wl_compositor_destroy(ctx->wl.compositor);
     if (ctx->wl.registry != NULL) wl_registry_destroy(ctx->wl.registry);
-    if (ctx->wl.display != NULL) wl_display_disconnect(ctx->wl.display);
+
+    wlm_wayland_core_cleanup(ctx);
 
     ctx->wl.initialized = false;
 }

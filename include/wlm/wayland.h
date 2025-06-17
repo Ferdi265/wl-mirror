@@ -16,6 +16,7 @@
 #include <wlm/proto/linux-dmabuf-unstable-v1.h>
 #include <wlm/wayland/shm.h>
 #include <wlm/wayland/dmabuf.h>
+#include <wlm/wayland/core.h>
 
 #ifdef WITH_LIBDECOR
 #include <libdecor.h>
@@ -49,10 +50,11 @@ typedef struct wlm_wayland_seat_entry {
 } wlm_wayland_seat_entry_t;
 
 typedef struct ctx_wl {
+    ctx_wl_core_t core;
+
     ctx_wl_shm_t shmbuf;
     ctx_wl_dmabuf_t dmabuf;
 
-    struct wl_display * display;
     struct wl_registry * registry;
 
     // registry objects
@@ -112,9 +114,6 @@ typedef struct ctx_wl {
     uint32_t height;
     double scale;
 
-    // event handler
-    wlm_event_loop_handler_t event_handler;
-
     // state flags
     uint32_t last_surface_serial;
 #ifndef WITH_LIBDECOR
@@ -122,13 +121,11 @@ typedef struct ctx_wl {
     bool xdg_toplevel_configured;
 #endif
     bool configured;
-    bool closing;
     bool initialized;
 } ctx_wl_t;
 
 void wlm_wayland_init(struct ctx * ctx);
 void wlm_wayland_configure_window(struct ctx * ctx);
-void wlm_wayland_window_close(struct ctx * ctx);
 void wlm_wayland_window_set_title(struct ctx * ctx, const char * title);
 void wlm_wayland_window_set_fullscreen(struct ctx * ctx);
 void wlm_wayland_window_unset_fullscreen(struct ctx * ctx);
