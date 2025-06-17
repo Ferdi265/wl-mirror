@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <wlm/context.h>
 #include <wlm/event.h>
+#include <wlm/event/emit.h>
 
 static void add_handler(ctx_t * ctx, wlm_event_loop_handler_t * handler) {
     handler->next = ctx->event.handlers;
@@ -93,7 +94,7 @@ void wlm_event_loop(ctx_t * ctx) {
     timeout_handler = min_timeout(ctx);
     timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;
 
-    while ((num_events = epoll_wait(ctx->event.pollfd, events, MAX_EVENTS, timeout_ms)) != -1 && !ctx->wl.closing) {
+    while ((num_events = epoll_wait(ctx->event.pollfd, events, MAX_EVENTS, timeout_ms)) != -1 && !wlm_wayland_core_is_closing(ctx)) {
         for (int i = 0; i < num_events; i++) {
             wlm_event_loop_handler_t * handler = (wlm_event_loop_handler_t *)events[i].data.ptr;
             handler->on_event(ctx, events[i].events);
@@ -102,6 +103,8 @@ void wlm_event_loop(ctx_t * ctx) {
         if (num_events == 0 && timeout_handler != NULL) {
             timeout_handler->on_event(ctx, 0);
         }
+
+        wlm_event_emit_before_poll(ctx);
 
         timeout_handler = min_timeout(ctx);
         timeout_ms = timeout_handler == NULL ? -1 : timeout_handler->timeout_ms;

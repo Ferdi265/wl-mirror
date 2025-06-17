@@ -23,7 +23,7 @@ static void on_frame(
     ctx->mirror.frame_callback = NULL;
 
     // don't attempt to render if window is already closing
-    if (ctx->wl.closing) {
+    if (wlm_wayland_core_is_closing(ctx)) {
         return;
     }
 
@@ -46,7 +46,7 @@ static void on_frame(
 
     // wait for events
     // - screencapture events from backend
-    wl_display_roundtrip(ctx->wl.display);
+    wl_display_roundtrip(wlm_wayland_core_get_display(ctx));
 
     wlm_egl_draw_frame(ctx);
 
