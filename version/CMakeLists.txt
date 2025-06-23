@@ -1,5 +1,5 @@
 add_library(version INTERFACE)
-target_include_directories(version INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include/")
+target_include_directories(version INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include")
 
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/wlm")
 set(version-header "${CMAKE_CURRENT_BINARY_DIR}/include/wlm/version.h")

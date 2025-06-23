@@ -1,5 +1,5 @@
 add_library(shaders STATIC)
-target_include_directories(shaders PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/include/")
+target_include_directories(shaders PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/include")
 file(GLOB shaders CONFIGURE_DEPENDS "*.glsl")
 foreach(shader ${shaders})
     get_filename_component(shader-base "${shader}" NAME_WE)

@@ -13,8 +13,8 @@ set(FORCE_WAYLAND_SCANNER_PATH "" CACHE STRING "provide a custom path for waylan
 # wayland protocols needed by wl-mirror
 option(FORCE_SYSTEM_WL_PROTOCOLS "force use of system wayland-protocols" OFF)
 option(FORCE_SYSTEM_WLR_PROTOCOLS "force use of system wlr-protocols" OFF)
-set(WL_PROTOCOL_DIR "/usr/share/wayland-protocols/" CACHE STRING "wayland-protocols directory")
-set(WLR_PROTOCOL_DIR "/usr/share/wlr-protocols/" CACHE STRING "wlr-protocols directory")
+set(WL_PROTOCOL_DIR "/usr/share/wayland-protocols" CACHE STRING "wayland-protocols directory")
+set(WLR_PROTOCOL_DIR "/usr/share/wlr-protocols" CACHE STRING "wlr-protocols directory")
 set(PROTOCOLS
     "stable/xdg-shell/xdg-shell.xml"
     "stable/viewporter/viewporter.xml"

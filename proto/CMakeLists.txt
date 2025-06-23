@@ -2,7 +2,7 @@
 set(wl-protocols-found FALSE)
 if(NOT ${FORCE_SYSTEM_WL_PROTOCOLS} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/wayland-protocols/.git")
     message(STATUS "using wayland-protocols from submodule")
-    set(WL_PROTOCOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wayland-protocols/")
+    set(WL_PROTOCOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wayland-protocols")
     set(wl-protocols-found TRUE)
 endif()
 
@@ -19,7 +19,7 @@ endif()
 set(wlr-protocols-found FALSE)
 if(NOT ${FORCE_SYSTEM_WLR_PROTOCOLS} AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/wlr-protocols/.git")
     message(STATUS "using wlr-protocols from submodule")
-    set(WLR_PROTOCOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wlr-protocols/")
+    set(WLR_PROTOCOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wlr-protocols")
     set(wlr-protocols-found TRUE)
 endif()
 
@@ -39,7 +39,7 @@ endif()
 # wayland protocol wrapper generation with wayland-scanner
 set(protocols-found TRUE)
 add_library(protocols STATIC)
-target_include_directories(protocols INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include/")
+target_include_directories(protocols INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/include")
 target_link_libraries(protocols PRIVATE proto_deps)
 foreach(proto ${PROTOCOLS})
     get_filename_component(proto-base "${proto}" NAME_WE)
@@ -61,8 +61,8 @@ foreach(proto ${PROTOCOLS})
     set(proto-header "${CMAKE_CURRENT_BINARY_DIR}/include/wlm/proto/${proto-base}.h")
     set(proto-source "${CMAKE_CURRENT_BINARY_DIR}/src/${proto-base}.c")
 
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/")
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src/")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/src")
     add_custom_command(
         OUTPUT "${proto-header}"
         MAIN_DEPENDENCY "${proto-file}"
