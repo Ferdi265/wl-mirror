@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <sys/epoll.h>
+#include <wlm/event/emit.h>
 
 struct ctx;
 

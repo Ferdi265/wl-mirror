@@ -24,8 +24,8 @@ static wlm_mirror_target_t * create_output_target(ctx_t * ctx, wlm_wayland_outpu
     output_target->header.transform = output_node->transform;
     output_target->output = output_node;
 
-    if (ctx->wl.output_capture_source_manager != NULL) {
-        output_target->header.source = ext_output_image_capture_source_manager_v1_create_source(ctx->wl.output_capture_source_manager, output_node->output);
+    if (ctx->wl.protocols.output_capture_source_manager != NULL) {
+        output_target->header.source = ext_output_image_capture_source_manager_v1_create_source(ctx->wl.protocols.output_capture_source_manager, output_node->output);
     }
 
     return (wlm_mirror_target_t *)output_target;
@@ -38,8 +38,8 @@ static wlm_mirror_target_t * create_toplevel_target(ctx_t * ctx, struct ext_fore
     toplevel_target->header.transform = WL_OUTPUT_TRANSFORM_NORMAL;
     toplevel_target->toplevel = toplevel;
 
-    if (ctx->wl.toplevel_capture_source_manager != NULL) {
-        toplevel_target->header.source = ext_foreign_toplevel_image_capture_source_manager_v1_create_source(ctx->wl.toplevel_capture_source_manager, toplevel);
+    if (ctx->wl.protocols.toplevel_capture_source_manager != NULL) {
+        toplevel_target->header.source = ext_foreign_toplevel_image_capture_source_manager_v1_create_source(ctx->wl.protocols.toplevel_capture_source_manager, toplevel);
     }
 
     return (wlm_mirror_target_t *)toplevel_target;

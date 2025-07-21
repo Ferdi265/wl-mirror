@@ -7,4 +7,6 @@
 #define wlm_log_warn(fmt, ...) fprintf(stderr, "warning: " fmt, ##__VA_ARGS__)
 #define wlm_log_error(fmt, ...) fprintf(stderr, "error: " fmt, ##__VA_ARGS__)
 
+#define wlm_assert(expr, fmt, ...) if (!(expr)) wlm_log_error(fmt, ##__VA_ARGS__)
+
 #endif

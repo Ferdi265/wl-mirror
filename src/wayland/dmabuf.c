@@ -147,13 +147,13 @@ void wlm_wayland_dmabuf_open_main_device(ctx_t * ctx, wlm_wayland_dmabuf_callbac
         ctx->wl.dmabuf.feedback = NULL;
     }
 
-    if (ctx->wl.linux_dmabuf == NULL) {
+    if (ctx->wl.protocols.linux_dmabuf == NULL) {
         wlm_log_error("wayland::shm::create_pool(): missing linux_dmabuf protocol\n");
         cb(ctx, false);
     }
 
     ctx->wl.dmabuf.open_device_callback = cb;
-    ctx->wl.dmabuf.feedback = zwp_linux_dmabuf_v1_get_default_feedback(ctx->wl.linux_dmabuf);
+    ctx->wl.dmabuf.feedback = zwp_linux_dmabuf_v1_get_default_feedback(ctx->wl.protocols.linux_dmabuf);
     zwp_linux_dmabuf_feedback_v1_add_listener(ctx->wl.dmabuf.feedback, &linux_dmabuf_feedback_listener, (void *)ctx);
 #else
     wlm_log_error("wayland::dmabuf::open_device(): need libGBM for dmabuf allocation\n");
@@ -291,7 +291,7 @@ void wlm_wayland_dmabuf_alloc(ctx_t * ctx, uint32_t drm_format, uint32_t width, 
 
     // create dmabuf wl_buffer
     ctx->wl.dmabuf.alloc_callback = cb;
-    ctx->wl.dmabuf.buffer_params = zwp_linux_dmabuf_v1_create_params(ctx->wl.linux_dmabuf);
+    ctx->wl.dmabuf.buffer_params = zwp_linux_dmabuf_v1_create_params(ctx->wl.protocols.linux_dmabuf);
     zwp_linux_buffer_params_v1_add_listener(ctx->wl.dmabuf.buffer_params, &linux_buffer_params_listener, (void *)ctx);
 
     for (size_t i = 0; i < num_planes; i++) {
