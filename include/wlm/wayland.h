@@ -17,6 +17,10 @@
 #include <wlm/wayland/shm.h>
 #include <wlm/wayland/dmabuf.h>
 #include <wlm/wayland/core.h>
+#include <wlm/wayland/registry.h>
+#include <wlm/wayland/protocols.h>
+#include <wlm/wayland/output.h>
+#include <wlm/wayland/seat.h>
 
 #ifdef WITH_LIBDECOR
 #include <libdecor.h>
@@ -51,50 +55,13 @@ typedef struct wlm_wayland_seat_entry {
 
 typedef struct ctx_wl {
     ctx_wl_core_t core;
+    ctx_wl_registry_t registry;
+    ctx_wl_protocols_t protocols;
+    ctx_wl_output_t output;
+    ctx_wl_seat_t seat;
 
     ctx_wl_shm_t shmbuf;
     ctx_wl_dmabuf_t dmabuf;
-
-    struct wl_registry * registry;
-
-    // registry objects
-    struct wl_compositor * compositor;
-    struct wp_viewporter * viewporter;
-    struct wp_fractional_scale_manager_v1 * fractional_scale_manager;
-    struct xdg_wm_base * wm_base;
-    struct zxdg_output_manager_v1 * output_manager;
-    // registry ids
-    uint32_t compositor_id;
-    uint32_t viewporter_id;
-    uint32_t fractional_scale_manager_id;
-    uint32_t wm_base_id;
-    uint32_t output_manager_id;
-
-    // shm and dmabuf objects
-    struct wl_shm * shm;
-    uint32_t shm_id;
-    struct zwp_linux_dmabuf_v1 * linux_dmabuf;
-    uint32_t linux_dmabuf_id;
-
-    // dmabuf backend objects
-    struct zwlr_export_dmabuf_manager_v1 * dmabuf_manager;
-    uint32_t dmabuf_manager_id;
-
-    // screencopy backend objects
-    struct zwlr_screencopy_manager_v1 * screencopy_manager;
-    uint32_t screencopy_manager_id;
-
-    // extcopy backend objects
-    struct ext_image_copy_capture_manager_v1 * copy_capture_manager;
-    struct ext_output_image_capture_source_manager_v1 * output_capture_source_manager;
-    struct ext_foreign_toplevel_image_capture_source_manager_v1 * toplevel_capture_source_manager;
-    uint32_t copy_capture_manager_id;
-    uint32_t output_capture_source_manager_id;
-    uint32_t toplevel_capture_source_manager_id;
-
-    // output list
-    wlm_wayland_output_entry_t * outputs;
-    wlm_wayland_seat_entry_t * seats;
 
     // surface objects
     struct wl_surface * surface;

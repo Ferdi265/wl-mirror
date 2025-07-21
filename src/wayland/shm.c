@@ -40,7 +40,7 @@ bool wlm_wayland_shm_create_pool(ctx_t * ctx) {
     // check if pool already exists
     if (ctx->wl.shmbuf.pool != NULL) return true;
 
-    if (ctx->wl.shm == NULL) {
+    if (ctx->wl.protocols.shm == NULL) {
         wlm_log_error("wayland::shm::create_pool(): missing wl_shm protocol\n");
         return false;
     }
@@ -69,7 +69,7 @@ bool wlm_wayland_shm_create_pool(ctx_t * ctx) {
     ctx->wl.shmbuf.addr = new_addr;
 
     // create shm pool from shm fd
-    ctx->wl.shmbuf.pool = wl_shm_create_pool(ctx->wl.shm, ctx->wl.shmbuf.fd, ctx->wl.shmbuf.size);
+    ctx->wl.shmbuf.pool = wl_shm_create_pool(ctx->wl.protocols.shm, ctx->wl.shmbuf.fd, ctx->wl.shmbuf.size);
     if (ctx->wl.shmbuf.pool == NULL) {
         wlm_log_error("wayland::shm::create_pool(): failed to create shm pool\n");
         return false;

@@ -258,7 +258,7 @@ static void do_capture(ctx_t * ctx) {
 
         // create wlr_dmabuf_export_frame
         backend->dmabuf_frame = zwlr_export_dmabuf_manager_v1_capture_output(
-            ctx->wl.dmabuf_manager, ctx->opt.show_cursor, output_node->output
+            ctx->wl.protocols.export_dmabuf_manager, ctx->opt.show_cursor, output_node->output
         );
         if (backend->dmabuf_frame == NULL) {
             wlm_log_error("mirror-export-dmabuf::do_capture(): failed to create wlr_dmabuf_export_frame\n");
@@ -290,7 +290,7 @@ static void do_cleanup(ctx_t * ctx) {
 
 void wlm_mirror_export_dmabuf_init(ctx_t * ctx) {
     // check for required protocols
-    if (ctx->wl.dmabuf_manager == NULL) {
+    if (ctx->wl.protocols.export_dmabuf_manager == NULL) {
         wlm_log_error("mirror-export-dmabuf::init(): missing wlr_export_dmabuf_manager protocol\n");
         return;
     }

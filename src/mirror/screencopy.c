@@ -292,7 +292,7 @@ static void do_capture(ctx_t * ctx) {
         // create screencopy_frame
         if (ctx->opt.has_region) {
             backend->screencopy_frame = zwlr_screencopy_manager_v1_capture_output_region(
-                ctx->wl.screencopy_manager, ctx->opt.show_cursor, output_node->output,
+                ctx->wl.protocols.screencopy_manager, ctx->opt.show_cursor, output_node->output,
                 output_node->x + ctx->mirror.current_region.x,
                 output_node->y + ctx->mirror.current_region.y,
                 ctx->mirror.current_region.width,
@@ -300,7 +300,7 @@ static void do_capture(ctx_t * ctx) {
             );
         } else {
             backend->screencopy_frame = zwlr_screencopy_manager_v1_capture_output(
-                ctx->wl.screencopy_manager, ctx->opt.show_cursor, output_node->output
+                ctx->wl.protocols.screencopy_manager, ctx->opt.show_cursor, output_node->output
             );
         }
         if (backend->screencopy_frame == NULL) {
@@ -348,13 +348,13 @@ static void on_dmabuf_device_opened(ctx_t * ctx, bool success) {
 
 static void wlm_mirror_screencopy_init(ctx_t * ctx, bool use_dmabuf) {
     // check for required protocols
-    if (use_dmabuf && ctx->wl.linux_dmabuf == NULL) {
+    if (use_dmabuf && ctx->wl.protocols.linux_dmabuf == NULL) {
         wlm_log_error("mirror-screencopy::dmabuf_init(): missing linux_dmabuf protocol\n");
         return;
-    } else if (!use_dmabuf && ctx->wl.shm == NULL) {
+    } else if (!use_dmabuf && ctx->wl.protocols.shm == NULL) {
         wlm_log_error("mirror-screencopy::shm_init(): missing wl_shm protocol\n");
         return;
-    } else if (ctx->wl.screencopy_manager == NULL) {
+    } else if (ctx->wl.protocols.screencopy_manager == NULL) {
         wlm_log_error("mirror-screencopy::init(): missing wlr_screencopy protocol\n");
         return;
     }
