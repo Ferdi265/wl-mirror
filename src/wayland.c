@@ -1061,7 +1061,7 @@ void wlm_wayland_configure_window(struct ctx * ctx) {
 
     // set libdecor app properties
     libdecor_frame_set_app_id(ctx->wl.libdecor_frame, "at.yrlf.wl_mirror");
-    libdecor_frame_set_title(ctx->wl.libdecor_frame, "Wayland Output Mirror");
+    wlm_mirror_update_title(ctx);
 
     // map libdecor frame
     // commits surface and triggers configure sequence
@@ -1096,7 +1096,7 @@ void wlm_wayland_configure_window(struct ctx * ctx) {
 
     // set xdg toplevel properties
     xdg_toplevel_set_app_id(ctx->wl.xdg_toplevel, "at.yrlf.wl_mirror");
-    xdg_toplevel_set_title(ctx->wl.xdg_toplevel, "Wayland Output Mirror");
+    wlm_mirror_update_title(ctx);
 
     // commit surface to trigger configure sequence
     wl_surface_commit(ctx->wl.surface);
