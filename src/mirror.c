@@ -228,14 +228,24 @@ static size_t specifier_str(ctx_t * ctx, char *dst, int n, specifier_t specifier
 }
 
 static int format_title(ctx_t * ctx, char ** dst, char * fmt) {
+    // guard against mirror not being initialized
+    // for initial setting of the window title
+    int x                    = !ctx->mirror.initialized ? 0 : ctx->mirror.current_region.x;
+    int y                    = !ctx->mirror.initialized ? 0 : ctx->mirror.current_region.y;
+    int width                = !ctx->mirror.initialized ? 0 : ctx->mirror.current_region.width;
+    int height               = !ctx->mirror.initialized ? 0 : ctx->mirror.current_region.height;
+    int target_width         = !ctx->mirror.initialized ? 0 : ctx->mirror.current_target == NULL ? 0 : ctx->mirror.current_target->width;
+    int target_height        = !ctx->mirror.initialized ? 0 : ctx->mirror.current_target == NULL ? 0 : ctx->mirror.current_target->height;
+    const char * target_name = !ctx->mirror.initialized ? "" : ctx->mirror.current_target == NULL ? "" : ctx->mirror.current_target->name;
+
     specifier_t replacements[] = {
-        {"{x}", 'd', {.d = ctx->mirror.current_region.x}},
-        {"{y}", 'd', {.d = ctx->mirror.current_region.y}},
-        {"{width}", 'd', {.d = ctx->mirror.current_region.width}},
-        {"{height}", 'd', {.d = ctx->mirror.current_region.height}},
-        {"{target_width}", 'd', {.d = ctx->mirror.current_target->width}},
-        {"{target_height}", 'd', {.d = ctx->mirror.current_target->height}},
-        {"{target_output}", 's', {.s = ctx->mirror.current_target->name}}
+        {"{x}", 'd', {.d = x}},
+        {"{y}", 'd', {.d = y}},
+        {"{width}", 'd', {.d = width}},
+        {"{height}", 'd', {.d = height}},
+        {"{target_width}", 'd', {.d = target_width}},
+        {"{target_height}", 'd', {.d = target_height}},
+        {"{target_output}", 's', {.s = target_name}}
     };
 
     size_t length = strlen(fmt);
