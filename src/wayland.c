@@ -1,4 +1,6 @@
 #include "wlm/proto/ext-image-capture-source-v1.h"
+#include "wlm/proto/color-management-v1.h"
+#include "wlm/proto/ext-image-capture-color-management-v1.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -296,8 +298,11 @@ static void on_registry_add(
 
         // bind image copy capture manager object
         // - for extcopy backend
+		if (version > 2) {
+			version = 2;
+		}
         ctx->wl.copy_capture_manager = (struct ext_image_copy_capture_manager_v1 *)wl_registry_bind(
-            registry, id, &ext_image_copy_capture_manager_v1_interface, 1
+            registry, id, &ext_image_copy_capture_manager_v1_interface, version
         );
         ctx->wl.copy_capture_manager_id = id;
     } else if (strcmp(interface, ext_output_image_capture_source_manager_v1_interface.name) == 0) {
@@ -424,7 +429,27 @@ static void on_registry_add(
             registry, id, &wl_seat_interface, 1
         );
         node->seat_id = id;
-    }
+	} else if (strcmp(interface, wp_color_manager_v1_interface.name) == 0 && version >= 2) {
+		if (ctx->wl.color_manager != NULL) {
+			wlm_log_error("wayland::on_registry_add(): duplicate color_manager\n");
+			wlm_exit_fail(ctx);
+		}
+
+		ctx->wl.color_manager = (struct wp_color_manager_v1 *)wl_registry_bind(
+			registry, id, &wp_color_manager_v1_interface, 2
+		);
+		ctx->wl.color_manager_id = id;
+	} else if (strcmp(interface, ext_image_capture_color_manager_v1_interface.name) == 0) {
+		if (ctx->wl.copy_capture_color_manager != NULL) {
+			wlm_log_error("wayland::on_registry_add(): duplicate copy_capture_color_manager\n");
+			wlm_exit_fail(ctx);
+		}
+
+		ctx->wl.copy_capture_color_manager = (struct ext_image_capture_color_manager_v1 *)wl_registry_bind(
+			registry, id, &ext_image_capture_color_manager_v1_interface, 1
+		);
+		ctx->wl.copy_capture_color_manager_id = id;
+	}
 
     (void)version;
 }
@@ -467,8 +492,14 @@ static void on_registry_remove(
     } else if (id == ctx->wl.output_capture_source_manager_id) {
         wlm_log_error("wayland::on_registry_remove(): output_capture_source_manager disappeared\n");
         wlm_exit_fail(ctx);
-    } else if (id == ctx->wl.toplevel_capture_source_manager_id) {
-        wlm_log_error("wayland::on_registry_remove(): toplevel_capture_source_manager disappeared\n");
+	} else if (id == ctx->wl.toplevel_capture_source_manager_id) {
+		wlm_log_error("wayland::on_registry_remove(): toplevel_capture_source_manager disappeared\n");
+		wlm_exit_fail(ctx);
+	} else if (id == ctx->wl.color_manager_id) {
+		wlm_log_error("wayland::on_registry_remove(): color_manager disappeared\n");
+		wlm_exit_fail(ctx);
+    } else if (id == ctx->wl.copy_capture_color_manager_id) {
+        wlm_log_error("wayland::on_registry_remove(): copy_capture_color_manager disappeared\n");
         wlm_exit_fail(ctx);
     } else {
         {
@@ -1037,6 +1068,11 @@ void wlm_wayland_init(ctx_t * ctx) {
 
         wp_fractional_scale_v1_add_listener(ctx->wl.fractional_scale, &fractional_scale_listener, (void *)ctx);
     }
+
+	// create color management surface if supported
+	if (ctx->wl.color_manager != NULL) {
+		ctx->wl.color_management_surface = wp_color_manager_v1_get_surface(ctx->wl.color_manager, ctx->wl.surface);
+	}
 }
 
 // --- configure_window ---
@@ -1101,10 +1137,12 @@ void wlm_wayland_configure_window(struct ctx * ctx) {
     // commit surface to trigger configure sequence
     wl_surface_commit(ctx->wl.surface);
 
-    // wait for events
-    // - expecting surface configure event
-    // - expecting xdg toplevel configure event
-    wl_display_roundtrip(ctx->wl.display);
+	while (!ctx->wl.configured) {
+		// wait for events
+		// - expecting surface configure event
+		// - expecting xdg toplevel configure event
+		wl_display_roundtrip(ctx->wl.display);
+	}
 #endif
 
     // check if surface is configured
@@ -1231,6 +1269,8 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
     if (ctx->wl.copy_capture_manager != NULL) ext_image_copy_capture_manager_v1_destroy(ctx->wl.copy_capture_manager);
     if (ctx->wl.output_capture_source_manager != NULL) ext_output_image_capture_source_manager_v1_destroy(ctx->wl.output_capture_source_manager);
     if (ctx->wl.toplevel_capture_source_manager != NULL) ext_foreign_toplevel_image_capture_source_manager_v1_destroy(ctx->wl.toplevel_capture_source_manager);
+	if (ctx->wl.copy_capture_color_manager != NULL) ext_image_capture_color_manager_v1_destroy(ctx->wl.copy_capture_color_manager);
+	if (ctx->wl.color_manager != NULL) wp_color_manager_v1_destroy(ctx->wl.color_manager);
     if (ctx->wl.dmabuf_manager != NULL) zwlr_export_dmabuf_manager_v1_destroy(ctx->wl.dmabuf_manager);
     if (ctx->wl.screencopy_manager != NULL) zwlr_screencopy_manager_v1_destroy(ctx->wl.screencopy_manager);
     if (ctx->wl.linux_dmabuf != NULL) zwp_linux_dmabuf_v1_destroy(ctx->wl.linux_dmabuf);
@@ -1242,6 +1282,7 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
     if (ctx->wl.xdg_toplevel != NULL) xdg_toplevel_destroy(ctx->wl.xdg_toplevel);
     if (ctx->wl.xdg_surface != NULL) xdg_surface_destroy(ctx->wl.xdg_surface);
 #endif
+	if (ctx->wl.color_management_surface != NULL) wp_color_management_surface_v1_destroy(ctx->wl.color_management_surface);
     if (ctx->wl.fractional_scale != NULL) wp_fractional_scale_v1_destroy(ctx->wl.fractional_scale);
     if (ctx->wl.viewport != NULL) wp_viewport_destroy(ctx->wl.viewport);
     if (ctx->wl.surface != NULL) wl_surface_destroy(ctx->wl.surface);
