@@ -16,8 +16,10 @@ option(FORCE_SYSTEM_WLR_PROTOCOLS "force use of system wlr-protocols" OFF)
 set(WL_PROTOCOL_DIR "/usr/share/wayland-protocols" CACHE STRING "wayland-protocols directory")
 set(WLR_PROTOCOL_DIR "/usr/share/wlr-protocols" CACHE STRING "wlr-protocols directory")
 set(PROTOCOLS
+    "experimental/xx-image-capture-color-management/xx-image-capture-color-management-v1.xml"
     "stable/xdg-shell/xdg-shell.xml"
     "stable/viewporter/viewporter.xml"
+    "staging/color-management/color-management-v1.xml"
     "staging/fractional-scale/fractional-scale-v1.xml"
     "staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml"
     "staging/ext-image-capture-source/ext-image-capture-source-v1.xml"
