@@ -1108,9 +1108,17 @@ void wlm_wayland_configure_window(struct ctx * ctx) {
 #endif
 
     // check if surface is configured
+    // - if not, attempt to wait another roundtrip
+    // - this can happen with e.g. libdecor, when it doesn't find any plugins
+    if (!ctx->wl.configured) {
+        wlm_log_error("wayland::configure_window(): surface not configured, attempting to wait one another roundtrip\n");
+        wl_display_roundtrip(ctx->wl.display);
+    }
+
+    // check if surface is configured
     // - expecting surface to be configured at this point
     if (!ctx->wl.configured) {
-        wlm_log_error("wayland::configure_window(): surface not configured\n");
+        wlm_log_error("wayland::configure_window(): surface not configured, exiting\n");
         wlm_exit_fail(ctx);
     }
 
