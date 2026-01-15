@@ -1,9 +1,13 @@
 #compdef wl-mirror
 
 _wl_mirror_outputs() {
-    if [[ "$XDG_CURRENT_DESKTOP" == "sway" ]]; then
-        swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p'
-    fi
+    case "$XDG_CURRENT_DESKTOP" in
+        sway|swayfx)
+           swaymsg -t get_outputs | sed -n '/^[[:space:]]*"name":/s/^.*"\([^"]*\)",/\1/p'
+           ;;
+        *)
+           _message "Output completion is not supported on '${XDG_CURRENT_DESKTOP}'"
+    esac
 }
 
 _wl_mirror_transforms() {
@@ -19,6 +23,15 @@ _wl_mirror_scalings() {
 }
 
 _wl_mirror() {
+    if [ -z "${XDG_CURRENT_DESKTOP+x}" ]; then
+        _message "Please set XDG_CURRENT_DESKTOP to enable completion of outputs"
+    else
+        case "$XDG_CURRENT_DESKTOP" in
+            sway|swayfx) ;;
+            *) _message "Output completion is not supported on '${XDG_CURRENT_DESKTOP}'"
+        esac
+    fi
+
     local -a outputs transforms backends scalings
     outputs=("${(@f)$(_wl_mirror_outputs)}")
     transforms=("${(@f)$(_wl_mirror_transforms)}")
@@ -26,8 +39,12 @@ _wl_mirror() {
     scalings=("${(@f)$(_wl_mirror_scalings)}")
 
     local -a options
-    options=(
-        '1:output:_values "output" $outputs'
+    if [ -n "${outputs}" ]; then
+        options+=('1:output:_values "output" $outputs')
+        options+='--fullscreen-output[set fullscreen target output, implies --fullscreen]:output:_values "output" $outputs'
+    fi
+
+    options+=(
         '(-h --help)'{-h,--help}'[show this help]'
         '(-V --version)'{-V,--version}'[print version]'
         '(-v --verbose --no-verbose)'{-v,--verbose}'[enable debug logging]'
@@ -41,7 +58,6 @@ _wl_mirror() {
         '--toggle-freeze[toggle freeze state of screen capture]'
         '(-F --fullscreen --no-fullscreen --fullscreen-output --no-fullscreen-output)'{-F,--fullscreen}'[display wl-mirror as fullscreen]'
         '--no-fullscreen[display wl-mirror as a window]'
-        '--fullscreen-output[set fullscreen target output, implies --fullscreen]:output:_values "output" $outputs'
         '--no-fullscreen-output[unset fullscreen target output, implies --no-fullscreen]'
         '-s[scaling method]:scaling method:_values "scaling" $scalings'
         '-b[use a specific backend]:backend:_values "backend" $backends'
