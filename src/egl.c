@@ -30,7 +30,7 @@ static bool has_extension(const char * extension) {
 
     // try to find extension in extension list
     const char * extensions = (const char *)glGetString(GL_EXTENSIONS);
-    char * match = strstr(extensions, extension);
+    const char * match = strstr(extensions, extension);
 
     // verify match was not a substring of another extension
     bool found = (
