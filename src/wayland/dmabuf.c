@@ -352,7 +352,7 @@ struct wl_buffer * wlm_wayland_dmabuf_get_buffer(ctx_t * ctx) {
 
 // --- wlm_wayland_dmabuf_get_raw_buffer ---
 
-dmabuf_t * wlm_wayland_dmabuf_get_raw_buffer(ctx_t * ctx) {
+wlm_dmabuf_t * wlm_wayland_dmabuf_get_raw_buffer(ctx_t * ctx) {
     if (ctx->wl.dmabuf.buffer == NULL) return NULL;
     return &ctx->wl.dmabuf.raw_buffer;
 }

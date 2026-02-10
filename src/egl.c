@@ -1,3 +1,4 @@
+#include "wlm/mirror/target.h"
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <EGL/egl.h>
@@ -305,7 +306,7 @@ bool wlm_egl_query_dmabuf_formats(ctx_t * ctx) {
         return false;
     }
 
-    dmabuf_format_t * dmabuf_formats = calloc(num_formats, sizeof *dmabuf_formats);
+    wlm_dmabuf_format_t * dmabuf_formats = calloc(num_formats, sizeof *dmabuf_formats);
     if (dmabuf_formats == NULL) {
         free(egl_drm_formats);
         wlm_log_error("egl::init(): failed to allocate dmabuf format array\n");
@@ -422,13 +423,17 @@ void wlm_egl_resize_viewport(ctx_t * ctx) {
 
     // rotate texture dimensions by output transform
     if (ctx->egl.texture_initialized) {
-        wlm_util_viewport_apply_output_transform(&tex_width, &tex_height, ctx->mirror.current_target->transform);
+        enum wl_output_transform transform = wlm_mirror_target_get_transform(ctx->mirror.current_target);
+        wlm_util_viewport_apply_output_transform(&tex_width, &tex_height, transform);
     }
 
     // clamp texture dimensions to specified region
     region_t output_region;
     region_t clamp_region;
     if (ctx->egl.texture_initialized && ctx->opt.has_region && !ctx->egl.texture_region_aware) {
+        // TODO: handle output regions differently
+        // TODO: allow specifying regions relative to recording target
+
         output_region = (region_t){
             .x = 0, .y = 0,
             .width = tex_width, .height = tex_height
@@ -437,7 +442,12 @@ void wlm_egl_resize_viewport(ctx_t * ctx) {
 
         // HACK: calculate effective output fractional scale
         // wayland doesn't provide this information
-        double output_scale = (double)tex_width / ctx->mirror.current_target->width;
+        // TODO: figure out how to deal with this without hardcoding output targets
+        double output_scale = 1;
+        wlm_wayland_output_entry_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
+        if (output_node != NULL) {
+            output_scale = (double)tex_width / output_node->width;
+        }
         wlm_util_region_scale(&clamp_region, output_scale);
         wlm_util_region_clamp(&clamp_region, &output_region);
 
@@ -510,7 +520,8 @@ void wlm_egl_resize_viewport(ctx_t * ctx) {
             wlm_util_mat3_apply_region_transform(&texture_transform, &clamp_region, &output_region);
         }
 
-        wlm_util_mat3_apply_output_transform(&texture_transform, ctx->mirror.current_target->transform);
+        enum wl_output_transform transform = wlm_mirror_target_get_transform(ctx->mirror.current_target);
+        wlm_util_mat3_apply_output_transform(&texture_transform, transform);
         wlm_util_mat3_apply_invert_y(&texture_transform, ctx->mirror.invert_y);
     }
 

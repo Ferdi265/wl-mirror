@@ -29,7 +29,7 @@ typedef struct ctx_wl_dmabuf {
     struct zwp_linux_dmabuf_feedback_v1 * feedback;
     struct zwp_linux_buffer_params_v1 * buffer_params;
     struct wl_buffer * buffer;
-    dmabuf_t raw_buffer;
+    wlm_dmabuf_t raw_buffer;
 
     bool initialized;
 } ctx_wl_dmabuf_t;
@@ -66,6 +66,6 @@ void wlm_wayland_dmabuf_dealloc(ctx_t * ctx);
 struct wl_buffer * wlm_wayland_dmabuf_get_buffer(ctx_t * ctx);
 
 /// Get the dmabuf_t object for the DMA-BUF
-dmabuf_t * wlm_wayland_dmabuf_get_raw_buffer(ctx_t * ctx);
+wlm_dmabuf_t * wlm_wayland_dmabuf_get_raw_buffer(ctx_t * ctx);
 
 #endif

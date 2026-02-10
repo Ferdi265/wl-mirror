@@ -248,9 +248,17 @@ static void do_capture(ctx_t * ctx) {
         backend->state = STATE_WAIT_FRAME;
         backend->processed_objects = 0;
 
+        // check if target is supported
+        wlm_wayland_output_entry_t * output_node = wlm_mirror_target_get_output_node(ctx->mirror.current_target);
+        if (output_node == NULL) {
+            wlm_log_error("mirror-export-dmabuf::do_capture(): capture target not supported by this backend\n");
+            wlm_mirror_backend_fail(ctx);
+            return;
+        }
+
         // create wlr_dmabuf_export_frame
         backend->dmabuf_frame = zwlr_export_dmabuf_manager_v1_capture_output(
-            ctx->wl.dmabuf_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output
+            ctx->wl.dmabuf_manager, ctx->opt.show_cursor, output_node->output
         );
         if (backend->dmabuf_frame == NULL) {
             wlm_log_error("mirror-export-dmabuf::do_capture(): failed to create wlr_dmabuf_export_frame\n");
@@ -319,5 +327,5 @@ void wlm_mirror_export_dmabuf_init(ctx_t * ctx) {
     backend->processed_objects = 0;
 
     // set backend object as current backend
-    ctx->mirror.backend = (mirror_backend_t *)backend;
+    ctx->mirror.backend = (wlm_mirror_backend_t *)backend;
 }

@@ -1,4 +1,3 @@
-#include "wlm/proto/ext-image-capture-source-v1.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,8 +10,30 @@ static void on_output_geometry(
     int32_t x, int32_t y, int32_t physical_width, int32_t physical_height,
     int32_t subpixel, const char * make, const char * model, int32_t transform
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
+
+    // update make only if changed
+    if (node->make == NULL || strcmp(node->make, make) != 0) {
+        free(node->make);
+        if (strcmp(make, "Unknown") == 0) {
+            node->make = NULL;
+        } else {
+            node->make = strdup(make);
+        }
+        wlm_log_debug(ctx, "wayland::on_output_geometry(): updating output %s (make = %s)\n", node->name, node->make);
+    }
+
+    // update model only if changed
+    if (node->model == NULL || strcmp(node->model, model) != 0) {
+        free(node->model);
+        if (strcmp(model, "Unknown") == 0) {
+            node->model = NULL;
+        } else {
+            node->model = strdup(model);
+        }
+        wlm_log_debug(ctx, "wayland::on_output_geometry(): updating output %s (model = %s)\n", node->name, node->model);
+    }
 
     // update transform only if changed
     if (node->transform != (uint32_t)transform) {
@@ -52,12 +73,13 @@ static void on_output_geometry(
 
         node->transform = transform;
 
-        // update egl viewport only if this is the target output
-        if (ctx->mirror.initialized && ctx->mirror.current_target->output == output) {
+        // update egl viewport only if initialized
+        if (ctx->egl.initialized) {
             wlm_egl_resize_viewport(ctx);
         }
     }
 
+    (void)output;
     (void)x;
     (void)y;
     (void)physical_width;
@@ -84,7 +106,7 @@ static void on_output_scale(
     void * data, struct wl_output * output,
     int32_t scale
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update scale only if changed
@@ -120,16 +142,24 @@ static void on_xdg_output_description(
     void * data, struct zxdg_output_v1 * xdg_output,
     const char * description
 ) {
-    (void)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
+    ctx_t * ctx = node->ctx;
+
+    // update description only if changed
+    if (node->description == NULL || strcmp(node->description, description) != 0) {
+        free(node->description);
+        node->description = strdup(description);
+        wlm_log_debug(ctx, "wayland::on_xdg_output_description(): updating output %s (description = %s)\n", node->name, node->description);
+    }
+
     (void)xdg_output;
-    (void)description;
 }
 
 static void on_xdg_output_logical_position(
     void * data, struct zxdg_output_v1 * xdg_output,
     int32_t x, int32_t y
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update position only if changed
@@ -147,7 +177,7 @@ static void on_xdg_output_logical_size(
     void * data, struct zxdg_output_v1 * xdg_output,
     int32_t width, int32_t height
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update size only if changed
@@ -165,7 +195,7 @@ static void on_xdg_output_name(
     void * data, struct zxdg_output_v1 * xdg_output,
     const char * name
 ) {
-    output_list_node_t * node = (output_list_node_t *)data;
+    wlm_wayland_output_entry_t * node = (wlm_wayland_output_entry_t *)data;
     ctx_t * ctx = node->ctx;
 
     // update name only if changed
@@ -350,7 +380,7 @@ static void on_registry_add(
         ctx->wl.linux_dmabuf_id = id;
     } else if (strcmp(interface, wl_output_interface.name) == 0) {
         // allocate output node
-        output_list_node_t * node = malloc(sizeof (output_list_node_t));
+        wlm_wayland_output_entry_t * node = malloc(sizeof (wlm_wayland_output_entry_t));
         if (node == NULL) {
             wlm_log_error("wayland::on_registry_add(): failed to allocate output node\n");
             wlm_exit_fail(ctx);
@@ -359,6 +389,9 @@ static void on_registry_add(
         // initialize output node
         node->ctx = ctx;
         node->name = NULL;
+        node->make = NULL;
+        node->model = NULL;
+        node->description = NULL;
         node->xdg_output = NULL;
         node->x = 0;
         node->y = 0;
@@ -406,7 +439,7 @@ static void on_registry_add(
         zxdg_output_v1_add_listener(node->xdg_output, &xdg_output_listener, (void *)node);
     } else if (strcmp(interface, wl_seat_interface.name) == 0) {
         // allocate seat node
-        seat_list_node_t * node = malloc(sizeof (seat_list_node_t));
+        wlm_wayland_seat_entry_t * node = malloc(sizeof (wlm_wayland_seat_entry_t));
         if (node == NULL) {
             wlm_log_error("wayland::on_registry_add(): failed to allocate seat node\n");
             wlm_exit_fail(ctx);
@@ -472,9 +505,9 @@ static void on_registry_remove(
         wlm_exit_fail(ctx);
     } else {
         {
-            output_list_node_t ** link = &ctx->wl.outputs;
-            output_list_node_t * cur = ctx->wl.outputs;
-            output_list_node_t * prev = NULL;
+            wlm_wayland_output_entry_t ** link = &ctx->wl.outputs;
+            wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
+            wlm_wayland_output_entry_t * prev = NULL;
             while (cur != NULL) {
                 if (id == cur->output_id) {
                     wlm_log_debug(ctx, "wayland::on_registry_remove(): output %s removed (id = %d)\n", cur->name, id);
@@ -492,6 +525,9 @@ static void on_registry_remove(
                     zxdg_output_v1_destroy(prev->xdg_output);
                     wl_output_destroy(prev->output);
                     free(prev->name);
+                    free(prev->make);
+                    free(prev->model);
+                    free(prev->description);
                     free(prev);
 
                     // return because the removed object was found
@@ -506,9 +542,9 @@ static void on_registry_remove(
         // output not found
         // id must have been a seat
         {
-            seat_list_node_t ** link = &ctx->wl.seats;
-            seat_list_node_t * cur = ctx->wl.seats;
-            seat_list_node_t * prev = NULL;
+            wlm_wayland_seat_entry_t ** link = &ctx->wl.seats;
+            wlm_wayland_seat_entry_t * cur = ctx->wl.seats;
+            wlm_wayland_seat_entry_t * prev = NULL;
             while (cur != NULL) {
                 if (id == cur->seat_id) {
                     wlm_log_debug(ctx, "wayland::on_registry_remove(): seat removed (id = %d)\n", id);
@@ -562,8 +598,8 @@ static void on_surface_enter(
     ctx_t * ctx = (ctx_t *)data;
 
     // find output list node for the entered output
-    output_list_node_t * node = NULL;
-    output_list_node_t * cur = ctx->wl.outputs;
+    wlm_wayland_output_entry_t * node = NULL;
+    wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
     while (cur != NULL) {
         if (cur->output == output) {
             node = cur;
@@ -875,20 +911,102 @@ static const struct wp_fractional_scale_v1_listener fractional_scale_listener = 
 
 // --- find_output ---
 
-bool wlm_wayland_find_output(ctx_t * ctx, char * output_name, struct wl_output ** output) {
+static bool match_output(wlm_wayland_output_entry_t * node, const char * name) {
+    // check if name is equal
+    if (node->name != NULL && strcmp(node->name, name) == 0) {
+        // matched output name (e.g. 'eDP-1')
+        wlm_log_error("DEBUG: matched output name: %s\n", name);
+        return true;
+    }
+
+    // check if description is equal
+    // this is usually make + model + serial on wlroots, but doesn't have to be
+    if (node->description != NULL && strcmp(node->description, name) == 0) {
+        // matched output description (e.g. 'BOE 0x0BCA Unknown', 'Virtual X11 output via :1')
+        wlm_log_error("DEBUG: matched output description: %s\n", name);
+        return true;
+    }
+
+    // check for make / model / serial
+    // piecewise check with early returns
+
+    // don't allow make / model / serial matching for outputs without such info
+    if (node->make == NULL && node->model == NULL) {
+        wlm_log_error("DEBUG: can't perform make+model matching\n");
+        return false;
+    }
+
+    // check make
+    const char * name_make = name;
+    const char * node_make = node->make ? node->make : "Unknown";
+    if (strncmp(node_make, name_make, strlen(node_make)) != 0) {
+        wlm_log_error("DEBUG: failed to match node make: '%s' vs '%s'\n", node_make, name_make);
+        return false;
+    }
+
+    // check space after make
+    const char * name_sep = name_make + strlen(node_make);
+    if (*name_sep == '\0') {
+        // matched output make (e.g. 'BOE', 'Acer', 'Foocorp')
+        wlm_log_error("DEBUG: matched output make: %s\n", name);
+        return true;
+    }
+    if (*name_sep != ' ') {
+        // partial match, fail here (e.g. 'Acer 123' vs 'Aceryx 123')
+        wlm_log_error("DEBUG: failed to match node make: '%s' vs '%s' (extra space)\n", node_make, name_make);
+        return false;
+    }
+
+    // check model
+    const char * name_model = name_sep + 1;
+    const char * node_model = node->model ? node->model : "Unknown";
+    if (strncmp(node_model, name_model, strlen(node_model)) != 0) {
+        wlm_log_error("DEBUG: failed to match node model: '%s' vs '%s'\n", node_model, name_model);
+        return false;
+    }
+
+    // check space after model
+    name_sep = name_model + strlen(node_model);
+    if (*name_sep == '\0') {
+        // matched output make + model (e.g. 'BOE 0x0BCA', 'Acer XB240H', 'Foocorp Foo1')
+        wlm_log_error("DEBUG: matched output make+model: %s\n", name);
+        return true;
+    }
+    if (*name_sep != ' ') {
+        // partial match, fail here (e.g. 'Acer 123' vs 'Acer 1234')
+        wlm_log_error("DEBUG: failed to match node model: '%s' vs '%s' (extra space)\n", node_model, name_model);
+        return false;
+    }
+
+    // check "serial" (doesn't exist in Wayland, for compatibility with kanshi, allow 'Unknown')
+    const char * name_serial = name_sep + 1;
+    const char * node_serial = "Unknown"; // always use 'Unknown'
+    if (strcmp(node_serial, name_serial) != 0) {
+        wlm_log_error("DEBUG: failed to match node serial: '%s' vs '%s'\n", node_serial, name_serial);
+        return false;
+    }
+
+    // matched make + model + "serial" (e.g. 'BOE 0x0BCA Unknown', 'Acer XB240H Unknown')
+    wlm_log_error("DEBUG: matched output make+model+serial: %s\n", name);
+    return true;
+}
+
+bool wlm_wayland_find_output(ctx_t * ctx, const char * output_name, wlm_wayland_output_entry_t ** output) {
     bool found = false;
-    output_list_node_t * cur = ctx->wl.outputs;
+    wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
     while (cur != NULL) {
-        if (cur->name != NULL && strcmp(cur->name, output_name) == 0) {
-            output_name = cur->name;
+        if (match_output(cur, output_name)) {
             break;
         }
+
         cur = cur->next;
     }
+
     if (cur != NULL) {
         found = true;
-        *output = cur->output;
+        *output = cur;
     }
+
     return found;
 }
 
@@ -1155,18 +1273,18 @@ void wlm_wayland_window_set_title(ctx_t * ctx, const char * title) {
 // --- set_window_fullscreen ---
 
 void wlm_wayland_window_set_fullscreen(ctx_t * ctx) {
-    struct wl_output * output = NULL;
+    wlm_wayland_output_entry_t * output_node = NULL;
     if (ctx->opt.fullscreen_output == NULL) {
-        output = ctx->wl.current_output->output;
-    } else if (!wlm_wayland_find_output(ctx, ctx->opt.fullscreen_output, &output)) {
+        output_node = ctx->wl.current_output;
+    } else if (!wlm_wayland_find_output(ctx, ctx->opt.fullscreen_output, &output_node)) {
         wlm_log_error("wayland::init(): output %s not found\n", ctx->opt.fullscreen_output);
         wlm_exit_fail(ctx);
     }
 
 #ifdef WITH_LIBDECOR
-    libdecor_frame_set_fullscreen(ctx->wl.libdecor_frame, output);
+    libdecor_frame_set_fullscreen(ctx->wl.libdecor_frame, output_node->output);
 #else
-    xdg_toplevel_set_fullscreen(ctx->wl.xdg_toplevel, output);
+    xdg_toplevel_set_fullscreen(ctx->wl.xdg_toplevel, output_node->output);
 #endif
 }
 
@@ -1213,8 +1331,8 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
 
     {
         // free every output in output list
-        output_list_node_t * cur = ctx->wl.outputs;
-        output_list_node_t * prev = NULL;
+        wlm_wayland_output_entry_t * cur = ctx->wl.outputs;
+        wlm_wayland_output_entry_t * prev = NULL;
         while (cur != NULL) {
             prev = cur;
             cur = cur->next;
@@ -1223,6 +1341,9 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
             zxdg_output_v1_destroy(prev->xdg_output);
             wl_output_destroy(prev->output);
             free(prev->name);
+            free(prev->make);
+            free(prev->model);
+            free(prev->description);
             free(prev);
         }
         ctx->wl.outputs = NULL;
@@ -1230,8 +1351,8 @@ void wlm_wayland_cleanup(ctx_t *ctx) {
 
     {
         // free every seat in seat list
-        seat_list_node_t * cur = ctx->wl.seats;
-        seat_list_node_t * prev = NULL;
+        wlm_wayland_seat_entry_t * cur = ctx->wl.seats;
+        wlm_wayland_seat_entry_t * prev = NULL;
         while (cur != NULL) {
             prev = cur;
             cur = cur->next;

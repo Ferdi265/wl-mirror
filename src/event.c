@@ -4,14 +4,14 @@
 #include <wlm/context.h>
 #include <wlm/event.h>
 
-static void add_handler(ctx_t * ctx, event_handler_t * handler) {
+static void add_handler(ctx_t * ctx, wlm_event_loop_handler_t * handler) {
     handler->next = ctx->event.handlers;
     ctx->event.handlers = handler;
 }
 
 static void remove_handler(ctx_t * ctx, int fd) {
-    event_handler_t ** pcur = &ctx->event.handlers;
-    event_handler_t * cur = *pcur;
+    wlm_event_loop_handler_t ** pcur = &ctx->event.handlers;
+    wlm_event_loop_handler_t * cur = *pcur;
     while (cur != NULL) {
         if (cur->fd == fd) {
             *pcur = cur->next;
@@ -24,7 +24,7 @@ static void remove_handler(ctx_t * ctx, int fd) {
 }
 
 static void call_each_handler(ctx_t * ctx) {
-    event_handler_t * cur = ctx->event.handlers;
+    wlm_event_loop_handler_t * cur = ctx->event.handlers;
     while (cur != NULL) {
         if (cur->on_each != NULL) {
             cur->on_each(ctx);
@@ -35,9 +35,9 @@ static void call_each_handler(ctx_t * ctx) {
 }
 
 
-static event_handler_t * min_timeout(ctx_t * ctx) {
-    event_handler_t * min = NULL;
-    event_handler_t * cur = ctx->event.handlers;
+static wlm_event_loop_handler_t * min_timeout(ctx_t * ctx) {
+    wlm_event_loop_handler_t * min = NULL;
+    wlm_event_loop_handler_t * cur = ctx->event.handlers;
     while (cur != NULL) {
         if (cur->timeout_ms != -1) {
             if (min == NULL || cur->timeout_ms < min->timeout_ms) min = cur;
@@ -49,7 +49,7 @@ static event_handler_t * min_timeout(ctx_t * ctx) {
     return min;
 }
 
-void wlm_event_add_fd(ctx_t * ctx, event_handler_t * handler) {
+void wlm_event_add_fd(ctx_t * ctx, wlm_event_loop_handler_t * handler) {
     struct epoll_event event;
     event.events = handler->events;
     event.data.ptr = handler;
@@ -62,7 +62,7 @@ void wlm_event_add_fd(ctx_t * ctx, event_handler_t * handler) {
     add_handler(ctx, handler);
 }
 
-void wlm_event_change_fd(ctx_t * ctx, event_handler_t * handler) {
+void wlm_event_change_fd(ctx_t * ctx, wlm_event_loop_handler_t * handler) {
     struct epoll_event event;
     event.events = handler->events;
     event.data.ptr = handler;
@@ -73,7 +73,7 @@ void wlm_event_change_fd(ctx_t * ctx, event_handler_t * handler) {
     }
 }
 
-void wlm_event_remove_fd(ctx_t * ctx, event_handler_t * handler) {
+void wlm_event_remove_fd(ctx_t * ctx, wlm_event_loop_handler_t * handler) {
     if (epoll_ctl(ctx->event.pollfd, EPOLL_CTL_DEL, handler->fd, NULL) == -1) {
         wlm_log_error("event::remove_fd(): failed to remove fd from epoll instance\n");
     }
@@ -87,7 +87,7 @@ void wlm_event_loop(ctx_t * ctx) {
     struct epoll_event events[MAX_EVENTS];
     int num_events;
 
-    event_handler_t * timeout_handler;
+    wlm_event_loop_handler_t * timeout_handler;
     int timeout_ms;
 
     timeout_handler = min_timeout(ctx);
@@ -95,7 +95,7 @@ void wlm_event_loop(ctx_t * ctx) {
 
     while ((num_events = epoll_wait(ctx->event.pollfd, events, MAX_EVENTS, timeout_ms)) != -1 && !ctx->wl.closing) {
         for (int i = 0; i < num_events; i++) {
-            event_handler_t * handler = (event_handler_t *)events[i].data.ptr;
+            wlm_event_loop_handler_t * handler = (wlm_event_loop_handler_t *)events[i].data.ptr;
             handler->on_event(ctx, events[i].events);
         }
 
