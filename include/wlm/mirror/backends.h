@@ -19,5 +19,6 @@ void wlm_mirror_screencopy_shm_init(struct ctx * ctx);
 void wlm_mirror_screencopy_dmabuf_init(struct ctx * ctx);
 void wlm_mirror_extcopy_shm_init(struct ctx * ctx);
 void wlm_mirror_extcopy_dmabuf_init(struct ctx * ctx);
+void wlm_mirror_xdg_portal_init(struct ctx * ctx);
 
 #endif
