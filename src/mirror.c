@@ -218,7 +218,10 @@ void wlm_mirror_output_added(ctx_t * ctx, output_list_node_t * node) {
 
     output_list_node_t * target = NULL;
     region_t region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
-    if (!wlm_opt_find_output(ctx, &target, &region)) return;
+    if (!wlm_opt_find_output(ctx, &target, &region)) {
+        wlm_log_warn("mirror::output_added(): target output not yet found, continuing to wait for reconnect\n");
+        return;
+    }
 
     // only restart if this specific output is the one we were waiting for
     if (target != node) return;
