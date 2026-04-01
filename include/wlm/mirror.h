@@ -37,6 +37,7 @@ void wlm_mirror_init(struct ctx * ctx);
 void wlm_mirror_backend_init(struct ctx * ctx);
 
 void wlm_mirror_output_removed(struct ctx * ctx, struct output_list_node * node);
+void wlm_mirror_output_added(struct ctx * ctx, struct output_list_node * node);
 void wlm_mirror_update_title(struct ctx * ctx);
 void wlm_mirror_options_updated(struct ctx * ctx);
 

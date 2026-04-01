@@ -196,15 +196,38 @@ void wlm_mirror_backend_init(ctx_t * ctx) {
     if (ctx->mirror.backend == NULL) wlm_exit_fail(ctx);
 }
 
-// --- output_removed ---
+// --- output_removed / output_added ---
 
 void wlm_mirror_output_removed(ctx_t * ctx, output_list_node_t * node) {
     if (!ctx->mirror.initialized) return;
     if (ctx->mirror.current_target == NULL) return;
     if (ctx->mirror.current_target != node) return;
 
-    wlm_log_error("mirror::output_removed(): output disappeared, closing\n");
-    wlm_exit_fail(ctx);
+    wlm_log_warn("mirror::output_removed(): output disappeared, waiting for reconnect\n");
+
+    // cancel capture and clear target; frame callback keeps running but
+    // on_frame() skips do_capture() while backend == NULL
+    if (ctx->mirror.backend != NULL) ctx->mirror.backend->do_cleanup(ctx);
+    ctx->mirror.current_target = NULL;
+    wlm_mirror_update_title(ctx);
+}
+
+void wlm_mirror_output_added(ctx_t * ctx, output_list_node_t * node) {
+    if (!ctx->mirror.initialized) return;
+    if (ctx->mirror.current_target != NULL) return;
+
+    output_list_node_t * target = NULL;
+    region_t region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
+    if (!wlm_opt_find_output(ctx, &target, &region)) return;
+
+    // only restart if this specific output is the one we were waiting for
+    if (target != node) return;
+
+    wlm_log_debug(ctx, "mirror::output_added(): target output reconnected, restarting capture\n");
+    ctx->mirror.current_target = target;
+    ctx->mirror.current_region = region;
+    wlm_mirror_backend_init(ctx);
+    wlm_mirror_update_title(ctx);
 }
 
 // --- update_title ---

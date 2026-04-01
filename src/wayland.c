@@ -187,7 +187,13 @@ static void on_xdg_output_name(
 static void on_xdg_output_done(
     void * data, struct zxdg_output_v1 * xdg_output
 ) {
-    (void)data;
+    output_list_node_t * node = (output_list_node_t *)data;
+    ctx_t * ctx = node->ctx;
+
+    // notify mirror code that an output is now fully populated
+    // - triggers capture restart if this is the reconnected target output
+    wlm_mirror_output_added(ctx, node);
+
     (void)xdg_output;
 }
 
