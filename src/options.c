@@ -350,6 +350,12 @@ bool wlm_opt_find_output(ctx_t * ctx, output_list_node_t ** output_handle, regio
         wlm_log_debug(ctx, "options::find_output(): clamping region to output bounds\n");
         local_region = ctx->opt.region;
         wlm_util_region_clamp(&local_region, &output_region);
+
+        // translate region from global layout coordinates to output-local
+        // coordinates, otherwise the texture crop in egl.c samples off-texture
+        // (black) for any output not at the layout origin (multi-monitor).
+        local_region.x -= local_output_handle->x;
+        local_region.y -= local_output_handle->y;
     }
 
     *output_handle = local_output_handle;
