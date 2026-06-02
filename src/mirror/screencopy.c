@@ -285,8 +285,8 @@ static void do_capture(ctx_t * ctx) {
         if (ctx->opt.has_region) {
             backend->screencopy_frame = zwlr_screencopy_manager_v1_capture_output_region(
                 ctx->wl.screencopy_manager, ctx->opt.show_cursor, ctx->mirror.current_target->output,
-                ctx->mirror.current_target->x + ctx->mirror.current_region.x,
-                ctx->mirror.current_target->y + ctx->mirror.current_region.y,
+                ctx->mirror.current_region.x,
+                ctx->mirror.current_region.y,
                 ctx->mirror.current_region.width,
                 ctx->mirror.current_region.height
             );
