@@ -66,7 +66,6 @@ void wlm_mirror_init(ctx_t * ctx) {
     ctx->mirror.current_target = NULL;
     ctx->mirror.frame_callback = NULL;
     ctx->mirror.current_region = (region_t){ .x = 0, .y = 0, .width = 0, .height = 0 };
-    ctx->mirror.invert_y = false;
 
     ctx->mirror.backend = NULL;
     ctx->mirror.fallback_backends = auto_fallback_backends;

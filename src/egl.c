@@ -72,6 +72,7 @@ void wlm_egl_init(ctx_t * ctx) {
     ctx->egl.invert_colors_uniform = 0;
 
     ctx->egl.texture_region_aware = false;
+    ctx->egl.texture_invert_y = false;
     ctx->egl.texture_initialized = false;
     ctx->egl.initialized = true;
 
@@ -511,7 +512,7 @@ void wlm_egl_resize_viewport(ctx_t * ctx) {
         }
 
         wlm_util_mat3_apply_output_transform(&texture_transform, ctx->mirror.current_target->transform);
-        wlm_util_mat3_apply_invert_y(&texture_transform, ctx->mirror.invert_y);
+        wlm_util_mat3_apply_invert_y(&texture_transform, ctx->egl.texture_invert_y);
     }
 
     // set texture transform matrix uniform

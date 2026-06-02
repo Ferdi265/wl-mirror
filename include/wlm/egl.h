@@ -66,6 +66,7 @@ typedef struct ctx_egl {
 
     // state flags
     bool texture_region_aware;
+    bool texture_invert_y;
     bool texture_initialized;
     bool initialized;
 } ctx_egl_t;

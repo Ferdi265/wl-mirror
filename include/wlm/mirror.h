@@ -22,7 +22,6 @@ typedef struct ctx_mirror {
     struct output_list_node * current_target;
     struct wl_callback * frame_callback;
     region_t current_region;
-    bool invert_y;
 
     // backend data
     mirror_backend_t * backend;

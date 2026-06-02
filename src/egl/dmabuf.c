@@ -98,19 +98,19 @@ bool wlm_egl_dmabuf_import(ctx_t * ctx, dmabuf_t * dmabuf, const wlm_egl_format_
 
     ctx->egl.format = format != NULL ? format->gl_format : GL_RGB8_OES; // TODO: remove this fallback
     ctx->egl.texture_initialized = true;
-    ctx->egl.texture_region_aware = region_aware;
 
-    // set buffer flags
-    if (ctx->mirror.invert_y != invert_y) {
-        ctx->mirror.invert_y = invert_y;
-        wlm_egl_update_uniforms(ctx);
-    }
-
-    // set texture size and aspect ratio only if changed
-    if (dmabuf->width != ctx->egl.width || dmabuf->height != ctx->egl.height) {
+    // set texture info only if changed
+    if (
+        dmabuf->width != ctx->egl.width ||
+        dmabuf->height != ctx->egl.height ||
+        region_aware != ctx->egl.texture_region_aware ||
+        invert_y != ctx->egl.texture_invert_y
+    ) {
         ctx->egl.width = dmabuf->width;
         ctx->egl.height = dmabuf->height;
-        wlm_egl_resize_viewport(ctx);
+        ctx->egl.texture_region_aware = region_aware;
+        ctx->egl.texture_invert_y = invert_y;
+        wlm_egl_update_uniforms(ctx);
     }
 
     return true;
