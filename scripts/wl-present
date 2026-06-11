@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 usage() {
     echo "usage: wl-present [options] <command> [argument]"
@@ -36,145 +36,163 @@ usage() {
     exit 0
 }
 
-if [[ -n "$WL_PRESENT_DMENU" ]]; then
+if [ -n "$WL_PRESENT_DMENU" ]; then
     DMENU="$WL_PRESENT_DMENU"
-elif type -p wofi >/dev/null; then
+elif type wofi >/dev/null 2>&1; then
     DMENU="wofi -d"
-elif type -p wmenu >/dev/null; then
+elif type wmenu >/dev/null 2>&1; then
     DMENU=wmenu
-elif type -p fuzzel >/dev/null; then
+elif type fuzzel >/dev/null 2>&1; then
     DMENU="fuzzel -d"
-elif type -p rofi >/dev/null; then
+elif type rofi >/dev/null 2>&1; then
     DMENU="rofi -dmenu"
 else
     DMENU=dmenu
 fi
 
-if [[ -n "$WL_PRESENT_PIPECTL" ]]; then
+if [ -n "$WL_PRESENT_PIPECTL" ]; then
     PIPECTL="$WL_PRESENT_PIPECTL"
-elif type -p pipectl >/dev/null; then
+elif type pipectl >/dev/null 2>&1; then
     PIPECTL=pipectl
 else
-    PIPECTL=pipectl-shim
+    PIPECTL=pipectl_shim
 fi
 
-if [[ -n "$WL_PRESENT_SLURP" ]]; then
+if [ -n "$WL_PRESENT_SLURP" ]; then
     SLURP="$WL_PRESENT_SLURP"
 else
     SLURP=slurp
 fi
 
-if [[ -n "$WL_PRESENT_PIPE_NAME" ]]; then
+if [ -n "$WL_PRESENT_PIPE_NAME" ]; then
     PRESENT_PIPE_NAME="$WL_PRESENT_PIPE_NAME"
 else
     PRESENT_PIPE_NAME=wl-present
 fi
 
-pipectl-shim() {
+pipectl_shim() {
     PIPEPATH="${XDG_RUNTIME_DIR:-"${TMPDIR:-/tmp}"}"
     PIPENAME="pipectl.$(id -u).pipe"
     MODE=
     FORCE=0
 
-    while [[ $# -gt 0 && "${1:0:1}" == "-" ]]; do
-        opt="$1"
+    while [ $# -gt 0 ] && expr -- "$1" : '^-' >/dev/null 2>&1; do
+        opt=$1
         shift
         case "$opt" in
-            -n|--name) arg="$1"; shift; PIPENAME="pipectl.$(id -u).$arg.pipe";;
-            -i|--in) MODE=in;;
-            -o|--out) MODE=out;;
-            -f|--force) FORCE=1;;
-            --) break;;
+        -n | --name)
+            arg="$1"
+            shift
+            PIPENAME="pipectl.$(id -u).$arg.pipe"
+            ;;
+        -i | --in) MODE=in ;;
+        -o | --out) MODE=out ;;
+        -f | --force) FORCE=1 ;;
+        --) break ;;
         esac
     done
 
     PIPE="$PIPEPATH/$PIPENAME"
 
     case "$MODE" in
-        "in") if [[ ! -p "$PIPE" ]]; then
-                echo "error: could not open pipe at '$PIPE': No such file or directory" >&2
-                return 1
-            else
-                cat > "$PIPE"
-            fi;;
-        "out") if [[ "$FORCE" -eq 0 && -p "$PIPE" ]]; then
-                echo "error: cannot create pipe at '$PIPE': File exists" >&2
-                return 1
-            else
-                [[ "$FORCE" -eq 1 ]] && rm -f "$PIPE"
-                mkfifo "$PIPE"; (tail -f "$PIPE" & echo > "$PIPE"; wait); rm -f "$PIPE"
-            fi;;
+    "in") if [ ! -p "$PIPE" ]; then
+        echo "error: could not open pipe at '$PIPE': No such file or directory" >&2
+        return 1
+    else
+        cat >"$PIPE"
+    fi ;;
+    "out") if [ "$FORCE" -eq 0 ] && [ -p "$PIPE" ]; then
+        echo "error: cannot create pipe at '$PIPE': File exists" >&2
+        return 1
+    else
+        [ "$FORCE" -eq 1 ] && rm -f "$PIPE"
+        mkfifo "$PIPE"
+        (
+            tail -f "$PIPE" &
+            echo >"$PIPE"
+            wait
+        )
+        rm -f "$PIPE"
+    fi ;;
     esac
 }
 
-slurp-output() {
+slurp_output() {
     $SLURP -or -f '%o' 2>/dev/null
 }
 
-slurp-region() {
+slurp_region() {
     $SLURP 2>/dev/null
 }
 
-slurp-output-or-region() {
+slurp_output_or_region() {
     $SLURP -o -f '%x,%y %wx%h %o' 2>/dev/null
 }
 
 mirror() {
-    if [[ "$#" -eq 0 || "$1" =~ ^- ]]; then
-        OUTPUT_REGION=$(ask-output-or-region)
+    if [ "$#" -eq 0 ] || expr -- "$1" : '^-' >/dev/null 2>&1; then
+        OUTPUT_REGION=$(ask_output_or_region)
 
-        ARGS=("-S" "-r" "$OUTPUT_REGION" "$@")
+        set -- "-S" "-r" "$OUTPUT_REGION" "$@"
     else
         OUTPUT="$1"
         shift
 
-        ARGS=("-S" "$@" "$OUTPUT")
+        set -- "-S" "$@" "$OUTPUT"
     fi
 
-    $PIPECTL -n "$PRESENT_PIPE_NAME" -o | wl-mirror "${ARGS[@]}"
+    $PIPECTL -n "$PRESENT_PIPE_NAME" -o | wl-mirror "$@"
 }
 
-mirror-cmd() {
-    $PIPECTL -n "$PRESENT_PIPE_NAME" -i <<< "$1"
+mirror_cmd() {
+    $PIPECTL -n "$PRESENT_PIPE_NAME" -i <<EOF
+$1
+EOF
 }
 
-set-output() {
-    mirror-cmd "$1"
+set_output() {
+    mirror_cmd "$1"
 }
 
-set-region() {
-    mirror-cmd "-r '$1'"
+set_region() {
+    mirror_cmd "-r '$1'"
 }
 
-set-scaling() {
-    mirror-cmd "-s $1"
+set_scaling() {
+    mirror_cmd "-s $1"
 }
 
-set-fullscreen-output() {
-    mirror-cmd "--fullscreen-output $1"
+set_fullscreen_output() {
+    mirror_cmd "--fullscreen-output $1"
 }
 
-ask-output() {
-    slurp-output
-    [[ $? -ne 0 ]] && exit 1
+ask_output() {
+    slurp_output
+    [ $? -ne 0 ] && exit 1
 }
 
-ask-region() {
-    slurp-region
-    [[ $? -ne 0 ]] && exit 1
+ask_region() {
+    slurp_region
+    [ $? -ne 0 ] && exit 1
 }
 
-ask-output-or-region() {
-    slurp-output-or-region
-    [[ $? -ne 0 ]] && exit 1
+ask_output_or_region() {
+    slurp_output_or_region
+    [ $? -ne 0 ] && exit 1
 }
 
-ask-scaling() {
-    (echo fit; echo cover; echo exact; echo linear; echo nearest) | $DMENU -p "wl-present scaling"
-    [[ $? -ne 0 ]] && exit 1
+ask_scaling() {
+    (
+        echo fit
+        echo cover
+        echo exact
+        echo linear
+        echo nearest
+    ) | $DMENU -p "wl-present scaling"
+    [ $? -ne 0 ] && exit 1
 }
 
-ask-custom() {
+ask_custom() {
     cat <<EOF | $DMENU -p "wl-present custom"
 --verbose
 --no-verbose
@@ -199,37 +217,44 @@ ask-custom() {
 --region
 --no-region
 EOF
-    [[ $? -ne 0 ]] && exit 1
+    [ $? -ne 0 ] && exit 1
 }
 
-while [[ $# -gt 0 && "${1:0:1}" == "-" ]]; do
+while [ $# -gt 0 ] && expr -- "$1" : '^-' >/dev/null 2>&1; do
     opt="$1"
     shift
     case "$opt" in
-        -n|--name) arg="$1"; shift; PRESENT_PIPE_NAME="$arg";;
-        -h|--help) usage;;
-        --) break;;
+    -n | --name)
+        arg="$1"
+        shift
+        PRESENT_PIPE_NAME="$arg"
+        ;;
+    -h | --help) usage ;;
+    --) break ;;
     esac
 done
 
-if [[ $# -eq 0 ]]; then
+if [ $# -eq 0 ]; then
     usage
 fi
 
 case "$1" in
-    help) usage;;
-    mirror) shift; mirror "$@";;
-    set-output) set-output "${2:-$(ask-output)}";;
-    set-region) set-region "${2:-$(ask-region)}";;
-    unset-region|no-region) mirror-cmd --no-region;;
-    set-scaling) set-scaling "${2:-$(ask-scaling)}";;
-    freeze) mirror-cmd --freeze;;
-    unfreeze) mirror-cmd --unfreeze;;
-    toggle-freeze) mirror-cmd --toggle-freeze;;
-    fullscreen) mirror-cmd --fullscreen;;
-    unfullscreen|no-fullscreen) mirror-cmd --no-fullscreen;;
-    fullscreen-output) set-fullscreen-output "${2:-$(ask-output)}";;
-    no-fullscreen-output) mirror-cmd --no-fullscreen-output;;
-    custom) mirror-cmd "${2:-$(ask-custom)}";;
-    *) usage;;
+help) usage ;;
+mirror)
+    shift
+    mirror "$@"
+    ;;
+set-output) set_output "${2:-$(ask_output)}" ;;
+set-region) set_region "${2:-$(ask_region)}" ;;
+unset-region | no-region) mirror_cmd --no-region ;;
+set-scaling) set_scaling "${2:-$(ask_scaling)}" ;;
+freeze) mirror_cmd --freeze ;;
+unfreeze) mirror_cmd --unfreeze ;;
+toggle-freeze) mirror_cmd --toggle-freeze ;;
+fullscreen) mirror_cmd --fullscreen ;;
+unfullscreen | no-fullscreen) mirror_cmd --no-fullscreen ;;
+fullscreen-output) set_fullscreen_output "${2:-$(ask_output)}" ;;
+no-fullscreen-output) mirror_cmd --no-fullscreen-output ;;
+custom) mirror_cmd "${2:-$(ask_custom)}" ;;
+*) usage ;;
 esac
