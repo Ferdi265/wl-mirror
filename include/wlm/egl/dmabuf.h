@@ -9,6 +9,6 @@
 typedef struct ctx ctx_t;
 typedef struct wlm_egl_format wlm_egl_format_t;
 
-bool wlm_egl_dmabuf_import(ctx_t * ctx, dmabuf_t * dmabuf, const wlm_egl_format_t * format, bool invert_y, bool region_aware);
+bool wlm_egl_dmabuf_import(ctx_t * ctx, wlm_dmabuf_t * dmabuf, const wlm_egl_format_t * format, bool invert_y, bool region_aware);
 
 #endif

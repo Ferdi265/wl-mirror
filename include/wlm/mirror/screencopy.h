@@ -18,7 +18,7 @@ typedef enum {
 } screencopy_state_t;
 
 typedef struct {
-    mirror_backend_t header;
+    wlm_mirror_backend_t header;
     bool use_dmabuf;
 
     // screencopy frame object
