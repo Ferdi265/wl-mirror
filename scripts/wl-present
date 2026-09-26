@@ -102,7 +102,9 @@ pipectl-shim() {
                 return 1
             else
                 [[ "$FORCE" -eq 1 ]] && rm -f "$PIPE"
-                mkfifo "$PIPE"; (tail -f "$PIPE" & echo > "$PIPE"; wait); rm -f "$PIPE"
+                mkfifo "$PIPE"
+                trap 'rm -f "$PIPE"' EXIT
+                (tail -f "$PIPE" & echo > "$PIPE"; wait)
             fi;;
     esac
 }
