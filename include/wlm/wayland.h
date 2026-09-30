@@ -82,9 +82,15 @@ typedef struct ctx_wl {
     struct ext_image_copy_capture_manager_v1 * copy_capture_manager;
     struct ext_output_image_capture_source_manager_v1 * output_capture_source_manager;
     struct ext_foreign_toplevel_image_capture_source_manager_v1 * toplevel_capture_source_manager;
+	struct ext_image_capture_color_manager_v1 * copy_capture_color_manager;
     uint32_t copy_capture_manager_id;
     uint32_t output_capture_source_manager_id;
     uint32_t toplevel_capture_source_manager_id;
+	uint32_t copy_capture_color_manager_id;
+
+	// color management
+	struct wp_color_manager_v1 * color_manager;
+	uint32_t color_manager_id;
 
     // output list
     output_list_node_t * outputs;
@@ -94,6 +100,7 @@ typedef struct ctx_wl {
     struct wl_surface * surface;
     struct wp_viewport * viewport;
     struct wp_fractional_scale_v1 * fractional_scale;
+	struct wp_color_management_surface_v1 * color_management_surface;
 #ifdef WITH_LIBDECOR
     struct libdecor * libdecor_context;
     struct libdecor_frame * libdecor_frame;

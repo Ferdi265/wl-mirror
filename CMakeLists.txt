@@ -18,6 +18,8 @@ set(WLR_PROTOCOL_DIR "/usr/share/wlr-protocols" CACHE STRING "wlr-protocols dire
 set(PROTOCOLS
     "stable/xdg-shell/xdg-shell.xml"
     "stable/viewporter/viewporter.xml"
+    "staging/color-management/color-management-v1.xml"
+    "staging/ext-image-capture-color-management/ext-image-capture-color-management-v1.xml"
     "staging/fractional-scale/fractional-scale-v1.xml"
     "staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml"
     "staging/ext-image-capture-source/ext-image-capture-source-v1.xml"
