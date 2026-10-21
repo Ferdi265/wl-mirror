@@ -313,6 +313,20 @@ void wlm_wayland_dmabuf_alloc(ctx_t * ctx, uint32_t drm_format, uint32_t width, 
 #endif
 }
 
+// --- wlm_wayland_dmabuf_cancel_alloc ---
+
+void wlm_wayland_dmabuf_cancel_alloc(ctx_t * ctx) {
+    if (ctx->wl.dmabuf.buffer_params == NULL) {
+        wlm_log_error("wayland::dmabuf::cancel_alloc(): no allocation in progress\n");
+        return;
+    }
+
+    wlm_log_debug(ctx, "wayland::dmabuf::cancel_alloc(): cancelling DMA-BUF allocation\n");
+    zwp_linux_buffer_params_v1_destroy(ctx->wl.dmabuf.buffer_params);
+    ctx->wl.dmabuf.buffer_params = NULL;
+    ctx->wl.dmabuf.alloc_callback = NULL;
+}
+
 // --- wlm_wayland_dmabuf_dealloc ---
 
 void wlm_wayland_dmabuf_dealloc(ctx_t * ctx) {
