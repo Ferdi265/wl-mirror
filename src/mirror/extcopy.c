@@ -174,6 +174,8 @@ static void on_capture_session_done(void * data, struct ext_image_copy_capture_s
         }
 
         wlm_log_debug(ctx, "mirror-extcopy::on_capture_session_done(): allocating DMA-BUF\n");
+        // the allocation completes asynchronously: don't capture until it is done
+        backend->state = STATE_WAIT_BUFFER_INFO;
         wlm_wayland_dmabuf_dealloc(ctx);
         wlm_wayland_dmabuf_alloc(ctx, backend->frame_drm_format, backend->frame_width, backend->frame_height, backend->frame_drm_modifiers, backend->frame_num_drm_modifiers, on_dmabuf_allocated);
     } else {
@@ -215,6 +217,12 @@ static void on_dmabuf_allocated(ctx_t * ctx, bool success) {
     if (!success) {
         wlm_log_error("mirror-extcopy::on_dmabuf_allocated(): failed to allocate DMA-BUF\n");
         backend_cancel(ctx, backend);
+        return;
+    }
+
+    if (backend->state == STATE_CANCELED || backend->capture_session == NULL) {
+        wlm_log_debug(ctx, "mirror-extcopy::on_dmabuf_allocated(): capture was cancelled during allocation, ignoring\n");
+        wlm_wayland_dmabuf_dealloc(ctx);
         return;
     }
 
