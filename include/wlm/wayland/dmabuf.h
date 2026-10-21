@@ -57,6 +57,14 @@ bool wlm_wayland_dmabuf_open_device(ctx_t * ctx, dev_t device);
 /// TODO: Allow managing multiple DMA-BUFs
 void wlm_wayland_dmabuf_alloc(ctx_t * ctx, uint32_t drm_format, uint32_t width, uint32_t height, uint64_t * modifiers, size_t num_modifiers, wlm_wayland_dmabuf_callback_t * cb);
 
+/// Cancel an ongoing DMA-BUF allocation
+///
+/// Calling this function while no DMA-BUF allocation is in flight results in an
+/// error.
+///
+/// TODO: Allow managing multiple DMA-BUFs
+void wlm_wayland_dmabuf_cancel_alloc(ctx_t * ctx);
+
 /// Deallocate the allocated DMA-BUF
 ///
 /// TODO: Allow identifying the buffer to be deallocated
