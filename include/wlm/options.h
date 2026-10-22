@@ -6,7 +6,7 @@
 #include <wlm/transform.h>
 
 struct ctx;
-struct output_list_node;
+struct wlm_wayland_output_entry;
 
 typedef enum {
     SCALE_FIT,
@@ -55,7 +55,7 @@ bool wlm_opt_parse_scaling(scale_t * scaling, scale_filter_t * scaling_filter, c
 bool wlm_opt_parse_backend(backend_t * backend, const char * backend_arg);
 bool wlm_opt_parse_transform(transform_t * transform, const char * transform_arg);
 bool wlm_opt_parse_region(region_t * region, char ** output, const char * region_arg);
-bool wlm_opt_find_output(struct ctx * ctx, struct output_list_node ** output_handle, region_t * region_handle);
+bool wlm_opt_find_output(struct ctx * ctx, struct wlm_wayland_output_entry ** output_handle, region_t * region_handle);
 
 void wlm_opt_usage(struct ctx * ctx);
 void wlm_opt_version(struct ctx * ctx);
