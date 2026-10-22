@@ -27,12 +27,20 @@ static void extcopy_frame_cleanup(extcopy_mirror_backend_t * backend) {
 static void extcopy_session_cleanup(ctx_t * ctx, extcopy_mirror_backend_t * backend) {
     extcopy_frame_cleanup(backend);
 
+	if (backend->ready_desc != NULL && backend->ready_desc != backend->frame_desc) wp_image_description_v1_destroy(backend->ready_desc);
+	if (backend->frame_desc != NULL) wp_image_description_v1_destroy(backend->frame_desc);
+	if (backend->pending_desc != NULL) wp_image_description_v1_destroy(backend->pending_desc);
     if (backend->capture_session != NULL) ext_image_copy_capture_session_v1_destroy(backend->capture_session);
+	if (backend->capture_source_colors != NULL) ext_image_capture_source_colors_v1_destroy(backend->capture_source_colors);
     if (backend->capture_source != NULL) ext_image_capture_source_v1_destroy(backend->capture_source);
     if (wlm_wayland_dmabuf_get_buffer(ctx) != NULL) wlm_wayland_dmabuf_dealloc(ctx);
     if (wlm_wayland_shm_get_buffer(ctx) != NULL) wlm_wayland_shm_dealloc(ctx);
 
+	backend->ready_desc = NULL;
+	backend->frame_desc = NULL;
+	backend->pending_desc = NULL;
     backend->capture_session = NULL;
+	backend->capture_source_colors = NULL;
     backend->capture_source = NULL;
 }
 
@@ -277,6 +285,15 @@ static void on_capture_frame_ready(void * data, struct ext_image_copy_capture_fr
 
     wlm_log_debug(ctx, "mirror-extcopy::on_capture_frame_ready(): frame captured\n");
 
+	if (!backend->frame_desc_is_surface_desc && ctx->wl.color_management_surface != NULL) {
+		if (backend->frame_desc) {
+			wp_color_management_surface_v1_set_image_description(ctx->wl.color_management_surface, backend->frame_desc, WP_COLOR_MANAGER_V1_RENDER_INTENT_PERCEPTUAL);
+		} else {
+			wp_color_management_surface_v1_unset_image_description(ctx->wl.color_management_surface);
+		}
+		backend->frame_desc_is_surface_desc = true;
+	}
+
     if (backend->use_dmabuf) {
         const wlm_egl_format_t * format = wlm_egl_formats_find_drm(backend->frame_drm_format);
         if (format == NULL) {
@@ -348,6 +365,68 @@ static const struct ext_image_copy_capture_frame_v1_listener capture_frame_liste
     .failed = on_capture_frame_failed,
 };
 
+static void on_image_description_failed(void *data, struct wp_image_description_v1 *wp_image_description_v1, uint32_t cause, const char *msg) {
+	ctx_t * ctx = (ctx_t *)data;
+	extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
+
+	wlm_log_error("mirror-extcopy::on_image_description_failed(): failed to retrieve image description, cause = %d, msg = %s\n", cause, msg);
+
+	if (backend->ready_desc != NULL && backend->ready_desc != backend->frame_desc) {
+		wp_image_description_v1_destroy(backend->ready_desc);
+	}
+	backend->ready_desc = NULL;
+	wp_image_description_v1_destroy(backend->pending_desc);
+	backend->pending_desc = NULL;
+
+	(void)wp_image_description_v1;
+}
+
+static void on_image_description_ready(void *data, struct wp_image_description_v1 *wp_image_description_v1, uint32_t identity) {
+	ctx_t * ctx = (ctx_t *)data;
+	extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
+
+	if (backend->ready_desc != NULL && backend->ready_desc != backend->frame_desc) {
+		wp_image_description_v1_destroy(backend->ready_desc);
+	}
+	backend->ready_desc = backend->pending_desc;
+	backend->pending_desc = NULL;
+
+	(void)wp_image_description_v1;
+	(void)identity;
+}
+
+static const struct wp_image_description_v1_listener image_description_listener = {
+	.failed = on_image_description_failed,
+	.ready = on_image_description_ready,
+};
+
+static void update_preferred_image_description(ctx_t * ctx, extcopy_mirror_backend_t * backend) {
+	struct wp_image_description_reference_v1 * ref = ext_image_capture_source_colors_v1_get_preferred(backend->capture_source_colors);
+	struct wp_image_description_v1 * desc = wp_color_manager_v1_get_image_description(ctx->wl.color_manager, ref);
+	wp_image_description_reference_v1_destroy(ref);
+	wp_image_description_v1_add_listener(desc, &image_description_listener, (void *)ctx);
+
+	if (backend->pending_desc != NULL) {
+		wp_image_description_v1_destroy(backend->pending_desc);
+	}
+	backend->pending_desc = desc;
+}
+
+static void on_preferred_changed(void * data, struct ext_image_capture_source_colors_v1 * colors, uint32_t hi, uint32_t lo) {
+	ctx_t * ctx = (ctx_t *)data;
+	extcopy_mirror_backend_t * backend = (extcopy_mirror_backend_t *)ctx->mirror.backend;
+
+	update_preferred_image_description(ctx, backend);
+
+	(void)colors;
+	(void)hi;
+	(void)lo;
+}
+
+static const struct ext_image_capture_source_colors_v1_listener source_colors_listener = {
+	.preferred_changed = on_preferred_changed,
+};
+
 // --- backend event handlers ---
 
 static void do_capture(ctx_t * ctx) {
@@ -355,6 +434,12 @@ static void do_capture(ctx_t * ctx) {
 
     if (backend->state == STATE_INIT || backend->state == STATE_CANCELED) {
         backend->capture_source = ext_output_image_capture_source_manager_v1_create_source(ctx->wl.output_capture_source_manager, ctx->mirror.current_target->output);
+
+		if (ctx->wl.copy_capture_color_manager != NULL && ctx->wl.color_manager != NULL) {
+			backend->capture_source_colors = ext_image_capture_color_manager_v1_get_capture_source_colors(ctx->wl.copy_capture_color_manager, backend->capture_source);
+			ext_image_capture_source_colors_v1_add_listener(backend->capture_source_colors, &source_colors_listener, (void *)ctx);
+			update_preferred_image_description(ctx, backend);
+		}
 
         wlm_log_debug(ctx, "mirror-extcopy::do_capture(): creating capture session\n");
         backend->state = STATE_WAIT_BUFFER_INFO;
@@ -382,6 +467,17 @@ static void do_capture(ctx_t * ctx) {
             backend_cancel(ctx, backend);
             return;
         }
+
+		if (backend->frame_desc != backend->ready_desc) {
+			if (backend->frame_desc != NULL) {
+				wp_image_description_v1_destroy(backend->frame_desc);
+			}
+			backend->frame_desc = backend->ready_desc;
+			backend->frame_desc_is_surface_desc = false;
+		}
+		if (backend->frame_desc != NULL) {
+			ext_image_capture_color_manager_v1_set_frame_image_description(ctx->wl.copy_capture_color_manager, backend->capture_frame, backend->frame_desc);
+		}
 
         ext_image_copy_capture_frame_v1_attach_buffer(backend->capture_frame, buffer);
         ext_image_copy_capture_frame_v1_capture(backend->capture_frame);
