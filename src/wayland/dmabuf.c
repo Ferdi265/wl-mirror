@@ -322,7 +322,10 @@ void wlm_wayland_dmabuf_cancel_alloc(ctx_t * ctx) {
     }
 
     wlm_log_debug(ctx, "wayland::dmabuf::cancel_alloc(): cancelling DMA-BUF allocation\n");
-    zwp_linux_buffer_params_v1_destroy(ctx->wl.dmabuf.buffer_params);
+    // NOTE: buffer params object can't be destroyed here, since the
+    // compositor may already have sent the created event, and its new_id
+    // can't be handled for a destroyed proxy. Instead, the result is ignored
+    // as stale and the buffer params object destroys itself on success/failure
     ctx->wl.dmabuf.buffer_params = NULL;
     ctx->wl.dmabuf.alloc_callback = NULL;
 }
