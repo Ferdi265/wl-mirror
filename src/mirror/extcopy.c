@@ -220,8 +220,6 @@ static void on_dmabuf_allocated(ctx_t * ctx, bool success) {
 
     if (!success) {
         wlm_log_error("mirror-extcopy::on_dmabuf_allocated(): failed to allocate DMA-BUF\n");
-        // the allocation is no longer in flight, so there is nothing to cancel
-        backend->state = STATE_CANCELED;
         backend_cancel(ctx, backend);
         return;
     }
